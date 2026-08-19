@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #111111;
+  --ink-soft: #1c1c1c;
+  --copper: #c06618;
+  --copper-hot: #d57422;
+  --copper-deep: #9a4e12;
+  --stone: #6d6e71;
+  --cream: #f7f1ea;
+  --paper: #fbf8f4;
+  --line: #e6d5c3;
+  --white: #ffffff;
+  --danger: #b42318;
+  --ok: #067647;
+  --background: var(--paper);
+  --foreground: var(--ink);
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-copper: var(--copper);
+  --color-copper-hot: var(--copper-hot);
+  --color-copper-deep: var(--copper-deep);
+  --color-stone: var(--stone);
+  --color-cream: var(--cream);
+  --color-paper: var(--paper);
+  --color-line: var(--line);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-outfit);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-outfit), "Segoe UI", sans-serif;
+}
+
+::selection {
+  background: #f3d5b8;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
+.v360-ring {
+  background:
+    radial-gradient(circle at 50% 45%, transparent 42%, rgba(192, 102, 24, 0.18) 43%, transparent 44%),
+    radial-gradient(circle at 50% 45%, transparent 32%, rgba(192, 102, 24, 0.12) 33%, transparent 34%);
+}
