@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     message: sms.delivered
       ? "OTP sent to the registered mobile number"
       : demo
-        ? "SMS is not configured. Use the on-screen demo OTP, then add MSG91 in Settings for live SMS."
+        ? "OTP is ready. It is shown on screen until phone SMS is connected."
         : sms.error || "Could not send SMS",
   });
 }
