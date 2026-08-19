@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { isResponse, jsonError, requireUser } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
 import { generateOtp, hashOtp } from "@/lib/otp";
-import { sendOtpSms } from "@/lib/sms";
+import { sendOtpSms, whatsappOtpLink } from "@/lib/sms";
 import { isValidIndianMobile, storePhone } from "@/lib/people";
 import { writeAudit } from "@/lib/audit";
 import { readJson } from "@/lib/employees";
@@ -69,14 +69,13 @@ export async function POST(request: NextRequest) {
   const demo = settings.demoOtp && (!sms.delivered || sms.channel === "demo");
   return NextResponse.json({
     ok: true,
-    channel: sms.channel,
+    channel: sms.delivered ? sms.channel : "whatsapp",
     delivered: sms.delivered,
     expiresInMinutes: settings.otpExpiryMinutes,
+    whatsappUrl: whatsappOtpLink(phone, otp, settings.otpExpiryMinutes),
     demoOtp: demo ? otp : undefined,
     message: sms.delivered
-      ? "OTP sent to the registered mobile number"
-      : demo
-        ? "OTP is ready. It is shown on screen until phone SMS is connected."
-        : sms.error || "Could not send SMS",
+      ? "OTP sent as SMS to the registered mobile number"
+      : "OTP is ready. Click Send on WhatsApp so it goes to the employee's phone.",
   });
 }

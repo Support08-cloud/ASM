@@ -19,7 +19,9 @@ export function ForgotPin({
   const [pin, setPin] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
   const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
   const [demoOtp, setDemoOtp] = useState<string | null>(null);
+  const [showOnScreen, setShowOnScreen] = useState(false);
   const [delivered, setDelivered] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,15 +31,22 @@ export function ForgotPin({
     setBusy(true);
     setError(null);
     setMessage(null);
+    setShowOnScreen(false);
     try {
-      const data = await api<{ demoOtp?: string; message: string; delivered?: boolean }>("/api/pin/forgot", {
+      const data = await api<{
+        demoOtp?: string;
+        message: string;
+        delivered?: boolean;
+        whatsappUrl?: string;
+      }>("/api/pin/forgot", {
         method: "POST",
         body: JSON.stringify({ employeeId, phone }),
       });
       setStep("otp");
       setDelivered(Boolean(data.delivered));
+      setWhatsappUrl(data.whatsappUrl || null);
       setDemoOtp(data.demoOtp || null);
-      if (data.demoOtp) setOtp(data.demoOtp);
+      setOtp("");
       setMessage(data.message);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send OTP");
@@ -60,6 +69,7 @@ export function ForgotPin({
       setPin("");
       setPinConfirm("");
       setDemoOtp(null);
+      setWhatsappUrl(null);
       onDone?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not change PIN");
@@ -73,24 +83,14 @@ export function ForgotPin({
       <div>
         <h3 className="text-lg font-semibold">Forgot PIN</h3>
         <p className="text-sm text-stone">
-          {employeeName} must enter the registered mobile number. Then enter the OTP and a new 4-digit PIN.
+          {employeeName} enters the registered mobile. Then send the OTP to their WhatsApp and they type it here.
         </p>
       </div>
       {error ? <Banner kind="error">{error}</Banner> : null}
-      {message && !demoOtp ? <Banner kind="ok">{message}</Banner> : null}
+      {message ? <Banner kind="ok">{message}</Banner> : null}
 
-      {demoOtp ? (
-        <div className="rounded-2xl border border-line bg-cream p-4 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-copper">OTP for this reset</p>
-          <p className="mt-2 text-4xl font-semibold tracking-[0.28em] text-ink">{demoOtp}</p>
-          <p className="mt-2 text-sm text-stone">
-            Phone SMS is not connected yet, so the OTP is shown here. Type this number in the OTP box (it is already filled), then set a new PIN.
-          </p>
-        </div>
-      ) : null}
-
-      {delivered && !demoOtp ? (
-        <Banner kind="ok">OTP sent to the registered mobile. Ask {employeeName} to read it from their phone.</Banner>
+      {delivered ? (
+        <Banner kind="ok">OTP SMS sent. Ask {employeeName} to read it from their phone.</Banner>
       ) : null}
 
       <Field label="Registered mobile">
@@ -104,11 +104,24 @@ export function ForgotPin({
       </Field>
       {step === "phone" ? (
         <Button disabled={busy || phone.length !== 10} onClick={sendOtp}>
-          Send OTP
+          Create OTP
         </Button>
       ) : (
         <>
-          <Field label="6-digit OTP">
+          {whatsappUrl && !delivered ? (
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex w-full items-center justify-center rounded-xl bg-[#25D366] px-4 py-3 text-sm font-semibold text-white hover:bg-[#1ebe5d]"
+            >
+              Send OTP on WhatsApp
+            </a>
+          ) : null}
+          <p className="text-sm text-stone">
+            WhatsApp opens with the OTP ready. Press Send, then ask {employeeName} to read the 6 digits from their phone and type them below.
+          </p>
+          <Field label="6-digit OTP from their phone">
             <Input
               inputMode="numeric"
               maxLength={6}
@@ -122,14 +135,25 @@ export function ForgotPin({
           <Field label="Confirm new PIN">
             <PinPad value={pinConfirm} onChange={setPinConfirm} />
           </Field>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button disabled={busy || otp.length !== 6 || pin.length !== 4 || pin !== pinConfirm} onClick={resetPin}>
               Save new PIN
             </Button>
             <Button variant="ghost" onClick={sendOtp} disabled={busy}>
-              Resend OTP
+              New OTP
             </Button>
           </div>
+          {demoOtp && !showOnScreen ? (
+            <button className="text-sm font-medium text-copper hover:underline" onClick={() => setShowOnScreen(true)}>
+              WhatsApp not opening? Show OTP on this screen
+            </button>
+          ) : null}
+          {showOnScreen && demoOtp ? (
+            <div className="rounded-2xl border border-line bg-cream p-4 text-center">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-copper">OTP</p>
+              <p className="mt-2 text-4xl font-semibold tracking-[0.28em]">{demoOtp}</p>
+            </div>
+          ) : null}
         </>
       )}
     </div>

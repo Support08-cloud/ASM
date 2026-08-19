@@ -75,7 +75,7 @@ export default function SettingsPage() {
     <div className="space-y-5">
       <div>
         <h2 className="text-2xl font-semibold">Settings</h2>
-        <p className="text-sm text-stone">OTP SMS uses MSG91 when a key is saved. Until then, demo OTP is shown on screen for office testing.</p>
+        <p className="text-sm text-stone">Forgot PIN sends OTP on WhatsApp. No MSG91 account is needed. MSG91 is optional later for automatic SMS.</p>
       </div>
       {error ? <Banner kind="error">{error}</Banner> : null}
       {notice ? <Banner kind="ok">{notice}</Banner> : null}
@@ -98,19 +98,19 @@ export default function SettingsPage() {
         <Field label="OTP expiry minutes">
           <Input type="number" value={settings.otpExpiryMinutes} onChange={(e) => setSettings({ ...settings, otpExpiryMinutes: Number(e.target.value) })} />
         </Field>
-        <Field label="Demo OTP on screen">
+        <Field label="Allow on-screen OTP backup">
           <Select value={settings.demoOtp ? "yes" : "no"} onChange={(e) => setSettings({ ...settings, demoOtp: e.target.value === "yes" })}>
-            <option value="yes">Yes — until SMS is configured</option>
-            <option value="no">No — phone OTP only</option>
+            <option value="yes">Yes — if WhatsApp cannot open</option>
+            <option value="no">No — WhatsApp / SMS only</option>
           </Select>
         </Field>
-        <Field label="MSG91 sender ID">
+        <Field label="Optional MSG91 sender ID">
           <Input value={settings.msg91SenderId} onChange={(e) => setSettings({ ...settings, msg91SenderId: e.target.value })} />
         </Field>
-        <Field label="MSG91 template ID">
+        <Field label="Optional MSG91 template ID">
           <Input value={settings.msg91TemplateId} onChange={(e) => setSettings({ ...settings, msg91TemplateId: e.target.value })} />
         </Field>
-        <Field label="MSG91 auth key" hint={settings.hasMsg91 ? "A key is already saved. Leave blank to keep it." : "Paste key to enable live SMS"}>
+        <Field label="Optional MSG91 auth key" hint="Leave empty. WhatsApp OTP works without this.">
           <Input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder={settings.hasMsg91 ? "••••••••" : ""} />
         </Field>
         <div className="md:col-span-2">

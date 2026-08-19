@@ -51,7 +51,8 @@ export function normalizePhone(phone: string): string {
   return digits;
 }
 
-export function isValidIndianMobile(phone: string): boolean {
-  const digits = phone.replace(/\D/g, "");
-  return /^(91)?[6-9]\d{9}$/.test(digits);
+export function whatsappOtpLink(phone: string, otp: string, minutes = 5): string {
+  const mobile = normalizePhone(phone);
+  const text = `Vision 360 PIN reset OTP: ${otp}. Do not share this code. Valid ${minutes} min.`;
+  return `https://wa.me/${mobile}?text=${encodeURIComponent(text)}`;
 }
