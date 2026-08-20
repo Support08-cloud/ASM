@@ -1,0 +1,209 @@
+<UserControl x:Class="DiamondFileRouter.App.Views.RouterView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:DiamondFileRouter.App.Converters"
+             AllowDrop="True"
+             Drop="OnDrop"
+             DragOver="OnDragOver">
+    <UserControl.Resources>
+        <converters:StatusToBrushConverter x:Key="StatusBg"/>
+        <converters:StatusToForegroundConverter x:Key="StatusFg"/>
+        <converters:InverseBoolConverter x:Key="Not"/>
+        <converters:NullToVisibilityConverter x:Key="NullVis"/>
+        <converters:BoolToVisibilityConverter x:Key="BoolVis"/>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+        <Grid Margin="28,22,20,24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel>
+                <TextBlock Text="INNOVATING VISIONS, CRAFTING EXCELLENCE" Foreground="{StaticResource CopperBrush}" FontSize="11" FontWeight="SemiBold"/>
+                <TextBlock Text="Route diamond files into existing stone folders" FontSize="22" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource StoneBrush}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <Grid Grid.Row="1" Margin="0,18,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Card}" AllowDrop="True">
+                    <StackPanel>
+                        <TextBlock Text="INPUT" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                        <TextBlock Text="Files, folders, or mixed batches. Originals stay untouched in Copy mode." Foreground="{StaticResource StoneBrush}" Margin="0,4,0,10" TextWrapping="Wrap"/>
+                        <TextBox Text="{Binding InputPath, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+                        <TextBlock Text="{Binding InputSummary}" Foreground="{StaticResource StoneBrush}" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Browse folder" Style="{StaticResource GhostButton}" Command="{Binding BrowseInputFolderCommand}" Margin="0,0,8,0"/>
+                            <Button Content="Browse files" Style="{StaticResource GhostButton}" Command="{Binding BrowseInputFilesCommand}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="OUTPUT" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                        <TextBlock Text="Existing diamond folders only. New folders are never created automatically." Foreground="{StaticResource StoneBrush}" Margin="0,4,0,10" TextWrapping="Wrap"/>
+                        <TextBox Text="{Binding OutputPath, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+                        <TextBlock Text="Indexed after Analyze. Built once per run." Foreground="{StaticResource StoneBrush}" FontSize="12" Margin="0,0,0,12"/>
+                        <Button Content="Browse output" Style="{StaticResource GhostButton}" Command="{Binding BrowseOutputCommand}" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Border Grid.Row="2" Style="{StaticResource Card}" Margin="0,16,0,0" Padding="16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="MODE" Style="{StaticResource CaptionLabel}"/>
+                        <ComboBox ItemsSource="{Binding TransferModes}" SelectedItem="{Binding TransferMode}" Margin="0,6,0,0"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="0,0,16,0">
+                        <TextBlock Text="DUPLICATES" Style="{StaticResource CaptionLabel}"/>
+                        <ComboBox ItemsSource="{Binding DuplicateActions}" SelectedItem="{Binding DuplicateHandling}" Margin="0,6,0,0"/>
+                    </StackPanel>
+                    <CheckBox Grid.Column="2" Content="Recursive scan" IsChecked="{Binding Recursive}" Margin="0,22,18,0" VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,16,0,0">
+                        <Button Content="Analyze" Style="{StaticResource InkButton}" Command="{Binding AnalyzeCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource Not}}" Margin="0,0,8,0"/>
+                        <Button Content="Start processing" Style="{StaticResource PrimaryButton}" Command="{Binding ProcessCommand}" IsEnabled="{Binding CanProcess}" Margin="0,0,8,0"/>
+                        <Button Content="Cancel" Style="{StaticResource DangerGhostButton}" Command="{Binding CancelCommand}" Visibility="{Binding IsBusy, Converter={StaticResource BoolVis}}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="3" Margin="0,14,0,0" Padding="14" CornerRadius="12" BorderThickness="1"
+                    Visibility="{Binding Banner, Converter={StaticResource NullVis}}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="{StaticResource CreamBrush}"/>
+                        <Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding BannerKind}" Value="ok">
+                                <Setter Property="Background" Value="{StaticResource OkSoftBrush}"/>
+                                <Setter Property="BorderBrush" Value="#B7E4C7"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding BannerKind}" Value="error">
+                                <Setter Property="Background" Value="{StaticResource DangerSoftBrush}"/>
+                                <Setter Property="BorderBrush" Value="#F2B8B5"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding BannerKind}" Value="warn">
+                                <Setter Property="Background" Value="{StaticResource WarnSoftBrush}"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Open report" Style="{StaticResource GhostButton}" Command="{Binding OpenReportCommand}" Visibility="{Binding ReportPath, Converter={StaticResource NullVis}}" Margin="12,0,0,0"/>
+                    <TextBlock Text="{Binding Banner}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                </DockPanel>
+            </Border>
+
+            <UniformGrid Grid.Row="4" Columns="6" Margin="0,16,0,0">
+                <Border Style="{StaticResource StatCard}" Margin="0,0,8,0">
+                    <StackPanel>
+                        <TextBlock Text="TOTAL" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                        <TextBlock Text="{Binding TotalFiles}" FontSize="22" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource StatCard}" Margin="0,0,8,0">
+                    <StackPanel>
+                        <TextBlock Text="MATCHED" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                        <TextBlock Text="{Binding MatchedFiles}" FontSize="22" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource StatCard}" Margin="0,0,8,0">
+                    <StackPanel>
+                        <TextBlock Text="COPIED" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                        <TextBlock Text="{Binding CopiedFiles}" FontSize="22" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource StatCard}" Margin="0,0,8,0">
+                    <StackPanel>
+                        <TextBlock Text="SKIPPED" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                        <TextBlock Text="{Binding SkippedFiles}" FontSize="22" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource StatCard}" Margin="0,0,8,0">
+                    <StackPanel>
+                        <TextBlock Text="UNMATCHED" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                        <TextBlock Text="{Binding UnmatchedFiles}" FontSize="22" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource StatCard}">
+                    <StackPanel>
+                        <TextBlock Text="ERRORS" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                        <TextBlock Text="{Binding ErrorFiles}" FontSize="22" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <Border Grid.Row="5" Style="{StaticResource Card}" Margin="0,16,0,0" Padding="0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <DockPanel Margin="16,14,16,8">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <TextBlock Text="{Binding IndexedFolders, StringFormat=Output folders indexed: {0}}" Foreground="{StaticResource StoneBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <Button Content="Clear preview" Style="{StaticResource GhostButton}" Command="{Binding ClearPlanCommand}"/>
+                        </StackPanel>
+                        <TextBlock Text="PROCESSING PLAN" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <Grid Grid.Row="1" Margin="16,0,16,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="220"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <ProgressBar Value="{Binding ProgressPercent}" Maximum="100"/>
+                            <TextBlock Text="{Binding ProgressText}" Foreground="{StaticResource StoneBrush}" FontSize="12" Margin="0,6,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                            <TextBlock Text="FILTER" Style="{StaticResource CaptionLabel}"/>
+                            <ComboBox Margin="0,6,0,0" ItemsSource="{Binding Filters}" SelectedItem="{Binding Filter}"/>
+                        </StackPanel>
+                    </Grid>
+                    <DataGrid Grid.Row="2" ItemsSource="{Binding ItemsView}" HeadersVisibility="Column" BorderThickness="0,1,0,0" BorderBrush="{StaticResource LineBrush}"
+                              MinHeight="280">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="FILE" Binding="{Binding SourceFileName}" Width="2*"/>
+                            <DataGridTextColumn Header="STONE ID" Binding="{Binding StoneId}" Width="*"/>
+                            <DataGridTextColumn Header="DESTINATION" Binding="{Binding DestinationFolderName}" Width="*"/>
+                            <DataGridTextColumn Header="MATCH" Binding="{Binding MatchMethodDisplay}" Width="120"/>
+                            <DataGridTemplateColumn Header="STATUS" Width="130">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border CornerRadius="999" Padding="8,3" HorizontalAlignment="Left" Background="{Binding Status, Converter={StaticResource StatusBg}}">
+                                            <TextBlock Text="{Binding Status}" FontWeight="SemiBold" FontSize="11" Foreground="{Binding Status, Converter={StaticResource StatusFg}}"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="REASON" Binding="{Binding Reason}" Width="2*"/>
+                        </DataGrid.Columns>
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                                <Setter Property="Background" Value="{Binding Status, Converter={StaticResource StatusBg}}"/>
+                            </Style>
+                        </DataGrid.RowStyle>
+                    </DataGrid>
+                </Grid>
+            </Border>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

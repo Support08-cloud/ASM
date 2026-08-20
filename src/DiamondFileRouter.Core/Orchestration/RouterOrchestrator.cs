@@ -38,7 +38,6 @@ public interface IRouterOrchestrator
 
 public sealed class RouterOrchestrator : IRouterOrchestrator
 {
-    private readonly IFileSystem _fileSystem;
     private readonly PathSafetyValidator _validator;
     private readonly IFileScanner _scanner;
     private readonly IOutputDirectoryIndexer _indexer;
@@ -61,7 +60,6 @@ public sealed class RouterOrchestrator : IRouterOrchestrator
         IHistoryManager history,
         string? dataDirectory = null)
     {
-        _fileSystem = fileSystem;
         _validator = validator;
         _scanner = scanner;
         _indexer = indexer;
@@ -71,6 +69,7 @@ public sealed class RouterOrchestrator : IRouterOrchestrator
         _reports = reports;
         _history = history;
         _dataDirectory = dataDirectory ?? DefaultDataDirectory;
+        _ = fileSystem;
 
         _processingEngine.ProgressChanged += (_, e) => ProgressChanged?.Invoke(this, e);
         _processingEngine.ItemUpdated += (_, e) => ItemUpdated?.Invoke(this, e);
