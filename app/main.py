@@ -2,19 +2,21 @@
 
 from __future__ import annotations
 
+import io
 import shutil
+import zipfile
 from pathlib import Path
 from typing import Optional
 
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import auth
-from app.dates import expiry_bucket, on_dashboard, parse_iso, renew_date_for
-from app.db import data_dir, db, init_db, row_to_dict, uploads_dir, utcnow
+from app.dates import days_until, expiry_bucket, on_dashboard, parse_iso, renew_date_for
+from app.db import data_dir, db, get_setting, init_db, row_to_dict, set_setting, uploads_dir, utcnow
 from app.extract import DOC_LABELS, label_for
 from app.ingest import ingest_paths, is_allowed, save_upload
 
@@ -50,10 +52,13 @@ def _need_auth(request: Request):
 
 def _member_payload(row) -> dict:
     data = row_to_dict(row)
-    if data and data.get("photo_path"):
+    if not data:
+        return {}
+    if data.get("photo_path"):
         data["photo_url"] = f"/files/{Path(data['photo_path']).name}"
-    elif data:
+    else:
         data["photo_url"] = None
+    data["role"] = data.get("role") or data.get("relation")
     return data
 
 
@@ -112,6 +117,56 @@ def _match_member_id(name: Optional[str]) -> Optional[int]:
     return None
 
 
+def _ensure_family_for(conn, member_id: int) -> int:
+    member = conn.execute("SELECT * FROM members WHERE id = ?", (member_id,)).fetchone()
+    if not member:
+        raise ValueError("Member not found")
+    if member["family_id"]:
+        return int(member["family_id"])
+    headed = conn.execute(
+        "SELECT id FROM families WHERE head_member_id = ?", (member_id,)
+    ).fetchone()
+    now = utcnow()
+    if headed:
+        conn.execute(
+            "UPDATE members SET family_id = ?, role = COALESCE(NULLIF(role,''), 'Head'), updated_at = ? WHERE id = ?",
+            (headed["id"], now, member_id),
+        )
+        return int(headed["id"])
+    label = (member["code"] or member["name"].split()[0]).strip()
+    cur = conn.execute(
+        "INSERT INTO families(name, head_member_id, created_at, updated_at) VALUES (?, ?, ?, ?)",
+        (f"{label}'s family", member_id, now, now),
+    )
+    family_id = cur.lastrowid
+    conn.execute(
+        "UPDATE members SET family_id = ?, role = 'Head', updated_at = ? WHERE id = ?",
+        (family_id, now, member_id),
+    )
+    return int(family_id)
+
+
+def _family_payload(conn, family_row, counts: dict) -> dict:
+    family = row_to_dict(family_row)
+    members = conn.execute(
+        """
+        SELECT * FROM members WHERE family_id = ?
+        ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END, name COLLATE NOCASE
+        """,
+        (family["id"], family.get("head_member_id")),
+    ).fetchall()
+    people = []
+    for row in members:
+        item = _member_payload(row)
+        item["doc_count"] = counts.get(row["id"], 0)
+        item["is_head"] = family.get("head_member_id") == row["id"]
+        people.append(item)
+    family["members"] = people
+    family["count"] = len(people)
+    family["head"] = next((p for p in people if p["is_head"]), people[0] if people else None)
+    return family
+
+
 @app.get("/")
 def home():
     return FileResponse(TEMPLATES / "index.html")
@@ -137,6 +192,7 @@ def bootstrap(request: Request):
         "storage_dir": str(data_dir()),
         "files_dir": str(uploads_dir()),
         "database": str(data_dir() / "docmanager.sqlite3"),
+        "household_name": get_setting("household_name", "Our family"),
     }
 
 
@@ -191,42 +247,64 @@ def dashboard(request: Request):
     with db() as conn:
         rows = conn.execute(
             """
-            SELECT d.*, m.name AS member_name, m.photo_path AS member_photo, m.code AS member_code
+            SELECT d.*, m.name AS member_name, m.photo_path AS member_photo, m.code AS member_code,
+                   f.name AS family_name
             FROM documents d
             LEFT JOIN members m ON m.id = d.member_id
+            LEFT JOIN families f ON f.id = m.family_id
             WHERE d.status = 'active' AND d.expiry_date IS NOT NULL AND d.expiry_date != ''
             ORDER BY d.expiry_date ASC
             """
         ).fetchall()
         policies = conn.execute(
             """
-            SELECT p.*, m.name AS member_name, m.photo_path AS member_photo
+            SELECT p.*, m.name AS member_name, m.photo_path AS member_photo, f.name AS family_name
             FROM policies p
             LEFT JOIN members m ON m.id = p.member_id
+            LEFT JOIN families f ON f.id = m.family_id
             WHERE p.status = 'active' AND p.end_date IS NOT NULL AND p.end_date != ''
             ORDER BY p.end_date ASC
             """
         ).fetchall()
+    window = int(get_setting("reminder_days", "180") or 180)
+    show_expired = get_setting("show_expired", "1") != "0"
     items = []
     for row in rows:
         payload = _doc_payload(row)
-        if payload.get("on_dashboard"):
+        remaining = parse_iso(payload.get("expiry_date"))
+        days = days_until(remaining)
+        show = False
+        if days is not None:
+            if days < 0:
+                show = show_expired
+            elif days < window:
+                show = True
+        if show:
             payload["kind"] = "document"
             payload["member_photo_url"] = _file_url(row["member_photo"])
+            payload["family_name"] = row["family_name"]
             items.append(payload)
     for row in policies:
         payload = _policy_payload(row)
         remaining = parse_iso(payload.get("end_date"))
-        if on_dashboard(remaining):
+        days = days_until(remaining)
+        show = False
+        if days is not None:
+            if days < 0:
+                show = show_expired
+            elif days < window:
+                show = True
+        if show:
             payload["kind"] = "insurance"
             payload["doc_type"] = "insurance"
             payload["label"] = "Insurance"
             payload["doc_number"] = payload.get("policy_number")
             payload["expiry_date"] = payload.get("end_date")
             payload["member_photo_url"] = _file_url(row["member_photo"])
+            payload["family_name"] = row["family_name"]
             items.append(payload)
     items.sort(key=lambda x: x.get("expiry_date") or "9999")
-    return {"ok": True, "items": items[:40]}
+    return {"ok": True, "items": items[:40], "reminder_days": window}
 
 
 @app.get("/api/members")
@@ -235,7 +313,14 @@ def list_members(request: Request):
     if denied:
         return denied
     with db() as conn:
-        rows = conn.execute("SELECT * FROM members ORDER BY name COLLATE NOCASE").fetchall()
+        rows = conn.execute(
+            """
+            SELECT m.*, f.name AS family_name
+            FROM members m
+            LEFT JOIN families f ON f.id = m.family_id
+            ORDER BY f.name COLLATE NOCASE, m.name COLLATE NOCASE
+            """
+        ).fetchall()
         counts = {
             r["member_id"]: r["n"]
             for r in conn.execute(
@@ -256,10 +341,14 @@ async def create_member(
     name: str = Form(...),
     code: str = Form(""),
     relation: str = Form(""),
+    role: str = Form(""),
     phone: str = Form(""),
     email: str = Form(""),
     dob: str = Form(""),
     notes: str = Form(""),
+    family_id: str = Form(""),
+    under_member_id: str = Form(""),
+    start_family: str = Form(""),
     photo: UploadFile | None = File(None),
 ):
     denied = _need_auth(request)
@@ -274,16 +363,37 @@ async def create_member(
         stored = save_upload(raw, photo.filename, uploads_dir())
         photo_path = str(stored)
     now = utcnow()
+    role_val = (role or relation).strip() or None
+    fid = int(family_id) if str(family_id).isdigit() else None
+    under_id = int(under_member_id) if str(under_member_id).isdigit() else None
     with db() as conn:
+        if under_id:
+            fid = _ensure_family_for(conn, under_id)
+            if not role_val:
+                role_val = "Family member"
         cur = conn.execute(
             """
-            INSERT INTO members(code, name, relation, phone, email, dob, photo_path, notes, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO members(code, name, relation, role, family_id, phone, email, dob, photo_path, notes, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (code.strip() or None, name, relation.strip() or None, phone.strip() or None,
-             email.strip() or None, dob.strip() or None, photo_path, notes.strip() or None, now, now),
+            (
+                code.strip() or None,
+                name,
+                relation.strip() or role_val,
+                role_val,
+                fid,
+                phone.strip() or None,
+                email.strip() or None,
+                dob.strip() or None,
+                photo_path,
+                notes.strip() or None,
+                now,
+                now,
+            ),
         )
         member_id = cur.lastrowid
+        if start_family in {"1", "true", "on", "yes"} and not fid:
+            _ensure_family_for(conn, member_id)
         row = conn.execute("SELECT * FROM members WHERE id = ?", (member_id,)).fetchone()
     return {"ok": True, "member": _member_payload(row)}
 
@@ -294,7 +404,15 @@ def get_member(member_id: int, request: Request):
     if denied:
         return denied
     with db() as conn:
-        member = conn.execute("SELECT * FROM members WHERE id = ?", (member_id,)).fetchone()
+        member = conn.execute(
+            """
+            SELECT m.*, f.name AS family_name
+            FROM members m
+            LEFT JOIN families f ON f.id = m.family_id
+            WHERE m.id = ?
+            """,
+            (member_id,),
+        ).fetchone()
         if not member:
             return JSONResponse({"ok": False, "error": "Not found"}, status_code=404)
         docs = conn.execute(
@@ -305,11 +423,20 @@ def get_member(member_id: int, request: Request):
             "SELECT * FROM policies WHERE member_id = ? AND status = 'active' ORDER BY end_date",
             (member_id,),
         ).fetchall()
+        relatives = []
+        if member["family_id"]:
+            relatives = conn.execute(
+                "SELECT * FROM members WHERE family_id = ? AND id != ? ORDER BY name COLLATE NOCASE",
+                (member["family_id"], member_id),
+            ).fetchall()
+    payload = _member_payload(member)
+    payload["family_name"] = member["family_name"]
     return {
         "ok": True,
-        "member": _member_payload(member),
+        "member": payload,
         "documents": [_doc_payload(d) for d in docs],
         "policies": [_policy_payload(p) for p in policies],
+        "relatives": [_member_payload(r) for r in relatives],
     }
 
 
@@ -321,6 +448,186 @@ def delete_member(member_id: int, request: Request):
     with db() as conn:
         conn.execute("DELETE FROM members WHERE id = ?", (member_id,))
     return {"ok": True}
+
+
+@app.get("/api/families")
+def list_families(request: Request):
+    denied = _need_auth(request)
+    if denied:
+        return denied
+    with db() as conn:
+        counts = {
+            r["member_id"]: r["n"]
+            for r in conn.execute(
+                "SELECT member_id, COUNT(*) AS n FROM documents WHERE status='active' GROUP BY member_id"
+            )
+        }
+        rows = conn.execute("SELECT * FROM families ORDER BY name COLLATE NOCASE").fetchall()
+        families = [_family_payload(conn, row, counts) for row in rows]
+        unassigned = conn.execute(
+            "SELECT * FROM members WHERE family_id IS NULL ORDER BY name COLLATE NOCASE"
+        ).fetchall()
+    loose = []
+    for row in unassigned:
+        item = _member_payload(row)
+        item["doc_count"] = counts.get(row["id"], 0)
+        loose.append(item)
+    return {"ok": True, "families": families, "unassigned": loose}
+
+
+@app.post("/api/families")
+def create_family(
+    request: Request,
+    name: str = Form(...),
+    head_member_id: str = Form(""),
+):
+    denied = _need_auth(request)
+    if denied:
+        return denied
+    name = name.strip()
+    if not name:
+        return JSONResponse({"ok": False, "error": "Family name is required"}, status_code=400)
+    head_id = int(head_member_id) if str(head_member_id).isdigit() else None
+    now = utcnow()
+    with db() as conn:
+        cur = conn.execute(
+            "INSERT INTO families(name, head_member_id, created_at, updated_at) VALUES (?, ?, ?, ?)",
+            (name, head_id, now, now),
+        )
+        family_id = cur.lastrowid
+        if head_id:
+            conn.execute(
+                "UPDATE members SET family_id = ?, role = 'Head', updated_at = ? WHERE id = ?",
+                (family_id, now, head_id),
+            )
+        row = conn.execute("SELECT * FROM families WHERE id = ?", (family_id,)).fetchone()
+        counts = {}
+        family = _family_payload(conn, row, counts)
+    return {"ok": True, "family": family}
+
+
+@app.post("/api/families/{family_id}")
+def rename_family(family_id: int, request: Request, name: str = Form(...)):
+    denied = _need_auth(request)
+    if denied:
+        return denied
+    with db() as conn:
+        conn.execute(
+            "UPDATE families SET name = ?, updated_at = ? WHERE id = ?",
+            (name.strip(), utcnow(), family_id),
+        )
+    return {"ok": True}
+
+
+@app.delete("/api/families/{family_id}")
+def delete_family(family_id: int, request: Request):
+    denied = _need_auth(request)
+    if denied:
+        return denied
+    with db() as conn:
+        conn.execute("UPDATE members SET family_id = NULL WHERE family_id = ?", (family_id,))
+        conn.execute("DELETE FROM families WHERE id = ?", (family_id,))
+    return {"ok": True}
+
+
+@app.get("/api/stats")
+def stats(request: Request):
+    denied = _need_auth(request)
+    if denied:
+        return denied
+    with db() as conn:
+        members = conn.execute("SELECT COUNT(*) AS n FROM members").fetchone()["n"]
+        families = conn.execute("SELECT COUNT(*) AS n FROM families").fetchone()["n"]
+        documents = conn.execute(
+            "SELECT COUNT(*) AS n FROM documents WHERE status='active'"
+        ).fetchone()["n"]
+        policies = conn.execute(
+            "SELECT COUNT(*) AS n FROM policies WHERE status='active'"
+        ).fetchone()["n"]
+    return {
+        "ok": True,
+        "members": members,
+        "families": families,
+        "documents": documents,
+        "policies": policies,
+    }
+
+
+@app.get("/api/settings")
+def read_settings(request: Request):
+    denied = _need_auth(request)
+    if denied:
+        return denied
+    return {
+        "ok": True,
+        "household_name": get_setting("household_name", "Our family"),
+        "reminder_days": int(get_setting("reminder_days", "180") or 180),
+        "show_expired": get_setting("show_expired", "1") != "0",
+        "storage_dir": str(data_dir()),
+        "files_dir": str(uploads_dir()),
+        "database": str(data_dir() / "docmanager.sqlite3"),
+    }
+
+
+@app.post("/api/settings")
+def save_settings(
+    request: Request,
+    household_name: str = Form(""),
+    reminder_days: str = Form("180"),
+    show_expired: str = Form("1"),
+):
+    denied = _need_auth(request)
+    if denied:
+        return denied
+    if household_name.strip():
+        set_setting("household_name", household_name.strip())
+    try:
+        days = max(14, min(365, int(reminder_days)))
+    except ValueError:
+        days = 180
+    set_setting("reminder_days", str(days))
+    set_setting("show_expired", "0" if show_expired in {"0", "false", "off"} else "1")
+    return read_settings(request)
+
+
+@app.post("/api/pin/change")
+def change_pin(request: Request, current: str = Form(...), pin: str = Form(...), confirm: str = Form(...)):
+    denied = _need_auth(request)
+    if denied:
+        return denied
+    if not auth.check_pin(current):
+        return JSONResponse({"ok": False, "error": "Current PIN is wrong"}, status_code=400)
+    if pin != confirm:
+        return JSONResponse({"ok": False, "error": "New PINs do not match"}, status_code=400)
+    try:
+        auth.set_pin(pin)
+    except ValueError as exc:
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
+    return {"ok": True}
+
+
+@app.get("/api/backup")
+def download_backup(request: Request):
+    denied = _need_auth(request)
+    if denied:
+        return denied
+    buf = io.BytesIO()
+    root = data_dir()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        db_file = root / "docmanager.sqlite3"
+        if db_file.exists():
+            zf.write(db_file, "docmanager.sqlite3")
+        uploads = uploads_dir()
+        if uploads.exists():
+            for path in uploads.rglob("*"):
+                if path.is_file():
+                    zf.write(path, Path("uploads") / path.relative_to(uploads))
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=doc-manager-backup.zip"},
+    )
 
 
 @app.get("/api/documents")

@@ -8,8 +8,12 @@ const state = {
   types: [],
   scanItems: [],
   memberId: null,
+  familyId: null,
+  addUnder: null,
   docType: null,
 };
+
+const ROLES = ["Head", "Husband", "Wife", "Son", "Daughter", "Father", "Mother", "Brother", "Sister", "Other"];
 
 function svgIcon(kind) {
   const map = {
@@ -68,13 +72,32 @@ function showApp() {
 function memberOptions(selected) {
   const opts = [`<option value="">Unassigned</option>`]
     .concat(
-      state.members.map(
-        (m) =>
-          `<option value="${m.id}" ${String(m.id) === String(selected) ? "selected" : ""}>${esc(m.name)}</option>`
-      )
+      state.members.map((m) => {
+        const extra = m.family_name ? ` · ${m.family_name}` : "";
+        return `<option value="${m.id}" ${String(m.id) === String(selected) ? "selected" : ""}>${esc(m.name)}${esc(extra)}</option>`;
+      })
     )
     .join("");
   return opts;
+}
+
+function roleOptions(selected) {
+  const cur = selected || "Wife";
+  return ROLES.map(
+    (r) => `<option value="${r}" ${r === cur ? "selected" : ""}>${r}</option>`
+  ).join("");
+}
+
+function relPill(role) {
+  const key = (role || "").toLowerCase();
+  return `<span class="rel ${esc(key)}">${esc(role || "Member")}</span>`;
+}
+
+function setHouseTitle() {
+  const el = $("#house-title");
+  if (el && state.bootstrap && state.bootstrap.household_name) {
+    el.textContent = state.bootstrap.household_name;
+  }
 }
 
 function typeOptions(selected) {
@@ -99,16 +122,18 @@ function pill(bucket, expiry) {
 }
 
 async function render() {
+  setHouseTitle();
   const screen = $("#screen");
   if (state.tab === "home") await renderHome(screen);
   if (state.tab === "family") await renderFamily(screen);
   if (state.tab === "docs") await renderDocs(screen);
   if (state.tab === "insurance") await renderInsurance(screen);
   if (state.tab === "upload") await renderUpload(screen);
+  if (state.tab === "settings") await renderSettings(screen);
 }
 
 async function renderHome(screen) {
-  const data = await api("/api/dashboard");
+  const [data, stats] = await Promise.all([api("/api/dashboard"), api("/api/stats")]);
   const rows = data.items
     .map((item) => {
       return `<article class="card item ${item.bucket || ""}">
@@ -117,7 +142,7 @@ async function renderHome(screen) {
           <div>
             <h3>${esc(item.member_name || item.person_name || "Family member")}</h3>
             <div>${esc(item.label)} · ${esc(item.doc_number || "No number yet")}</div>
-            <div class="muted">Expiry ${esc(item.expiry_date || "—")} · Renew ${esc(item.renew_date || item.end_date || "—")}</div>
+            <div class="muted">${item.family_name ? esc(item.family_name) + " · " : ""}Expiry ${esc(item.expiry_date || "—")} · Renew ${esc(item.renew_date || item.end_date || "—")}</div>
             ${item.notes ? `<div class="muted">${esc(item.notes)}</div>` : ""}
           </div>
           <div>${pill(item.bucket, item.expiry_date)}</div>
@@ -129,15 +154,23 @@ async function renderHome(screen) {
     })
     .join("");
   screen.innerHTML = `
+    <div class="stats">
+      <div class="stat"><b>${stats.families}</b><span>Families</span></div>
+      <div class="stat"><b>${stats.members}</b><span>People</span></div>
+      <div class="stat"><b>${stats.documents}</b><span>Docs</span></div>
+      <div class="stat"><b>${data.items.length}</b><span>Due soon</span></div>
+    </div>
     <h2>Upcoming expiry</h2>
     <div class="banner">Red = under 2 months · Orange = under 4 months · Green = under 6 months. A row stays here until you upload the renewed copy.</div>
-    ${rows || `<div class="empty">Nothing expiring soon. Add family and upload documents.</div>`}
+    ${rows || `<div class="empty">Nothing expiring soon. Add a family and upload documents.</div>`}
   `;
 }
 
 async function renderFamily(screen) {
-  const data = await api("/api/members");
-  state.members = data.members;
+  const data = await api("/api/families");
+  const membersData = await api("/api/members");
+  state.members = membersData.members;
+
   if (state.memberId) {
     const detail = await api(`/api/members/${state.memberId}`);
     const m = detail.member;
@@ -154,24 +187,49 @@ async function renderFamily(screen) {
         </article>`
       )
       .join("");
+    const relatives = (detail.relatives || [])
+      .map(
+        (r) => `<button class="family-person" data-member="${r.id}">
+          ${avatarHtml(r.photo_url, r.code || r.name)}
+          <div class="meta"><b>${esc(r.name)}</b><div class="muted">${esc(r.role || r.relation || "")}</div></div>
+          ${relPill(r.role || r.relation || "Member")}
+        </button>`
+      )
+      .join("");
     screen.innerHTML = `
-      <button class="btn ghost" id="back-family">← All family</button>
+      <button class="btn ghost" id="back-family">← Families</button>
       <div class="card" style="margin-top:12px">
         <div class="row-card">
           ${avatarHtml(m.photo_url, m.code || m.name)}
           <div>
             <h2>${esc(m.name)}</h2>
-            <div class="muted">${esc(m.code || "")} ${esc(m.relation || "")} ${esc(m.dob || "")}</div>
+            <div class="muted">${esc(m.code || "")} ${m.family_name ? "· " + esc(m.family_name) : ""}</div>
+            <div style="margin-top:6px">${relPill(m.role || m.relation || "Member")}</div>
           </div>
         </div>
       </div>
+      <div class="section-title"><h3>People in this family</h3>
+        <button class="btn small ghost" id="add-under-this">+ Add under ${esc((m.code || m.name.split(" ")[0]))}</button>
+      </div>
+      ${relatives || `<div class="empty">No one else in this family yet. Add a wife, child, or parent.</div>`}
       <h3>Documents</h3>
       ${docs || `<div class="empty">No documents yet. Use Upload.</div>`}
+      <div class="card" id="under-form-wrap">${memberFormHtml({ under: m.id, title: "Add someone under " + m.name })}</div>
     `;
     $("#back-family").onclick = () => {
       state.memberId = null;
       render();
     };
+    $("#add-under-this").onclick = () => {
+      $("#under-form-wrap").scrollIntoView({ behavior: "smooth" });
+    };
+    bindMemberForm("#add-member");
+    $$("[data-member]").forEach((btn) => {
+      btn.onclick = () => {
+        state.memberId = btn.dataset.member;
+        render();
+      };
+    });
     $$("[data-del-doc]").forEach((btn) => {
       btn.onclick = async () => {
         if (!confirm("Delete this document?")) return;
@@ -182,46 +240,139 @@ async function renderFamily(screen) {
     return;
   }
 
-  const tiles = data.members
+  const familyCards = (data.families || [])
+    .map((fam) => {
+      const head = fam.head;
+      const others = (fam.members || []).filter((p) => !p.is_head);
+      const branch = others
+        .map(
+          (p) => `<button class="family-person" data-member="${p.id}">
+            ${avatarHtml(p.photo_url, p.code || p.name)}
+            <div class="meta"><b>${esc(p.name)}</b><div class="muted">${esc(p.code || "")} · ${p.doc_count} docs</div></div>
+            ${relPill(p.role || p.relation || "Member")}
+          </button>`
+        )
+        .join("");
+      return `<article class="family-card">
+        <div class="section-title">
+          <div>
+            <h3>${esc(fam.name)}</h3>
+            <div class="muted">${fam.count} people</div>
+          </div>
+        </div>
+        ${
+          head
+            ? `<button class="family-head" data-member="${head.id}">
+                ${avatarHtml(head.photo_url, head.code || head.name)}
+                <div class="meta"><b>${esc(head.name)}</b><div class="muted">${esc(head.code || "")} · ${head.doc_count} docs</div></div>
+                ${relPill("Head")}
+              </button>`
+            : ""
+        }
+        ${branch ? `<div class="family-branch">${branch}</div>` : `<p class="muted" style="margin:8px 0 0">No one added under this head yet.</p>`}
+        <div class="actions">
+          ${head ? `<button class="btn small ghost" data-add-under="${head.id}">+ Add under ${esc(head.code || head.name.split(" ")[0])}</button>` : ""}
+        </div>
+      </article>`;
+    })
+    .join("");
+
+  const loose = (data.unassigned || [])
     .map(
       (m) => `<button class="tile" data-member="${m.id}">
         ${m.photo_url ? `<img src="${esc(m.photo_url)}" alt="" />` : `<div class="avatar" style="margin:0 auto 6px">${esc((m.code || m.name).slice(0, 3).toUpperCase())}</div>`}
         <div class="code">${esc(m.code || m.name.split(" ")[0])}</div>
-        <div class="sub">${esc(m.name)} · ${m.doc_count} docs</div>
+        <div class="sub">${esc(m.name)}</div>
       </button>`
     )
     .join("");
+
+  const underPrefill = state.addUnder
+    ? memberFormHtml({ under: state.addUnder, title: "Add this person under a family head" })
+    : memberFormHtml({ title: "Add a person" });
+
   screen.innerHTML = `
-    <h2>Family</h2>
-    <div class="member-grid">${tiles || ""}</div>
-    <div class="card" style="margin-top:16px">
-      <h3>Add family member</h3>
-      <form id="add-member">
-        <label class="field">Name<input name="name" required /></label>
-        <div class="grid2">
-          <label class="field">Short code (LPA)<input name="code" maxlength="8" /></label>
-          <label class="field">Relation<input name="relation" placeholder="Self / Spouse / Child" /></label>
-        </div>
-        <div class="grid2">
-          <label class="field">Phone<input name="phone" inputmode="tel" /></label>
-          <label class="field">Date of birth<input name="dob" type="date" /></label>
-        </div>
-        <label class="field">Photo<input name="photo" type="file" accept="image/*" /></label>
-        <button class="btn primary" type="submit">Save member</button>
+    <div class="section-title">
+      <h2>Families</h2>
+    </div>
+    <p class="muted">Each head can have their own people. Example: VBA’s family with wife NVA under him.</p>
+    ${familyCards || `<div class="empty">No families yet. Add VBA as a head, then add NVA under him.</div>`}
+    ${loose ? `<h3>Not in a family yet</h3><div class="member-grid">${loose}</div>` : ""}
+    <div class="card">
+      <h3>Start a new family</h3>
+      <form id="add-family">
+        <label class="field">Family name<input name="name" placeholder="VBA's family" required /></label>
+        <label class="field">Head of family
+          <select name="head_member_id">
+            <option value="">Choose later</option>
+            ${state.members.map((m) => `<option value="${m.id}">${esc(m.name)}</option>`).join("")}
+          </select>
+        </label>
+        <button class="btn primary" type="submit">Create family</button>
       </form>
     </div>
+    <div class="card">${underPrefill}</div>
   `;
+
   $$("[data-member]").forEach((btn) => {
     btn.onclick = () => {
       state.memberId = btn.dataset.member;
+      state.addUnder = null;
       render();
     };
   });
-  $("#add-member").onsubmit = async (e) => {
+  $$("[data-add-under]").forEach((btn) => {
+    btn.onclick = () => {
+      state.addUnder = btn.dataset.addUnder;
+      render();
+    };
+  });
+  bindMemberForm("#add-member");
+  $("#add-family").onsubmit = async (e) => {
+    e.preventDefault();
+    await api("/api/families", { method: "POST", body: new FormData(e.target) });
+    e.target.reset();
+    render();
+  };
+}
+
+function memberFormHtml({ under, title }) {
+  const underVal = under || "";
+  return `
+    <h3>${esc(title)}</h3>
+    <form id="add-member">
+      <input type="hidden" name="under_member_id" value="${esc(underVal)}" />
+      <label class="field">Name<input name="name" required placeholder="NVA / Nehal" /></label>
+      <div class="grid2">
+        <label class="field">Short code<input name="code" maxlength="8" placeholder="NVA" /></label>
+        <label class="field">Relation to head
+          <select name="role">${roleOptions(under ? "Wife" : "Head")}</select>
+        </label>
+      </div>
+      ${
+        under
+          ? ""
+          : `<label class="field"><input type="checkbox" name="start_family" value="1" checked /> This person is head of their own family</label>`
+      }
+      <div class="grid2">
+        <label class="field">Phone<input name="phone" inputmode="tel" /></label>
+        <label class="field">Date of birth<input name="dob" type="date" /></label>
+      </div>
+      <label class="field">Photo<input name="photo" type="file" accept="image/*" /></label>
+      <button class="btn primary" type="submit">${under ? "Add to this family" : "Save person"}</button>
+    </form>
+  `;
+}
+
+function bindMemberForm(sel) {
+  const form = $(sel);
+  if (!form) return;
+  form.onsubmit = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
+    fd.set("relation", fd.get("role") || "");
     await api("/api/members", { method: "POST", body: fd });
-    e.target.reset();
+    state.addUnder = null;
     render();
   };
 }
@@ -441,6 +592,77 @@ async function renderUpload(screen) {
   });
 }
 
+async function renderSettings(screen) {
+  const [settings, stats] = await Promise.all([api("/api/settings"), api("/api/stats")]);
+  screen.innerHTML = `
+    <h2>Settings</h2>
+    <div class="stats">
+      <div class="stat"><b>${stats.families}</b><span>Families</span></div>
+      <div class="stat"><b>${stats.members}</b><span>People</span></div>
+      <div class="stat"><b>${stats.documents}</b><span>Docs</span></div>
+      <div class="stat"><b>${stats.policies}</b><span>Policies</span></div>
+    </div>
+    <div class="card">
+      <h3>Household</h3>
+      <form id="save-settings">
+        <label class="field">Household name
+          <input name="household_name" value="${esc(settings.household_name || "")}" />
+        </label>
+        <label class="field">Show on Home if expiry is within (days)
+          <input name="reminder_days" type="number" min="14" max="365" value="${esc(settings.reminder_days)}" />
+        </label>
+        <div class="settings-row">
+          <div><b>Show already-expired docs</b><div class="hint">Keep them on Home until you upload the new copy</div></div>
+          <input class="toggle" type="checkbox" name="show_expired" value="1" ${settings.show_expired ? "checked" : ""} />
+        </div>
+        <button class="btn primary" type="submit">Save settings</button>
+      </form>
+    </div>
+    <div class="card">
+      <h3>Change family PIN</h3>
+      <p class="muted">Same PIN on every phone. Choose 4–8 digits.</p>
+      <form id="change-pin">
+        <label class="field">Current PIN<input name="current" inputmode="numeric" maxlength="8" required /></label>
+        <label class="field">New PIN<input name="pin" inputmode="numeric" maxlength="8" required /></label>
+        <label class="field">Confirm new PIN<input name="confirm" inputmode="numeric" maxlength="8" required /></label>
+        <button class="btn primary" type="submit">Update PIN</button>
+        <p class="muted" id="pin-status"></p>
+      </form>
+    </div>
+    <div class="card">
+      <h3>Backup</h3>
+      <p class="muted">Download a zip of the database and every uploaded PDF/photo. Keep this somewhere safe.</p>
+      <a class="btn primary" href="/api/backup">Download backup zip</a>
+    </div>
+    <div class="card">
+      <h3>Where files live</h3>
+      <div class="settings-row"><div>Photos & PDFs</div><div class="hint">${esc(settings.files_dir)}</div></div>
+      <div class="settings-row"><div>Names & dates</div><div class="hint">${esc(settings.database)}</div></div>
+      <p class="muted">Copy the data folder to back up. Files stay on this computer, not on the iPhone.</p>
+    </div>
+  `;
+  $("#save-settings").onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    if (!fd.get("show_expired")) fd.set("show_expired", "0");
+    const saved = await api("/api/settings", { method: "POST", body: fd });
+    state.bootstrap = { ...state.bootstrap, household_name: saved.household_name };
+    setHouseTitle();
+    render();
+  };
+  $("#change-pin").onsubmit = async (e) => {
+    e.preventDefault();
+    $("#pin-status").textContent = "";
+    try {
+      await api("/api/pin/change", { method: "POST", body: new FormData(e.target) });
+      $("#pin-status").textContent = "PIN updated.";
+      e.target.reset();
+    } catch (err) {
+      $("#pin-status").textContent = err.message;
+    }
+  };
+}
+
 async function boot() {
   const info = await fetch("/api/bootstrap").then((r) => r.json());
   state.bootstrap = info;
@@ -454,6 +676,7 @@ async function boot() {
     return;
   }
   showApp();
+  setHouseTitle();
   const members = await api("/api/members");
   state.members = members.members;
   render();
@@ -487,12 +710,20 @@ $("#logout").addEventListener("click", async () => {
   showLock(false);
 });
 
+$("#open-settings").addEventListener("click", () => {
+  $$(".tabs button").forEach((b) => b.classList.remove("active"));
+  state.tab = "settings";
+  state.memberId = null;
+  render();
+});
+
 $$(".tabs button").forEach((btn) => {
   btn.addEventListener("click", () => {
     $$(".tabs button").forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
     state.tab = btn.dataset.tab;
     state.memberId = null;
+    state.addUnder = null;
     render();
   });
 });

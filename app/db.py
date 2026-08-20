@@ -66,10 +66,21 @@ CREATE TABLE IF NOT EXISTS members (
     code TEXT,
     name TEXT NOT NULL,
     relation TEXT,
+    role TEXT,
+    family_id INTEGER,
     phone TEXT,
     email TEXT,
     dob TEXT,
     photo_path TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS families (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    head_member_id INTEGER,
     notes TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
@@ -120,6 +131,24 @@ CREATE TABLE IF NOT EXISTS policies (
 def init_db() -> None:
     with db() as conn:
         conn.executescript(SCHEMA)
+        _migrate(conn)
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    member_cols = {row[1] for row in conn.execute("PRAGMA table_info(members)")}
+    if "family_id" not in member_cols:
+        conn.execute("ALTER TABLE members ADD COLUMN family_id INTEGER")
+    if "role" not in member_cols:
+        conn.execute("ALTER TABLE members ADD COLUMN role TEXT")
+    defaults = {
+        "household_name": "Our family",
+        "reminder_days": "180",
+        "show_expired": "1",
+    }
+    for key, value in defaults.items():
+        exists = conn.execute("SELECT 1 FROM settings WHERE key = ?", (key,)).fetchone()
+        if not exists:
+            conn.execute("INSERT INTO settings(key, value) VALUES (?, ?)", (key, value))
 
 
 def get_setting(key: str, default: str | None = None) -> str | None:

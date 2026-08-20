@@ -5,7 +5,8 @@ Family document vault for iPhone and other phones.
 - One shared PIN for the household
 - Documents stay on the server disk (SQLite + files) so they are not lost when you change phones
 - Upload a zip, PDF, JPG, or PNG — the app reads passport / PAN / Aadhaar / DL / insurance details
-- Dashboard colours: red < 2 months, orange < 4 months, green < 6 months
+- Nested families: VBA can have his own family with NVA (wife) under him
+- Settings: household name, reminder window, PIN change, backup zip
 
 ## Run (office PC, Raspberry Pi, or any always-on machine)
 

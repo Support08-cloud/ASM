@@ -182,6 +182,7 @@ input, select, textarea {
   min-height: 44px;
   padding: 10px 12px;
 }
+input[type="checkbox"] { width: auto; min-height: auto; margin-right: 8px; }
 textarea { min-height: 80px; resize: vertical; }
 .pin-input { font-size: 28px; letter-spacing: 10px; text-align: center; }
 
@@ -225,6 +226,113 @@ textarea { min-height: 80px; resize: vertical; }
   font-size: 12px;
   color: var(--stone);
   word-break: break-all;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.stat {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 6px;
+  text-align: center;
+}
+.stat b { display: block; font-size: 18px; color: var(--copper-deep); }
+.stat span { font-size: 10px; color: var(--stone); font-weight: 700; }
+
+.family-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+.family-card h3 { margin: 0; }
+.family-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  background: var(--cream);
+  border-radius: 14px;
+  padding: 10px;
+  text-align: left;
+  margin-top: 10px;
+}
+.family-branch {
+  margin: 8px 0 0 24px;
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.family-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 14px;
+  padding: 8px 10px;
+  text-align: left;
+}
+.family-person .meta, .family-head .meta { flex: 1; min-width: 0; }
+.rel {
+  display: inline-block;
+  background: #111;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+.rel.wife, .rel.husband, .rel.spouse { background: var(--copper); }
+.rel.child, .rel.son, .rel.daughter { background: var(--ok); }
+.rel.head { background: var(--ink); }
+
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.settings-row:last-child { border-bottom: 0; }
+.settings-row .hint { font-size: 12px; color: var(--stone); font-weight: 400; }
+.toggle {
+  appearance: none;
+  width: 48px;
+  height: 28px;
+  border-radius: 999px;
+  background: #ddd;
+  position: relative;
+  border: 0;
+}
+.toggle:checked { background: var(--copper); }
+.toggle::after {
+  content: "";
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: #fff;
+}
+.toggle:checked::after { left: 23px; }
+
+.section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 @media (min-width: 720px) {
