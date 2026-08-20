@@ -20,9 +20,13 @@ cp .env.example .env
 python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8080
 ```
 
-On iPhone: open `http://THAT-PC-LAN-IP:8080` in Safari, then Share → Add to Home Screen.
+Keep that machine running. Other phones open the same address in Safari.
 
-For access outside the house, put HTTPS in front (Cloudflare Tunnel, Tailscale, or a VPS).
+System packages for photo reading:
+
+```bash
+sudo apt-get install -y tesseract-ocr
+```
 
 First open
 ----------
