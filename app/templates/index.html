@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#111111" />
+  <title>Vision 360 Doc Manager</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
+  <link rel="stylesheet" href="/static/app.css?v=4" />
+</head>
+<body>
+  <div id="lock" class="lock hidden">
+    <img src="/static/brand/logo-white.png" alt="Vision 360" />
+    <h1 id="lock-title">Doc Manager</h1>
+    <p id="lock-copy">Family documents on every phone. Set a PIN once.</p>
+    <form id="lock-form">
+      <label class="field">Family PIN
+        <input class="pin-input" id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" />
+      </label>
+      <label class="field hidden" id="confirm-wrap">Confirm PIN
+        <input class="pin-input" id="pin2" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" />
+      </label>
+      <button class="btn primary" type="submit" id="lock-btn">Open</button>
+      <p class="muted" id="lock-error" style="color:#ffb4a8;margin-top:10px"></p>
+    </form>
+  </div>
+
+  <div id="app" class="hidden">
+    <header class="app-header">
+      <img class="logo" src="/static/brand/logo-white.png" alt="Vision 360" />
+      <div class="titles">
+        <h1 id="house-title">Doc Manager</h1>
+        <p>Family vault · always on every phone</p>
+      </div>
+      <button class="icon-btn" id="open-settings" type="button" aria-label="Settings">⚙</button>
+      <button class="icon-btn" id="logout" type="button">Exit</button>
+    </header>
+
+    <main id="screen" class="screen"></main>
+
+    <nav class="tabs">
+      <button data-tab="home" class="active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 11l8-7 8 7v9H4z"/></svg>
+        Home
+      </button>
+      <button data-tab="family">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M4 19c1-3 3.5-5 5-5s4 2 5 5"/><path d="M14 19c.4-2 1.8-3.5 3-3.5 1.4 0 2.6 1 3.2 3.5"/></svg>
+        Family
+      </button>
+      <button data-tab="docs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>
+        Docs
+      </button>
+      <button data-tab="insurance">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 4v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg>
+        Policy
+      </button>
+      <button data-tab="upload">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V5"/><path d="M7 10l5-5 5 5"/><path d="M5 19h14"/></svg>
+        Upload
+      </button>
+    </nav>
+  </div>
+  <script src="/static/app.js?v=4"></script>
+</body>
+</html>
