@@ -1,0 +1,11 @@
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+python-multipart==0.0.20
+itsdangerous==2.2.0
+pydantic==2.11.7
+pillow==11.3.0
+pymupdf==1.26.3
+pytesseract==0.3.13
+python-dateutil==2.9.0.post0
+httpx==0.28.1
+pytest==8.4.1

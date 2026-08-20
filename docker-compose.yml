@@ -1,0 +1,11 @@
+services:
+  doc-manager:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - doc-data:/data
+    restart: unless-stopped
+
+volumes:
+  doc-data:
