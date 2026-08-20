@@ -95,3 +95,49 @@ def test_expiry_colours():
 def test_passport_renew_is_180_days():
     expiry = date(2027, 1, 1)
     assert renew_date_for("passport", expiry) == date(2026, 7, 5)
+
+
+def test_garbled_passport_mrz_from_phone_photo():
+    """Typical Tesseract output from an open Indian passport photo."""
+    text = """
+    REPUBLIC OF INDIA
+    Passport No.
+    A1234567
+    Surname ANKOLIYA
+    VANSH BALKRUSHNABHAI
+    Date of Birth 31/01/2 004
+    Date of Issue 22/1242015
+    Date of Expiry 21/12/2020
+    P<INDANKOLIYA<<VANSH<BALKRUSHNABHA I<<<<<<<<< | junk
+    A12 34567<8 INDO4O13 19M20122 16<<e< junk
+    """
+    parsed = detect_and_extract(text, hint="passport")
+    assert parsed["doc_type"] == "passport"
+    assert parsed["doc_number"].startswith("A1234567")
+    assert parsed["dob"] == "2004-01-31"
+    assert parsed["expiry_date"] == "2020-12-21"
+    assert parsed["issue_date"] == "2015-12-22"
+
+
+def test_aadhaar_uses_dob_not_download_date():
+    text = """
+    UNIQUE IDENTIFICATION AUTHORITY OF INDIA
+    AADHAAR
+    Vansh Kumar
+    DOB: 31/01/2004
+    Download Date: 09/06/2021
+    Issue Date: 07/06/2021
+    2345 6789 0123
+    """
+    parsed = detect_and_extract(text)
+    assert parsed["doc_type"] == "aadhaar"
+    assert parsed["doc_number"] == "2345 6789 0123"
+    assert parsed["dob"] == "2004-01-31"
+
+
+def test_filename_hint_prefers_passport_over_stray_pan_like_text():
+    from app.extract import hint_from_filename
+
+    assert hint_from_filename("VBA - passport (2015-2020).jpg") == "passport"
+    assert hint_from_filename("VBA.pdf") is None
+

@@ -330,6 +330,7 @@ function reviewCard(item, idx) {
   return `<form class="card" data-review="${idx}">
     <div class="review-file">${esc(item.original_name || item.file_name)}</div>
     <div class="muted">Read confidence ${esc(item.confidence || 0)}% ${item.needs_review ? "· please check" : "· looks good"}</div>
+    ${item.raw_text ? `<details><summary class="muted">Text the app read</summary><pre class="review-file">${esc(item.raw_text).slice(0, 1200)}</pre></details>` : ""}
     ${item.error ? `<div class="banner">${esc(item.error)}</div>` : ""}
     <label class="field">Document type
       <select name="doc_type">${typeOptions(item.doc_type)}</select>
@@ -374,6 +375,7 @@ async function renderUpload(screen) {
   screen.innerHTML = `
     <h2>Upload & auto-read</h2>
     <p class="muted">Zip, PDF, JPG, or PNG. Passport, PAN, Aadhaar, DL and policy files are read automatically. Check the details once, then save.</p>
+    <div class="banner" id="storage-banner"></div>
     <form id="scan-form" class="card">
       <label class="drop">Tap to choose files from iPhone
         <input id="scan-files" name="files" type="file" accept=".zip,.pdf,.jpg,.jpeg,.png,.webp,.heic,image/*" multiple style="margin-top:10px" />
@@ -384,6 +386,15 @@ async function renderUpload(screen) {
     </form>
     ${reviews}
   `;
+  const store = $("#storage-banner");
+  if (store && state.bootstrap && state.bootstrap.files_dir) {
+    store.textContent =
+      "Original files are stored in " +
+      state.bootstrap.files_dir +
+      ". Names, numbers and dates are stored in " +
+      state.bootstrap.database +
+      ". They stay on this computer until you delete them.";
+  }
   $("#scan-form").onsubmit = async (e) => {
     e.preventDefault();
     const input = $("#scan-files");

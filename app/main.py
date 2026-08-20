@@ -134,6 +134,9 @@ def bootstrap(request: Request):
         "pin_set": auth.pin_is_set(),
         "authed": _authed(request),
         "doc_types": [{"id": k, "label": v} for k, v in DOC_LABELS.items()],
+        "storage_dir": str(data_dir()),
+        "files_dir": str(uploads_dir()),
+        "database": str(data_dir() / "docmanager.sqlite3"),
     }
 
 

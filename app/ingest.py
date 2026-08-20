@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from app.extract import detect_and_extract, label_for
+from app.extract import detect_and_extract, hint_from_filename, label_for
 from app.ocr import HEIC_SUFFIXES, IMAGE_SUFFIXES, PDF_SUFFIXES, read_file_text
 
 ALLOWED = IMAGE_SUFFIXES | PDF_SUFFIXES | HEIC_SUFFIXES | {".zip"}
@@ -70,9 +70,10 @@ def expand_uploads(files: list[Path], work_dir: Path) -> list[Path]:
 
 def extract_one(path: Path) -> dict[str, Any]:
     text = read_file_text(path)
-    parsed = detect_and_extract(text)
+    original = path.name.split("_", 1)[-1]
+    parsed = detect_and_extract(text, hint=hint_from_filename(original))
     parsed["file_name"] = path.name
-    parsed["original_name"] = path.name.split("_", 1)[-1]
+    parsed["original_name"] = original
     parsed["file_path"] = str(path)
     parsed["raw_text"] = text[:8000]
     parsed["label"] = label_for(parsed.get("doc_type") or "other")
