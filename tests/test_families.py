@@ -34,6 +34,30 @@ def test_vba_family_then_wife_nva(tmp_path, monkeypatch):
         assert detail["relatives"][0]["code"] == "NVA"
 
 
+def test_unassigned_people_show_when_no_family_yet(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    with TestClient(app) as client:
+        client.post("/api/setup", data={"pin": "2580", "confirm": "2580"})
+        person = client.post(
+            "/api/members",
+            data={"name": "Vansh Ankoliya", "code": "VBA"},
+        ).json()["member"]
+        families = client.get("/api/families").json()
+        assert families["ok"] is True
+        assert families["families"] == []
+        assert families["unassigned"][0]["id"] == person["id"]
+        assert families["unassigned"][0]["code"] == "VBA"
+        started = client.post(
+            "/api/families",
+            data={"name": "VBA's family", "head_member_id": str(person["id"])},
+        ).json()
+        assert started["ok"] is True
+        after = client.get("/api/families").json()
+        assert len(after["families"]) == 1
+        assert after["families"][0]["head"]["code"] == "VBA"
+        assert after["unassigned"] == []
+
+
 def test_settings_and_pin_change(tmp_path, monkeypatch):
     monkeypatch.setenv("DATA_DIR", str(tmp_path))
     with TestClient(app) as client:

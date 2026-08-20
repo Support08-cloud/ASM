@@ -46,10 +46,26 @@ async function api(url, options = {}) {
   if (res.status === 401) {
     if (data.error === "setup_required") showLock(true);
     else showLock(false);
-    throw new Error(data.error || "auth");
+    const err = new Error(data.error || "auth");
+    err.auth = true;
+    throw err;
   }
-  if (!res.ok || data.ok === false) throw new Error(data.error || "Request failed");
+  if (!res.ok || data.ok === false) {
+    const err = new Error(data.error || data.detail || "Request failed");
+    err.status = res.status;
+    throw err;
+  }
   return data;
+}
+
+async function apiSafe(url, options = {}) {
+  try {
+    return await api(url, options);
+  } catch (err) {
+    if (err.auth) throw err;
+    console.warn(url, err);
+    return null;
+  }
 }
 
 function showLock(setup) {
@@ -124,16 +140,27 @@ function pill(bucket, expiry) {
 async function render() {
   setHouseTitle();
   const screen = $("#screen");
-  if (state.tab === "home") await renderHome(screen);
-  if (state.tab === "family") await renderFamily(screen);
-  if (state.tab === "docs") await renderDocs(screen);
-  if (state.tab === "insurance") await renderInsurance(screen);
-  if (state.tab === "upload") await renderUpload(screen);
-  if (state.tab === "settings") await renderSettings(screen);
+  screen.innerHTML = `<div class="empty">Loading…</div>`;
+  try {
+    if (state.tab === "home") await renderHome(screen);
+    if (state.tab === "family") await renderFamily(screen);
+    if (state.tab === "docs") await renderDocs(screen);
+    if (state.tab === "insurance") await renderInsurance(screen);
+    if (state.tab === "upload") await renderUpload(screen);
+    if (state.tab === "settings") await renderSettings(screen);
+  } catch (err) {
+    if (err.auth) return;
+    screen.innerHTML = `
+      <div class="banner">Could not load this screen. ${esc(err.message || "Try again.")}</div>
+      <button class="btn primary" id="retry-screen" type="button">Try again</button>
+    `;
+    $("#retry-screen").onclick = () => render();
+  }
 }
 
 async function renderHome(screen) {
-  const [data, stats] = await Promise.all([api("/api/dashboard"), api("/api/stats")]);
+  const data = await api("/api/dashboard");
+  const stats = (await apiSafe("/api/stats")) || {};
   const rows = data.items
     .map((item) => {
       return `<article class="card item ${item.bucket || ""}">
@@ -155,9 +182,9 @@ async function renderHome(screen) {
     .join("");
   screen.innerHTML = `
     <div class="stats">
-      <div class="stat"><b>${stats.families}</b><span>Families</span></div>
-      <div class="stat"><b>${stats.members}</b><span>People</span></div>
-      <div class="stat"><b>${stats.documents}</b><span>Docs</span></div>
+      <div class="stat"><b>${stats.families ?? "—"}</b><span>Families</span></div>
+      <div class="stat"><b>${stats.members ?? "—"}</b><span>People</span></div>
+      <div class="stat"><b>${stats.documents ?? "—"}</b><span>Docs</span></div>
       <div class="stat"><b>${data.items.length}</b><span>Due soon</span></div>
     </div>
     <h2>Upcoming expiry</h2>
@@ -167,9 +194,12 @@ async function renderHome(screen) {
 }
 
 async function renderFamily(screen) {
-  const data = await api("/api/families");
-  const membersData = await api("/api/members");
-  state.members = membersData.members;
+  const membersData = await apiSafe("/api/members");
+  if (membersData && membersData.members) state.members = membersData.members;
+  let data = await apiSafe("/api/families");
+  if (!data) {
+    data = { families: [], unassigned: state.members || [] };
+  }
 
   if (state.memberId) {
     const detail = await api(`/api/members/${state.memberId}`);
@@ -279,11 +309,17 @@ async function renderFamily(screen) {
 
   const loose = (data.unassigned || [])
     .map(
-      (m) => `<button class="tile" data-member="${m.id}">
-        ${m.photo_url ? `<img src="${esc(m.photo_url)}" alt="" />` : `<div class="avatar" style="margin:0 auto 6px">${esc((m.code || m.name).slice(0, 3).toUpperCase())}</div>`}
-        <div class="code">${esc(m.code || m.name.split(" ")[0])}</div>
-        <div class="sub">${esc(m.name)}</div>
-      </button>`
+      (m) => `<article class="family-card">
+        <button class="family-person" data-member="${m.id}">
+          ${avatarHtml(m.photo_url, m.code || m.name)}
+          <div class="meta"><b>${esc(m.name)}</b><div class="muted">${esc(m.code || "")} · ${m.doc_count || 0} docs</div></div>
+          ${relPill(m.role || m.relation || "Member")}
+        </button>
+        <div class="actions">
+          <button class="btn small ghost" data-start-family="${m.id}" data-start-name="${esc(m.code || m.name.split(" ")[0])}">Start ${esc(m.code || m.name.split(" ")[0])}'s family</button>
+          <button class="btn small ghost" data-add-under="${m.id}">+ Add under ${esc(m.code || m.name.split(" ")[0])}</button>
+        </div>
+      </article>`
     )
     .join("");
 
@@ -296,8 +332,8 @@ async function renderFamily(screen) {
       <h2>Families</h2>
     </div>
     <p class="muted">Each head can have their own people. Example: VBA’s family with wife NVA under him.</p>
-    ${familyCards || `<div class="empty">No families yet. Add VBA as a head, then add NVA under him.</div>`}
-    ${loose ? `<h3>Not in a family yet</h3><div class="member-grid">${loose}</div>` : ""}
+    ${familyCards || (loose ? "" : `<div class="empty">No people yet. Add a head below, then add wife, children, or parents under them.</div>`)}
+    ${loose ? `<h3>Not in a family yet</h3>${loose}` : ""}
     <div class="card">
       <h3>Start a new family</h3>
       <form id="add-family">
@@ -328,11 +364,28 @@ async function renderFamily(screen) {
     };
   });
   bindMemberForm("#add-member");
+  $$("[data-start-family]").forEach((btn) => {
+    btn.onclick = async () => {
+      const fd = new FormData();
+      fd.set("name", `${btn.dataset.startName}'s family`);
+      fd.set("head_member_id", btn.dataset.startFamily);
+      try {
+        await api("/api/families", { method: "POST", body: fd });
+        render();
+      } catch (err) {
+        alert(err.message || "Could not start family");
+      }
+    };
+  });
   $("#add-family").onsubmit = async (e) => {
     e.preventDefault();
-    await api("/api/families", { method: "POST", body: new FormData(e.target) });
-    e.target.reset();
-    render();
+    try {
+      await api("/api/families", { method: "POST", body: new FormData(e.target) });
+      e.target.reset();
+      render();
+    } catch (err) {
+      alert(err.message || "Could not create family");
+    }
   };
 }
 
@@ -359,6 +412,7 @@ function memberFormHtml({ under, title }) {
         <label class="field">Date of birth<input name="dob" type="date" /></label>
       </div>
       <label class="field">Photo<input name="photo" type="file" accept="image/*" /></label>
+      <p class="form-error" hidden></p>
       <button class="btn primary" type="submit">${under ? "Add to this family" : "Save person"}</button>
     </form>
   `;
@@ -369,11 +423,35 @@ function bindMemberForm(sel) {
   if (!form) return;
   form.onsubmit = async (e) => {
     e.preventDefault();
-    const fd = new FormData(e.target);
-    fd.set("relation", fd.get("role") || "");
-    await api("/api/members", { method: "POST", body: fd });
-    state.addUnder = null;
-    render();
+    const errEl = form.querySelector(".form-error");
+    const btn = form.querySelector("button[type=submit]");
+    const old = btn ? btn.textContent : "";
+    if (errEl) {
+      errEl.hidden = true;
+      errEl.textContent = "";
+    }
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Saving…";
+    }
+    try {
+      const fd = new FormData(e.target);
+      fd.set("relation", fd.get("role") || "");
+      await api("/api/members", { method: "POST", body: fd });
+      state.addUnder = null;
+      render();
+    } catch (err) {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = old;
+      }
+      if (errEl) {
+        errEl.hidden = false;
+        errEl.textContent = err.message || "Could not save this person.";
+      } else {
+        alert(err.message || "Could not save this person.");
+      }
+    }
   };
 }
 
@@ -593,14 +671,15 @@ async function renderUpload(screen) {
 }
 
 async function renderSettings(screen) {
-  const [settings, stats] = await Promise.all([api("/api/settings"), api("/api/stats")]);
+  const settings = await api("/api/settings");
+  const stats = (await apiSafe("/api/stats")) || {};
   screen.innerHTML = `
     <h2>Settings</h2>
     <div class="stats">
-      <div class="stat"><b>${stats.families}</b><span>Families</span></div>
-      <div class="stat"><b>${stats.members}</b><span>People</span></div>
-      <div class="stat"><b>${stats.documents}</b><span>Docs</span></div>
-      <div class="stat"><b>${stats.policies}</b><span>Policies</span></div>
+      <div class="stat"><b>${stats.families ?? "—"}</b><span>Families</span></div>
+      <div class="stat"><b>${stats.members ?? "—"}</b><span>People</span></div>
+      <div class="stat"><b>${stats.documents ?? "—"}</b><span>Docs</span></div>
+      <div class="stat"><b>${stats.policies ?? "—"}</b><span>Policies</span></div>
     </div>
     <div class="card">
       <h3>Household</h3>
@@ -677,8 +756,8 @@ async function boot() {
   }
   showApp();
   setHouseTitle();
-  const members = await api("/api/members");
-  state.members = members.members;
+  const members = await apiSafe("/api/members");
+  if (members && members.members) state.members = members.members;
   render();
 }
 
@@ -697,8 +776,8 @@ $("#lock-form").addEventListener("submit", async (e) => {
       await api("/api/login", { method: "POST", body: fd });
     }
     showApp();
-    const members = await api("/api/members");
-    state.members = members.members;
+    const members = await apiSafe("/api/members");
+    if (members && members.members) state.members = members.members;
     render();
   } catch (err) {
     $("#lock-error").textContent = err.message;

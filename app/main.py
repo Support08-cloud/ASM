@@ -169,7 +169,10 @@ def _family_payload(conn, family_row, counts: dict) -> dict:
 
 @app.get("/")
 def home():
-    return FileResponse(TEMPLATES / "index.html")
+    return FileResponse(
+        TEMPLATES / "index.html",
+        headers={"Cache-Control": "no-cache"},
+    )
 
 
 @app.get("/manifest.webmanifest")
@@ -179,7 +182,11 @@ def manifest():
 
 @app.get("/sw.js")
 def service_worker():
-    return FileResponse(STATIC / "sw.js", media_type="text/javascript")
+    return FileResponse(
+        STATIC / "sw.js",
+        media_type="text/javascript",
+        headers={"Cache-Control": "no-cache"},
+    )
 
 
 @app.get("/api/bootstrap")

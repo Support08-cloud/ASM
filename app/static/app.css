@@ -221,6 +221,7 @@ textarea { min-height: 80px; resize: vertical; }
 }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .empty { text-align: center; color: var(--stone); padding: 28px 10px; }
+.form-error { color: var(--danger); font-size: 13px; margin: 8px 0 0; }
 
 .review-file {
   font-size: 12px;

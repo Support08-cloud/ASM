@@ -1,5 +1,5 @@
-const CACHE = "v360-doc-shell-v1";
-const SHELL = ["/", "/static/app.css", "/static/app.js", "/static/brand/logo.png"];
+const CACHE = "v360-doc-shell-v4";
+const SHELL = ["/", "/static/app.css?v=4", "/static/app.js?v=4", "/static/brand/logo.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
