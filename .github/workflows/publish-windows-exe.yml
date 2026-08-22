@@ -1,0 +1,43 @@
+name: Publish Windows EXE
+
+on:
+  push:
+    branches:
+      - cursor/v360-branded-exe-99bc
+      - cursor/diamond-file-router-d058
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Test core engine
+        run: dotnet test tests/DiamondFileRouter.Core.Tests/DiamondFileRouter.Core.Tests.csproj -c Release --nologo
+
+      - name: Publish self-contained EXE
+        run: |
+          dotnet publish src/DiamondFileRouter.App/DiamondFileRouter.App.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
+            -o artifacts/DiamondFileRouter/win-x64
+
+      - name: Upload DiamondFileRouter.exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: DiamondFileRouter-win-x64
+          path: artifacts/DiamondFileRouter/win-x64/DiamondFileRouter.exe
+          if-no-files-found: error

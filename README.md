@@ -60,9 +60,11 @@ Layout rules applied:
 
 Official assets live in `src/DiamondFileRouter.App/Assets/` (`logo.png`, `logo-white.png`, `powered-by*.png`, `app.ico`).
 
-## Build the Windows EXE
+## Open the Windows EXE
 
-Requires Windows with the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (including the Windows desktop workload).
+A ready-to-run build is in [`dist/DiamondFileRouter.exe`](dist/DiamondFileRouter.exe). Download that file onto a Windows PC and double-click it. No Visual Studio or .NET install is required.
+
+To rebuild from source (Windows, [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) with the desktop workload):
 
 ```powershell
 .\scripts\publish-windows.ps1
@@ -71,8 +73,6 @@ Requires Windows with the [.NET 8 SDK](https://dotnet.microsoft.com/download/dot
 Output:
 
 `artifacts/DiamondFileRouter/win-x64/DiamondFileRouter.exe`
-
-The publish is **self-contained**. Another Windows PC does not need Visual Studio or a .NET runtime installed.
 
 Run tests:
 
