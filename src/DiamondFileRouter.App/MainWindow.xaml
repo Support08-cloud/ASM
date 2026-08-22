@@ -28,7 +28,7 @@
                                RenderOptions.BitmapScalingMode="HighQuality"/>
                         <TextBlock Text="Diamond File Router" Foreground="{StaticResource WhiteBrush}"
                                    FontSize="15" FontWeight="SemiBold" Margin="0,16,0,0"/>
-                        <TextBlock Text="V360.Tech · Internal utility" Foreground="{StaticResource Orange300Brush}"
+                        <TextBlock Text="V360.Tech · Internal utility" Foreground="{StaticResource CloudGreyBrush}"
                                    FontSize="12" Margin="0,4,0,0"/>
                         <Border Background="#22FFFFFF" CornerRadius="4" Padding="8,5" Margin="0,14,0,0" HorizontalAlignment="Left">
                             <TextBlock Text="INTERNAL USE ONLY" Foreground="{StaticResource CloudGreyBrush}" FontSize="10" FontWeight="Bold"/>
