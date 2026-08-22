@@ -49,17 +49,21 @@ The UI follows Vision 360 identity used across internal tools:
 
 Logo assets live in `src/DiamondFileRouter.App/Assets/`.
 
-## Build the Windows EXE
+## Run it (Windows)
 
-Requires Windows with the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (including the Windows desktop workload).
+On a Windows PC, open this folder and **double-click `BUILD-AND-RUN.bat`**.
+
+The first time it will install/build if needed, then open the app. After that, the EXE is:
+
+`artifacts\DiamondFileRouter\win-x64\DiamondFileRouter.exe`
+
+You can also publish manually:
 
 ```powershell
 .\scripts\publish-windows.ps1
 ```
 
-Output:
-
-`artifacts/DiamondFileRouter/win-x64/DiamondFileRouter.exe`
+Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (Windows x64).
 
 The publish is **self-contained**. Another Windows PC does not need Visual Studio or a .NET runtime installed.
 
