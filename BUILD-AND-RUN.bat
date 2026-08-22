@@ -23,10 +23,10 @@ if errorlevel 1 (
 if not exist "artifacts\DiamondFileRouter\win-x64\DiamondFileRouter.exe" (
     echo  Building the app. This can take a few minutes the first time...
     echo.
-    powershell -ExecutionPolicy Bypass -File "%~dp0scripts\publish-windows.ps1"
+    dotnet publish "src\DiamondFileRouter.App\DiamondFileRouter.App.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false -o "artifacts\DiamondFileRouter\win-x64"
     if errorlevel 1 (
         echo.
-        echo  Build failed. A Windows PC with the .NET 8 SDK is required.
+        echo  Build failed. Read the red error text above.
         pause
         exit /b 1
     )
@@ -40,5 +40,7 @@ if not exist "%EXE%" (
 )
 
 echo  Opening Diamond File Router...
+echo  EXE path:
+echo  %EXE%
 start "" "%EXE%"
 exit /b 0

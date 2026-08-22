@@ -1,4 +1,4 @@
-@param(
+param(
     [ValidateSet("win-x64", "win-x86", "win-arm64")]
     [string]$Runtime = "win-x64"
 )
@@ -8,7 +8,11 @@ $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
 dotnet restore DiamondFileRouter.sln
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 dotnet test tests/DiamondFileRouter.Core.Tests/DiamondFileRouter.Core.Tests.csproj -c Release --nologo
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 dotnet publish src/DiamondFileRouter.App/DiamondFileRouter.App.csproj `
     -c Release `
     -r $Runtime `
@@ -19,6 +23,8 @@ dotnet publish src/DiamondFileRouter.App/DiamondFileRouter.App.csproj `
     -p:DebugType=None `
     -p:DebugSymbols=false `
     -o "artifacts/DiamondFileRouter/$Runtime"
+
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""
 Write-Host "Published: artifacts/DiamondFileRouter/$Runtime/DiamondFileRouter.exe"
