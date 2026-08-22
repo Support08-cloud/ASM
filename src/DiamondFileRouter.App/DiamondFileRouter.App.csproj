@@ -9,9 +9,9 @@
     <AssemblyName>DiamondFileRouter</AssemblyName>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationTitle>Diamond File Router</ApplicationTitle>
-    <Title>Diamond File Router</Title>
-    <Description>Vision 360 internal offline utility that routes diamond and stone files into existing destination folders.</Description>
+    <ApplicationTitle>Diamond File Router — VISION 360°</ApplicationTitle>
+    <Title>Diamond File Router — VISION 360°</Title>
+    <Description>VISION 360° internal offline utility that routes diamond and stone files into existing destination folders.</Description>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
   <ItemGroup>
@@ -23,6 +23,10 @@
   <ItemGroup>
     <Resource Include="Assets\logo.png" />
     <Resource Include="Assets\logo-white.png" />
+    <Resource Include="Assets\logo-tech.png" />
+    <Resource Include="Assets\logo-tech-white.png" />
+    <Resource Include="Assets\powered-by.png" />
+    <Resource Include="Assets\powered-by-white.png" />
     <Resource Include="Assets\app-icon-256.png" />
     <Content Include="Assets\app.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

@@ -1,6 +1,6 @@
 # Diamond File Router
 
-Internal Vision 360 Windows utility that copies diamond/stone files from an Input location into **existing** Output stone folders.
+Internal VISION 360° Windows utility that copies diamond/stone files from an Input location into **existing** Output stone folders.
 
 This is an offline, staff-only desktop tool. It does not use cloud services, telemetry, authentication servers, or the internet.
 
@@ -34,20 +34,31 @@ Ambiguous or unknown items stay unmatched.
 
 ## Branding
 
-The UI follows Vision 360 identity used across internal tools:
+The UI follows **V360 Brand Guideline v2.0** (`V360_Brand_Guideline_Master_Package`). Official logos are used as supplied — they are not redrawn.
 
-| Token | Value |
-| --- | --- |
-| Ink | `#111111` |
-| Copper | `#C06618` |
-| Paper | `#FBF8F4` |
-| Cream | `#F7F1EA` |
-| Line | `#E6D5C3` |
-| Stone | `#6D6E71` |
-| Danger | `#B42318` |
-| OK | `#067647` |
+| Token | Hex | Role in this EXE |
+| --- | --- | --- |
+| V360 Orange | `#C6691D` | Accent only (~10%): CTA fill, active nav bar, H4 labels |
+| Orange 700 | `#8E4A12` | Orange button hover / pressed path |
+| Charcoal | `#2B2A29` | Body text, technical header, footer band, secondary buttons |
+| White | `#FEFEFE` | Page background |
+| Cloud Grey | `#EBECEC` | Alternating table rows, soft chips |
+| Cream | `#FFF6E0` | Warm info bands |
+| Ice Blue | `#E4F6F8` | Technical table headers |
+| Navy | `#011843` | Sidebar (V360.Tech / technical interface) |
+| Slate | `#34434D` | Charcoal button hover |
+| Success / Warning / Error / Info | `#2E7D32` / `#E0A800` / `#C62828` / `#1565C0` | Status only — never used as brand decoration |
 
-Logo assets live in `src/DiamondFileRouter.App/Assets/`.
+Layout rules applied:
+
+- Charcoal header bar (32 px), no orange stripe at the top
+- Footer: 4 px orange stripe + 32 px charcoal band
+- Product family strip: Studio · **Tech** · Micro · Measure · Light (current product in orange)
+- Cards 8 px radius, controls 4 px radius
+- Type: Gill Sans MT, then Verdana, then Segoe UI
+- Degree symbol is `°` (U+00B0)
+
+Official assets live in `src/DiamondFileRouter.App/Assets/` (`logo.png`, `logo-white.png`, `powered-by*.png`, `app.ico`).
 
 ## Build the Windows EXE
 

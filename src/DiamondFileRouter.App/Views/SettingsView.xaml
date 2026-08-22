@@ -3,25 +3,25 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="28,22,20,24" MaxWidth="760" HorizontalAlignment="Left">
-            <TextBlock Text="LOCAL SETTINGS" Foreground="{StaticResource CopperBrush}" FontSize="11" FontWeight="SemiBold"/>
-            <TextBlock Text="Stored on this PC only" FontSize="22" FontWeight="SemiBold" Margin="0,4,0,16"/>
+            <TextBlock Text="LOCAL SETTINGS" Style="{StaticResource EyebrowLabel}"/>
+            <TextBlock Text="Stored on this PC only" Style="{StaticResource PageTitle}" Margin="0,4,0,16"/>
 
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
-                    <TextBlock Text="DEFAULT DIRECTORIES" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                    <TextBlock Text="DEFAULT DIRECTORIES" Style="{StaticResource EyebrowLabel}"/>
                     <TextBlock Text="Default Input" Style="{StaticResource CaptionLabel}" Margin="0,14,0,6"/>
                     <DockPanel>
-                        <Button DockPanel.Dock="Right" Content="Browse" Style="{StaticResource GhostButton}" Command="{Binding BrowseInputCommand}" Margin="8,0,0,0"/>
+                        <Button DockPanel.Dock="Right" Content="BROWSE" Style="{StaticResource GhostButton}" Command="{Binding BrowseInputCommand}" Margin="8,0,0,0"/>
                         <TextBox Text="{Binding DefaultInputDirectory, UpdateSourceTrigger=PropertyChanged}"/>
                     </DockPanel>
                     <TextBlock Text="Default Output" Style="{StaticResource CaptionLabel}" Margin="0,14,0,6"/>
                     <DockPanel>
-                        <Button DockPanel.Dock="Right" Content="Browse" Style="{StaticResource GhostButton}" Command="{Binding BrowseOutputCommand}" Margin="8,0,0,0"/>
+                        <Button DockPanel.Dock="Right" Content="BROWSE" Style="{StaticResource GhostButton}" Command="{Binding BrowseOutputCommand}" Margin="8,0,0,0"/>
                         <TextBox Text="{Binding DefaultOutputDirectory, UpdateSourceTrigger=PropertyChanged}"/>
                     </DockPanel>
                     <TextBlock Text="Report location" Style="{StaticResource CaptionLabel}" Margin="0,14,0,6"/>
                     <DockPanel>
-                        <Button DockPanel.Dock="Right" Content="Browse" Style="{StaticResource GhostButton}" Command="{Binding BrowseReportsCommand}" Margin="8,0,0,0"/>
+                        <Button DockPanel.Dock="Right" Content="BROWSE" Style="{StaticResource GhostButton}" Command="{Binding BrowseReportsCommand}" Margin="8,0,0,0"/>
                         <TextBox Text="{Binding ReportLocation, UpdateSourceTrigger=PropertyChanged}"/>
                     </DockPanel>
                 </StackPanel>
@@ -29,7 +29,7 @@
 
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
-                    <TextBlock Text="SAFETY" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                    <TextBlock Text="SAFETY" Style="{StaticResource EyebrowLabel}"/>
                     <Grid Margin="0,12,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -54,7 +54,7 @@
 
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                 <StackPanel>
-                    <TextBlock Text="REPORTS" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                    <TextBlock Text="REPORTS" Style="{StaticResource EyebrowLabel}"/>
                     <CheckBox Content="CSV" IsChecked="{Binding WriteCsv}" Margin="0,12,0,8"/>
                     <CheckBox Content="JSON" IsChecked="{Binding WriteJson}" Margin="0,0,0,8"/>
                     <CheckBox Content="TXT" IsChecked="{Binding WriteTxt}"/>
@@ -62,10 +62,10 @@
             </Border>
 
             <StackPanel Orientation="Horizontal" Margin="0,4,0,12">
-                <Button Content="Save settings" Style="{StaticResource PrimaryButton}" Command="{Binding SaveCommand}" Margin="0,0,8,0"/>
-                <Button Content="Open data folder" Style="{StaticResource GhostButton}" Command="{Binding OpenDataFolderCommand}"/>
+                <Button Content="SAVE SETTINGS" Style="{StaticResource PrimaryButton}" Command="{Binding SaveCommand}" Margin="0,0,8,0"/>
+                <Button Content="OPEN DATA FOLDER" Style="{StaticResource GhostButton}" Command="{Binding OpenDataFolderCommand}"/>
             </StackPanel>
-            <TextBlock Text="{Binding Status}" Foreground="{StaticResource StoneBrush}"/>
+            <TextBlock Text="{Binding Status}" Style="{StaticResource MutedText}"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

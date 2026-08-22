@@ -1,35 +1,86 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Color x:Key="InkColor">#111111</Color>
-    <Color x:Key="InkSoftColor">#1C1C1C</Color>
-    <Color x:Key="CopperColor">#C06618</Color>
-    <Color x:Key="CopperHotColor">#D57422</Color>
-    <Color x:Key="CopperDeepColor">#9A4E12</Color>
-    <Color x:Key="StoneColor">#6D6E71</Color>
-    <Color x:Key="CreamColor">#F7F1EA</Color>
-    <Color x:Key="PaperColor">#FBF8F4</Color>
-    <Color x:Key="LineColor">#E6D5C3</Color>
-    <Color x:Key="WhiteColor">#FFFFFF</Color>
-    <Color x:Key="DangerColor">#B42318</Color>
-    <Color x:Key="OkColor">#067647</Color>
+    <!-- V360 Brand Guideline v2.0 — official palette. Do not invent extra hues. -->
+    <Color x:Key="OrangeColor">#C6691D</Color>
+    <Color x:Key="Orange100Color">#FBEEDF</Color>
+    <Color x:Key="Orange300Color">#EFB97A</Color>
+    <Color x:Key="Orange700Color">#8E4A12</Color>
+    <Color x:Key="Orange900Color">#5A2E08</Color>
+    <Color x:Key="CharcoalColor">#2B2A29</Color>
+    <Color x:Key="WhiteColor">#FEFEFE</Color>
+    <Color x:Key="CloudGreyColor">#EBECEC</Color>
+    <Color x:Key="CreamColor">#FFF6E0</Color>
+    <Color x:Key="IceBlueColor">#E4F6F8</Color>
+    <Color x:Key="NavyColor">#011843</Color>
+    <Color x:Key="IndigoColor">#0C2939</Color>
+    <Color x:Key="RoyalBlueColor">#072C50</Color>
+    <Color x:Key="SlateColor">#34434D</Color>
+    <Color x:Key="Neutral50Color">#FAFAFA</Color>
+    <Color x:Key="Neutral300Color">#C8C9C9</Color>
+    <Color x:Key="Neutral500Color">#7A7A79</Color>
+    <Color x:Key="Neutral700Color">#4A4A48</Color>
+    <Color x:Key="SuccessColor">#2E7D32</Color>
+    <Color x:Key="WarningColor">#E0A800</Color>
+    <Color x:Key="ErrorColor">#C62828</Color>
+    <Color x:Key="InfoColor">#1565C0</Color>
+    <Color x:Key="DisabledColor">#B0B0B0</Color>
 
-    <SolidColorBrush x:Key="InkBrush" Color="{StaticResource InkColor}"/>
-    <SolidColorBrush x:Key="InkSoftBrush" Color="{StaticResource InkSoftColor}"/>
-    <SolidColorBrush x:Key="CopperBrush" Color="{StaticResource CopperColor}"/>
-    <SolidColorBrush x:Key="CopperHotBrush" Color="{StaticResource CopperHotColor}"/>
-    <SolidColorBrush x:Key="CopperDeepBrush" Color="{StaticResource CopperDeepColor}"/>
-    <SolidColorBrush x:Key="StoneBrush" Color="{StaticResource StoneColor}"/>
-    <SolidColorBrush x:Key="CreamBrush" Color="{StaticResource CreamColor}"/>
-    <SolidColorBrush x:Key="PaperBrush" Color="{StaticResource PaperColor}"/>
-    <SolidColorBrush x:Key="LineBrush" Color="{StaticResource LineColor}"/>
+    <SolidColorBrush x:Key="OrangeBrush" Color="{StaticResource OrangeColor}"/>
+    <SolidColorBrush x:Key="Orange100Brush" Color="{StaticResource Orange100Color}"/>
+    <SolidColorBrush x:Key="Orange300Brush" Color="{StaticResource Orange300Color}"/>
+    <SolidColorBrush x:Key="Orange700Brush" Color="{StaticResource Orange700Color}"/>
+    <SolidColorBrush x:Key="Orange900Brush" Color="{StaticResource Orange900Color}"/>
+    <SolidColorBrush x:Key="CharcoalBrush" Color="{StaticResource CharcoalColor}"/>
     <SolidColorBrush x:Key="WhiteBrush" Color="{StaticResource WhiteColor}"/>
-    <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}"/>
-    <SolidColorBrush x:Key="OkBrush" Color="{StaticResource OkColor}"/>
-    <SolidColorBrush x:Key="OkSoftBrush" Color="#EAF6EF"/>
-    <SolidColorBrush x:Key="DangerSoftBrush" Color="#FDECEA"/>
-    <SolidColorBrush x:Key="WarnSoftBrush" Color="#FFF3E6"/>
-    <SolidColorBrush x:Key="SelectionBrush" Color="#F3D5B8"/>
+    <SolidColorBrush x:Key="CloudGreyBrush" Color="{StaticResource CloudGreyColor}"/>
+    <SolidColorBrush x:Key="CreamBrush" Color="{StaticResource CreamColor}"/>
+    <SolidColorBrush x:Key="IceBlueBrush" Color="{StaticResource IceBlueColor}"/>
+    <SolidColorBrush x:Key="NavyBrush" Color="{StaticResource NavyColor}"/>
+    <SolidColorBrush x:Key="IndigoBrush" Color="{StaticResource IndigoColor}"/>
+    <SolidColorBrush x:Key="RoyalBlueBrush" Color="{StaticResource RoyalBlueColor}"/>
+    <SolidColorBrush x:Key="SlateBrush" Color="{StaticResource SlateColor}"/>
+    <SolidColorBrush x:Key="Neutral50Brush" Color="{StaticResource Neutral50Color}"/>
+    <SolidColorBrush x:Key="Neutral300Brush" Color="{StaticResource Neutral300Color}"/>
+    <SolidColorBrush x:Key="Neutral500Brush" Color="{StaticResource Neutral500Color}"/>
+    <SolidColorBrush x:Key="Neutral700Brush" Color="{StaticResource Neutral700Color}"/>
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
+    <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}"/>
+    <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource InfoColor}"/>
+    <SolidColorBrush x:Key="DisabledBrush" Color="{StaticResource DisabledColor}"/>
+    <SolidColorBrush x:Key="SuccessSoftBrush" Color="#E8F5E9"/>
+    <SolidColorBrush x:Key="WarningSoftBrush" Color="#FFF8E1"/>
+    <SolidColorBrush x:Key="ErrorSoftBrush" Color="#FFEBEE"/>
+    <SolidColorBrush x:Key="InfoSoftBrush" Color="#E3F2FD"/>
+    <SolidColorBrush x:Key="SelectionBrush" Color="#FBEEDF"/>
 
-    <FontFamily x:Key="AppFont">Segoe UI, Outfit, sans-serif</FontFamily>
+    <!-- Legacy aliases used by existing views. Mapped to official tokens. -->
+    <Color x:Key="InkColor">#2B2A29</Color>
+    <Color x:Key="InkSoftColor">#0C2939</Color>
+    <Color x:Key="CopperColor">#C6691D</Color>
+    <Color x:Key="CopperHotColor">#8E4A12</Color>
+    <Color x:Key="CopperDeepColor">#5A2E08</Color>
+    <Color x:Key="StoneColor">#7A7A79</Color>
+    <Color x:Key="PaperColor">#FEFEFE</Color>
+    <Color x:Key="LineColor">#C8C9C9</Color>
+    <Color x:Key="DangerColor">#C62828</Color>
+    <Color x:Key="OkColor">#2E7D32</Color>
+
+    <SolidColorBrush x:Key="InkBrush" Color="{StaticResource CharcoalColor}"/>
+    <SolidColorBrush x:Key="InkSoftBrush" Color="{StaticResource IndigoColor}"/>
+    <SolidColorBrush x:Key="CopperBrush" Color="{StaticResource OrangeColor}"/>
+    <SolidColorBrush x:Key="CopperHotBrush" Color="{StaticResource Orange700Color}"/>
+    <SolidColorBrush x:Key="CopperDeepBrush" Color="{StaticResource Orange900Color}"/>
+    <SolidColorBrush x:Key="StoneBrush" Color="{StaticResource Neutral500Color}"/>
+    <SolidColorBrush x:Key="PaperBrush" Color="{StaticResource WhiteColor}"/>
+    <SolidColorBrush x:Key="LineBrush" Color="{StaticResource Neutral300Color}"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource ErrorColor}"/>
+    <SolidColorBrush x:Key="OkBrush" Color="{StaticResource SuccessColor}"/>
+    <SolidColorBrush x:Key="OkSoftBrush" Color="#E8F5E9"/>
+    <SolidColorBrush x:Key="DangerSoftBrush" Color="#FFEBEE"/>
+    <SolidColorBrush x:Key="WarnSoftBrush" Color="#FFF8E1"/>
+
+    <!-- Digital UI stack from Part E. Gill Sans MT when present; Verdana / Segoe UI otherwise. -->
+    <FontFamily x:Key="AppFont">Gill Sans MT, Verdana, Segoe UI, sans-serif</FontFamily>
     <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas, Courier New</FontFamily>
 </ResourceDictionary>
