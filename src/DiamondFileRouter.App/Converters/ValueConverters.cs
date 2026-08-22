@@ -13,13 +13,13 @@ public sealed class StatusToBrushConverter : IValueConverter
         var status = value is ItemStatus s ? s : ItemStatus.Pending;
         return status switch
         {
-            ItemStatus.Matched or ItemStatus.Completed => Brush("#EAF6EF"),
-            ItemStatus.Unmatched => Brush("#FFF3E6"),
-            ItemStatus.Error => Brush("#FDECEA"),
-            ItemStatus.Skipped or ItemStatus.AlreadyExists => Brush("#F7F1EA"),
-            ItemStatus.Copying or ItemStatus.Analyzing => Brush("#FFF3E6"),
-            ItemStatus.Cancelled => Brush("#F7F1EA"),
-            _ => Brush("#FFFFFF")
+            ItemStatus.Matched or ItemStatus.Completed => Brush("#E8F5E9"),
+            ItemStatus.Unmatched => Brush("#FFF8E1"),
+            ItemStatus.Error => Brush("#FFEBEE"),
+            ItemStatus.Skipped or ItemStatus.AlreadyExists => Brush("#EBECEC"),
+            ItemStatus.Copying or ItemStatus.Analyzing => Brush("#E3F2FD"),
+            ItemStatus.Cancelled => Brush("#EBECEC"),
+            _ => Brush("#FEFEFE")
         };
     }
 
@@ -37,12 +37,12 @@ public sealed class StatusToForegroundConverter : IValueConverter
         var status = value is ItemStatus s ? s : ItemStatus.Pending;
         return status switch
         {
-            ItemStatus.Matched or ItemStatus.Completed => Brush("#067647"),
-            ItemStatus.Unmatched => Brush("#9A4E12"),
-            ItemStatus.Error => Brush("#B42318"),
-            ItemStatus.Skipped or ItemStatus.AlreadyExists => Brush("#6D6E71"),
-            ItemStatus.Cancelled => Brush("#6D6E71"),
-            _ => Brush("#111111")
+            ItemStatus.Matched or ItemStatus.Completed => Brush("#2E7D32"),
+            ItemStatus.Unmatched => Brush("#8E4A12"),
+            ItemStatus.Error => Brush("#C62828"),
+            ItemStatus.Skipped or ItemStatus.AlreadyExists => Brush("#7A7A79"),
+            ItemStatus.Cancelled => Brush("#7A7A79"),
+            _ => Brush("#2B2A29")
         };
     }
 

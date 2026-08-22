@@ -24,9 +24,9 @@
             </Grid.RowDefinitions>
 
             <StackPanel>
-                <TextBlock Text="INNOVATING VISIONS, CRAFTING EXCELLENCE" Foreground="{StaticResource CopperBrush}" FontSize="11" FontWeight="SemiBold"/>
-                <TextBlock Text="Route diamond files into existing stone folders" FontSize="22" FontWeight="SemiBold" Margin="0,4,0,0"/>
-                <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource StoneBrush}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                <TextBlock Text="PRECISION 360° IMAGING AND MEASUREMENT" Style="{StaticResource EyebrowLabel}"/>
+                <TextBlock Text="Route diamond files into existing stone folders" Style="{StaticResource PageTitle}" Margin="0,4,0,0"/>
+                <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource MutedText}" Margin="0,6,0,0" TextWrapping="Wrap"/>
             </StackPanel>
 
             <Grid Grid.Row="1" Margin="0,18,0,0">
@@ -37,23 +37,23 @@
                 </Grid.ColumnDefinitions>
                 <Border Style="{StaticResource Card}" AllowDrop="True">
                     <StackPanel>
-                        <TextBlock Text="INPUT" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
-                        <TextBlock Text="Files, folders, or mixed batches. Originals stay untouched in Copy mode." Foreground="{StaticResource StoneBrush}" Margin="0,4,0,10" TextWrapping="Wrap"/>
+                        <TextBlock Text="INPUT" Style="{StaticResource EyebrowLabel}"/>
+                        <TextBlock Text="Files, folders, or mixed batches. Originals stay untouched in Copy mode." Style="{StaticResource MutedText}" Margin="0,4,0,10" TextWrapping="Wrap"/>
                         <TextBox Text="{Binding InputPath, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                        <TextBlock Text="{Binding InputSummary}" Foreground="{StaticResource StoneBrush}" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding InputSummary}" Style="{StaticResource MutedText}" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap"/>
                         <StackPanel Orientation="Horizontal">
-                            <Button Content="Browse folder" Style="{StaticResource GhostButton}" Command="{Binding BrowseInputFolderCommand}" Margin="0,0,8,0"/>
-                            <Button Content="Browse files" Style="{StaticResource GhostButton}" Command="{Binding BrowseInputFilesCommand}"/>
+                            <Button Content="BROWSE FOLDER" Style="{StaticResource GhostButton}" Command="{Binding BrowseInputFolderCommand}" Margin="0,0,8,0"/>
+                            <Button Content="BROWSE FILES" Style="{StaticResource GhostButton}" Command="{Binding BrowseInputFilesCommand}"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
                 <Border Grid.Column="2" Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Text="OUTPUT" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
-                        <TextBlock Text="Existing diamond folders only. New folders are never created automatically." Foreground="{StaticResource StoneBrush}" Margin="0,4,0,10" TextWrapping="Wrap"/>
+                        <TextBlock Text="OUTPUT" Style="{StaticResource EyebrowLabel}"/>
+                        <TextBlock Text="Existing diamond folders only. New folders are never created automatically." Style="{StaticResource MutedText}" Margin="0,4,0,10" TextWrapping="Wrap"/>
                         <TextBox Text="{Binding OutputPath, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                        <TextBlock Text="Indexed after Analyze. Built once per run." Foreground="{StaticResource StoneBrush}" FontSize="12" Margin="0,0,0,12"/>
-                        <Button Content="Browse output" Style="{StaticResource GhostButton}" Command="{Binding BrowseOutputCommand}" HorizontalAlignment="Left"/>
+                        <TextBlock Text="Indexed after Analyze. Built once per run." Style="{StaticResource MutedText}" FontSize="12" Margin="0,0,0,12"/>
+                        <Button Content="BROWSE OUTPUT" Style="{StaticResource GhostButton}" Command="{Binding BrowseOutputCommand}" HorizontalAlignment="Left"/>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -76,9 +76,9 @@
                     </StackPanel>
                     <CheckBox Grid.Column="2" Content="Recursive scan" IsChecked="{Binding Recursive}" Margin="0,22,18,0" VerticalAlignment="Center"/>
                     <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,16,0,0">
-                        <Button Content="Analyze" Style="{StaticResource InkButton}" Command="{Binding AnalyzeCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource Not}}" Margin="0,0,8,0"/>
-                        <Button Content="Start processing" Style="{StaticResource PrimaryButton}" Command="{Binding ProcessCommand}" IsEnabled="{Binding CanProcess}" Margin="0,0,8,0"/>
-                        <Button Content="Cancel" Style="{StaticResource DangerGhostButton}" Command="{Binding CancelCommand}" Visibility="{Binding IsBusy, Converter={StaticResource BoolVis}}"/>
+                        <Button Content="ANALYZE" Style="{StaticResource InkButton}" Command="{Binding AnalyzeCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource Not}}" Margin="0,0,8,0"/>
+                        <Button Content="START PROCESSING" Style="{StaticResource PrimaryButton}" Command="{Binding ProcessCommand}" IsEnabled="{Binding CanProcess}" Margin="0,0,8,0"/>
+                        <Button Content="CANCEL" Style="{StaticResource DangerGhostButton}" Command="{Binding CancelCommand}" Visibility="{Binding IsBusy, Converter={StaticResource BoolVis}}"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -91,22 +91,22 @@
                         <Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding BannerKind}" Value="ok">
-                                <Setter Property="Background" Value="{StaticResource OkSoftBrush}"/>
-                                <Setter Property="BorderBrush" Value="#B7E4C7"/>
+                                <Setter Property="Background" Value="{StaticResource SuccessSoftBrush}"/>
+                                <Setter Property="BorderBrush" Value="#A5D6A7"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding BannerKind}" Value="error">
-                                <Setter Property="Background" Value="{StaticResource DangerSoftBrush}"/>
-                                <Setter Property="BorderBrush" Value="#F2B8B5"/>
+                                <Setter Property="Background" Value="{StaticResource ErrorSoftBrush}"/>
+                                <Setter Property="BorderBrush" Value="#EF9A9A"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding BannerKind}" Value="warn">
-                                <Setter Property="Background" Value="{StaticResource WarnSoftBrush}"/>
-                                <Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/>
+                                <Setter Property="Background" Value="{StaticResource WarningSoftBrush}"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource Neutral300Brush}"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
                 <DockPanel>
-                    <Button DockPanel.Dock="Right" Content="Open report" Style="{StaticResource GhostButton}" Command="{Binding OpenReportCommand}" Visibility="{Binding ReportPath, Converter={StaticResource NullVis}}" Margin="12,0,0,0"/>
+                    <Button DockPanel.Dock="Right" Content="OPEN REPORT" Style="{StaticResource GhostButton}" Command="{Binding OpenReportCommand}" Visibility="{Binding ReportPath, Converter={StaticResource NullVis}}" Margin="12,0,0,0"/>
                     <TextBlock Text="{Binding Banner}" TextWrapping="Wrap" VerticalAlignment="Center"/>
                 </DockPanel>
             </Border>
@@ -114,37 +114,37 @@
             <UniformGrid Grid.Row="4" Columns="6" Margin="0,16,0,0">
                 <Border Style="{StaticResource StatCard}" Margin="0,0,8,0">
                     <StackPanel>
-                        <TextBlock Text="TOTAL" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                        <TextBlock Text="TOTAL" Style="{StaticResource EyebrowLabel}"/>
                         <TextBlock Text="{Binding TotalFiles}" FontSize="22" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource StatCard}" Margin="0,0,8,0">
                     <StackPanel>
-                        <TextBlock Text="MATCHED" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                        <TextBlock Text="MATCHED" Style="{StaticResource EyebrowLabel}"/>
                         <TextBlock Text="{Binding MatchedFiles}" FontSize="22" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource StatCard}" Margin="0,0,8,0">
                     <StackPanel>
-                        <TextBlock Text="COPIED" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                        <TextBlock Text="COPIED" Style="{StaticResource EyebrowLabel}"/>
                         <TextBlock Text="{Binding CopiedFiles}" FontSize="22" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource StatCard}" Margin="0,0,8,0">
                     <StackPanel>
-                        <TextBlock Text="SKIPPED" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                        <TextBlock Text="SKIPPED" Style="{StaticResource EyebrowLabel}"/>
                         <TextBlock Text="{Binding SkippedFiles}" FontSize="22" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource StatCard}" Margin="0,0,8,0">
                     <StackPanel>
-                        <TextBlock Text="UNMATCHED" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                        <TextBlock Text="UNMATCHED" Style="{StaticResource EyebrowLabel}"/>
                         <TextBlock Text="{Binding UnmatchedFiles}" FontSize="22" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource StatCard}">
                     <StackPanel>
-                        <TextBlock Text="ERRORS" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                        <TextBlock Text="ERRORS" Style="{StaticResource EyebrowLabel}"/>
                         <TextBlock Text="{Binding ErrorFiles}" FontSize="22" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Border>
@@ -159,10 +159,10 @@
                     </Grid.RowDefinitions>
                     <DockPanel Margin="16,14,16,8">
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                            <TextBlock Text="{Binding IndexedFolders, StringFormat=Output folders indexed: {0}}" Foreground="{StaticResource StoneBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                            <Button Content="Clear preview" Style="{StaticResource GhostButton}" Command="{Binding ClearPlanCommand}"/>
+                            <TextBlock Text="{Binding IndexedFolders, StringFormat=Output folders indexed: {0}}" Style="{StaticResource MutedText}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <Button Content="CLEAR PREVIEW" Style="{StaticResource GhostButton}" Command="{Binding ClearPlanCommand}"/>
                         </StackPanel>
-                        <TextBlock Text="PROCESSING PLAN" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="PROCESSING PLAN" Style="{StaticResource EyebrowLabel}" VerticalAlignment="Center"/>
                     </DockPanel>
                     <Grid Grid.Row="1" Margin="16,0,16,10">
                         <Grid.ColumnDefinitions>
@@ -171,7 +171,7 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel>
                             <ProgressBar Value="{Binding ProgressPercent}" Maximum="100"/>
-                            <TextBlock Text="{Binding ProgressText}" Foreground="{StaticResource StoneBrush}" FontSize="12" Margin="0,6,0,0"/>
+                            <TextBlock Text="{Binding ProgressText}" Style="{StaticResource MutedText}" FontSize="12" Margin="0,6,0,0"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Margin="16,0,0,0">
                             <TextBlock Text="FILTER" Style="{StaticResource CaptionLabel}"/>

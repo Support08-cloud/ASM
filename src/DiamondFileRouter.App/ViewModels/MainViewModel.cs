@@ -19,7 +19,15 @@ public partial class MainViewModel : ObservableObject
     public SettingsViewModel Settings { get; }
 
     [ObservableProperty] private string _currentPage = "router";
-    public string VersionText => "v1.0.0 · Offline";
+    public string VersionText => "v1.1.0 · Offline · Brand 2.0";
+    public string PageTitle => CurrentPage switch
+    {
+        "history" => "History",
+        "settings" => "Settings",
+        _ => "Router"
+    };
+
+    partial void OnCurrentPageChanged(string value) => OnPropertyChanged(nameof(PageTitle));
 
     [RelayCommand]
     private void ShowRouter() => CurrentPage = "router";
