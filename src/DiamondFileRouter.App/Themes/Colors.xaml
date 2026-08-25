@@ -1,0 +1,35 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Color x:Key="InkColor">#111111</Color>
+    <Color x:Key="InkSoftColor">#1C1C1C</Color>
+    <Color x:Key="CopperColor">#C06618</Color>
+    <Color x:Key="CopperHotColor">#D57422</Color>
+    <Color x:Key="CopperDeepColor">#9A4E12</Color>
+    <Color x:Key="StoneColor">#6D6E71</Color>
+    <Color x:Key="CreamColor">#F7F1EA</Color>
+    <Color x:Key="PaperColor">#FBF8F4</Color>
+    <Color x:Key="LineColor">#E6D5C3</Color>
+    <Color x:Key="WhiteColor">#FFFFFF</Color>
+    <Color x:Key="DangerColor">#B42318</Color>
+    <Color x:Key="OkColor">#067647</Color>
+
+    <SolidColorBrush x:Key="InkBrush" Color="{StaticResource InkColor}"/>
+    <SolidColorBrush x:Key="InkSoftBrush" Color="{StaticResource InkSoftColor}"/>
+    <SolidColorBrush x:Key="CopperBrush" Color="{StaticResource CopperColor}"/>
+    <SolidColorBrush x:Key="CopperHotBrush" Color="{StaticResource CopperHotColor}"/>
+    <SolidColorBrush x:Key="CopperDeepBrush" Color="{StaticResource CopperDeepColor}"/>
+    <SolidColorBrush x:Key="StoneBrush" Color="{StaticResource StoneColor}"/>
+    <SolidColorBrush x:Key="CreamBrush" Color="{StaticResource CreamColor}"/>
+    <SolidColorBrush x:Key="PaperBrush" Color="{StaticResource PaperColor}"/>
+    <SolidColorBrush x:Key="LineBrush" Color="{StaticResource LineColor}"/>
+    <SolidColorBrush x:Key="WhiteBrush" Color="{StaticResource WhiteColor}"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}"/>
+    <SolidColorBrush x:Key="OkBrush" Color="{StaticResource OkColor}"/>
+    <SolidColorBrush x:Key="OkSoftBrush" Color="#EAF6EF"/>
+    <SolidColorBrush x:Key="DangerSoftBrush" Color="#FDECEA"/>
+    <SolidColorBrush x:Key="WarnSoftBrush" Color="#FFF3E6"/>
+    <SolidColorBrush x:Key="SelectionBrush" Color="#F3D5B8"/>
+
+    <FontFamily x:Key="AppFont">Segoe UI</FontFamily>
+    <FontFamily x:Key="MonoFont">Consolas</FontFamily>
+</ResourceDictionary>

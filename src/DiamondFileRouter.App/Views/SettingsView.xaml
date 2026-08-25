@@ -1,0 +1,71 @@
+<UserControl x:Class="DiamondFileRouter.App.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="28,22,20,24" MaxWidth="760" HorizontalAlignment="Left">
+            <TextBlock Text="LOCAL SETTINGS" Foreground="{StaticResource CopperBrush}" FontSize="11" FontWeight="SemiBold"/>
+            <TextBlock Text="Stored on this PC only" FontSize="22" FontWeight="SemiBold" Margin="0,4,0,16"/>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <TextBlock Text="DEFAULT DIRECTORIES" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                    <TextBlock Text="Default Input" Style="{StaticResource CaptionLabel}" Margin="0,14,0,6"/>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Browse" Style="{StaticResource GhostButton}" Command="{Binding BrowseInputCommand}" Margin="8,0,0,0"/>
+                        <TextBox Text="{Binding DefaultInputDirectory, UpdateSourceTrigger=PropertyChanged}"/>
+                    </DockPanel>
+                    <TextBlock Text="Default Output" Style="{StaticResource CaptionLabel}" Margin="0,14,0,6"/>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Browse" Style="{StaticResource GhostButton}" Command="{Binding BrowseOutputCommand}" Margin="8,0,0,0"/>
+                        <TextBox Text="{Binding DefaultOutputDirectory, UpdateSourceTrigger=PropertyChanged}"/>
+                    </DockPanel>
+                    <TextBlock Text="Report location" Style="{StaticResource CaptionLabel}" Margin="0,14,0,6"/>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Browse" Style="{StaticResource GhostButton}" Command="{Binding BrowseReportsCommand}" Margin="8,0,0,0"/>
+                        <TextBox Text="{Binding ReportLocation, UpdateSourceTrigger=PropertyChanged}"/>
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <TextBlock Text="SAFETY" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Copy / Move" Style="{StaticResource CaptionLabel}" Margin="0,0,0,6"/>
+                            <ComboBox ItemsSource="{Binding TransferModes}" SelectedItem="{Binding TransferMode}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Duplicate handling" Style="{StaticResource CaptionLabel}" Margin="0,0,0,6"/>
+                            <ComboBox ItemsSource="{Binding DuplicateActions}" SelectedItem="{Binding DuplicateHandling}"/>
+                        </StackPanel>
+                    </Grid>
+                    <CheckBox Content="Recursive scanning" IsChecked="{Binding RecursiveScanning}" Margin="0,16,0,8"/>
+                    <CheckBox Content="Preview before processing (required workflow)" IsChecked="{Binding PreviewBeforeProcessing}" Margin="0,0,0,8"/>
+                    <CheckBox Content="Confirmation before replacement" IsChecked="{Binding ConfirmationBeforeReplacement}" Margin="0,0,0,8"/>
+                    <CheckBox Content="Write local processing logs" IsChecked="{Binding LoggingEnabled}"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                <StackPanel>
+                    <TextBlock Text="REPORTS" Style="{StaticResource CaptionLabel}" Foreground="{StaticResource CopperBrush}"/>
+                    <CheckBox Content="CSV" IsChecked="{Binding WriteCsv}" Margin="0,12,0,8"/>
+                    <CheckBox Content="JSON" IsChecked="{Binding WriteJson}" Margin="0,0,0,8"/>
+                    <CheckBox Content="TXT" IsChecked="{Binding WriteTxt}"/>
+                </StackPanel>
+            </Border>
+
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,12">
+                <Button Content="Save settings" Style="{StaticResource PrimaryButton}" Command="{Binding SaveCommand}" Margin="0,0,8,0"/>
+                <Button Content="Open data folder" Style="{StaticResource GhostButton}" Command="{Binding OpenDataFolderCommand}"/>
+            </StackPanel>
+            <TextBlock Text="{Binding Status}" Foreground="{StaticResource StoneBrush}"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

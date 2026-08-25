@@ -1,0 +1,83 @@
+<Window x:Class="DiamondFileRouter.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:DiamondFileRouter.App.Views"
+        Title="Diamond File Router — Vision 360"
+        Height="860" Width="1320"
+        MinHeight="700" MinWidth="1100"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource PaperBrush}">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="248"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Background="{StaticResource InkBrush}">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="20,22,20,8">
+                    <Image x:Name="BrandLogo" Height="72" Stretch="Uniform" HorizontalAlignment="Left"/>
+                    <TextBlock Text="VISION 360°" Foreground="White" FontSize="16" FontWeight="SemiBold" Margin="0,14,0,0"/>
+                    <TextBlock Text="Diamond File Router" Foreground="{StaticResource CopperBrush}" FontSize="13" FontWeight="SemiBold"/>
+                    <Border Background="#22FFFFFF" CornerRadius="8" Padding="8,5" Margin="0,14,0,0" HorizontalAlignment="Left">
+                        <TextBlock Text="INTERNAL USE ONLY" Foreground="#DDDDDD" FontSize="10" FontWeight="Bold"/>
+                    </Border>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Bottom" Margin="20,0,20,20">
+                    <TextBlock Text="{Binding VersionText}" Foreground="#8A8A8A" FontSize="11"/>
+                    <TextBlock Text="No internet required" Foreground="#8A8A8A" FontSize="11" Margin="0,4,0,0"/>
+                </StackPanel>
+                <StackPanel Margin="12,24,12,0">
+                    <RadioButton Content="Router" Style="{StaticResource NavButton}" GroupName="nav"
+                                 IsChecked="{Binding CurrentPage, Converter={StaticResource EqualsString}, ConverterParameter=router, Mode=OneWay}"
+                                 Command="{Binding ShowRouterCommand}"/>
+                    <RadioButton Content="History" Style="{StaticResource NavButton}" GroupName="nav"
+                                 IsChecked="{Binding CurrentPage, Converter={StaticResource EqualsString}, ConverterParameter=history, Mode=OneWay}"
+                                 Command="{Binding ShowHistoryCommand}"/>
+                    <RadioButton Content="Settings" Style="{StaticResource NavButton}" GroupName="nav"
+                                 IsChecked="{Binding CurrentPage, Converter={StaticResource EqualsString}, ConverterParameter=settings, Mode=OneWay}"
+                                 Command="{Binding ShowSettingsCommand}"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Column="1" Background="{StaticResource PaperBrush}">
+            <views:RouterView DataContext="{Binding Router}">
+                <views:RouterView.Style>
+                    <Style TargetType="views:RouterView">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding DataContext.CurrentPage, RelativeSource={RelativeSource AncestorType=Window}}" Value="router">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </views:RouterView.Style>
+            </views:RouterView>
+            <views:HistoryView DataContext="{Binding History}">
+                <views:HistoryView.Style>
+                    <Style TargetType="views:HistoryView">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding DataContext.CurrentPage, RelativeSource={RelativeSource AncestorType=Window}}" Value="history">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </views:HistoryView.Style>
+            </views:HistoryView>
+            <views:SettingsView DataContext="{Binding Settings}">
+                <views:SettingsView.Style>
+                    <Style TargetType="views:SettingsView">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding DataContext.CurrentPage, RelativeSource={RelativeSource AncestorType=Window}}" Value="settings">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </views:SettingsView.Style>
+            </views:SettingsView>
+        </Grid>
+    </Grid>
+</Window>
