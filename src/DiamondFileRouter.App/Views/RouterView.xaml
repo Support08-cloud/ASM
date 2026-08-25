@@ -188,7 +188,7 @@
                             <DataGridTemplateColumn Header="STATUS" Width="130">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Border CornerRadius="999" Padding="8,3" HorizontalAlignment="Left" Background="{Binding Status, Converter={StaticResource StatusBg}}">
+                                        <Border CornerRadius="16" Padding="8,3" HorizontalAlignment="Left" Background="{Binding Status, Converter={StaticResource StatusBg}}">
                                             <TextBlock Text="{Binding Status}" FontWeight="SemiBold" FontSize="11" Foreground="{Binding Status, Converter={StaticResource StatusFg}}"/>
                                         </Border>
                                     </DataTemplate>
@@ -197,7 +197,7 @@
                             <DataGridTextColumn Header="REASON" Binding="{Binding Reason}" Width="2*"/>
                         </DataGrid.Columns>
                         <DataGrid.RowStyle>
-                            <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                            <Style TargetType="DataGridRow">
                                 <Setter Property="Background" Value="{Binding Status, Converter={StaticResource StatusBg}}"/>
                             </Style>
                         </DataGrid.RowStyle>

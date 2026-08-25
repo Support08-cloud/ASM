@@ -245,7 +245,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
-                    <Border x:Name="bd" Background="{StaticResource CreamBrush}" CornerRadius="999" Padding="12,6">
+                    <Border x:Name="bd" Background="{StaticResource CreamBrush}" CornerRadius="16" Padding="12,6">
                         <ContentPresenter/>
                     </Border>
                     <ControlTemplate.Triggers>

@@ -6,8 +6,7 @@
         Height="860" Width="1320"
         MinHeight="700" MinWidth="1100"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource PaperBrush}"
-        Icon="Assets/app.ico">
+        Background="{StaticResource PaperBrush}">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="248"/>
@@ -17,7 +16,7 @@
         <Border Background="{StaticResource InkBrush}">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Top" Margin="20,22,20,8">
-                    <Image Source="pack://application:,,,/Assets/logo-white.png" Height="72" Stretch="Uniform" HorizontalAlignment="Left"/>
+                    <Image x:Name="BrandLogo" Height="72" Stretch="Uniform" HorizontalAlignment="Left"/>
                     <TextBlock Text="VISION 360°" Foreground="White" FontSize="16" FontWeight="SemiBold" Margin="0,14,0,0"/>
                     <TextBlock Text="Diamond File Router" Foreground="{StaticResource CopperBrush}" FontSize="13" FontWeight="SemiBold"/>
                     <Border Background="#22FFFFFF" CornerRadius="8" Padding="8,5" Margin="0,14,0,0" HorizontalAlignment="Left">

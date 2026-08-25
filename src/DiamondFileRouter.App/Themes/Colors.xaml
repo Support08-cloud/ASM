@@ -30,6 +30,6 @@
     <SolidColorBrush x:Key="WarnSoftBrush" Color="#FFF3E6"/>
     <SolidColorBrush x:Key="SelectionBrush" Color="#F3D5B8"/>
 
-    <FontFamily x:Key="AppFont">Segoe UI, Outfit, sans-serif</FontFamily>
-    <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas, Courier New</FontFamily>
+    <FontFamily x:Key="AppFont">Segoe UI</FontFamily>
+    <FontFamily x:Key="MonoFont">Consolas</FontFamily>
 </ResourceDictionary>

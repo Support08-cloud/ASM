@@ -21,12 +21,18 @@
   <ItemGroup>
     <ProjectReference Include="..\DiamondFileRouter.Core\DiamondFileRouter.Core.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Assets\logo.png" />
-    <Resource Include="Assets\logo-white.png" />
-    <Resource Include="Assets\app-icon-256.png" />
-    <Content Include="Assets\app.ico">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
+    <ItemGroup>
+        <Resource Include="Assets\logo.png">
+            <LogicalName>Assets/logo.png</LogicalName>
+        </Resource>
+        <Resource Include="Assets\logo-white.png">
+            <LogicalName>Assets/logo-white.png</LogicalName>
+        </Resource>
+        <Resource Include="Assets\app-icon-256.png">
+            <LogicalName>Assets/app-icon-256.png</LogicalName>
+        </Resource>
+        <Resource Include="Assets\app.ico">
+            <LogicalName>Assets/app.ico</LogicalName>
+        </Resource>
+    </ItemGroup>
 </Project>
