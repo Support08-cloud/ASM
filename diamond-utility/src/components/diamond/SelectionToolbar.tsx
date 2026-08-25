@@ -6,19 +6,7 @@ interface SelectionToolbarProps {
 }
 
 export function SelectionToolbar({ count, disabled, onClear, onProcess }: SelectionToolbarProps) {
-  if (count === 0) {
-    return (
-      <div className="selection-bar">
-        <div>
-          <div className="selection-copy">No selection</div>
-          <div className="selection-sub">Select one or more diamonds to enable processing.</div>
-        </div>
-        <button type="button" className="btn primary" disabled>
-          Get MP4 →
-        </button>
-      </div>
-    )
-  }
+  if (count === 0) return null
 
   return (
     <div className="selection-bar">

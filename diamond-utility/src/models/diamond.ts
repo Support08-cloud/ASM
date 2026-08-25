@@ -68,9 +68,9 @@ export function summarizeDiamond(views: DiamondView[]): Pick<
   'status' | 'mp4' | 'json' | 'images' | 'sourceFolderCount'
 > {
   const expected = Math.max(views.length, 1)
-  const mp4Found = views.reduce((sum, view) => sum + countKind(view, 'mp4'), 0)
-  const jsonFound = views.reduce((sum, view) => sum + countKind(view, 'json'), 0)
-  const imageFound = views.reduce((sum, view) => sum + countKind(view, 'image'), 0)
+  const mp4Found = views.filter((view) => countKind(view, 'mp4') > 0).length
+  const jsonFound = views.filter((view) => countKind(view, 'json') > 0).length
+  const imageFound = views.filter((view) => countKind(view, 'image') > 0).length
 
   const inaccessible = views.some((view) => !view.accessible)
   const hasMultiple = views.some((view) => countKind(view, 'mp4') > 1)

@@ -29,6 +29,21 @@ describe('groupDiamonds', () => {
     expect(diamonds[0].views.map((view) => view.view)).toEqual(['Front', '3D', 'Top', '360', 'ER'])
     expect(diamonds[0].status).toBe('ready')
     expect(diamonds[0].mp4).toEqual({ found: 5, expected: 5, availability: 'available' })
+    expect(diamonds[0].json).toEqual({ found: 5, expected: 5 })
+    expect(diamonds[0].images).toEqual({ found: 5, expected: 5 })
+  })
+
+  it('counts media presence per view, not raw file totals', () => {
+    const diamonds = groupDiamonds([
+      {
+        folderName: 'Krish_Front',
+        relativePath: 'Krish_Front',
+        files: [{ name: 'a.jpg' }, { name: 'b.jpg' }, { name: 'c.jpg' }, { name: 'video.mp4' }],
+      },
+    ])
+    expect(diamonds[0].images.found).toBe(1)
+    expect(diamonds[0].images.expected).toBe(1)
+    expect(diamonds[0].mp4.found).toBe(1)
   })
 
   it('marks missing and multiple MP4s as warnings and inaccessible folders as errors', () => {
@@ -55,7 +70,7 @@ describe('groupDiamonds', () => {
     expect(abc?.status).toBe('warning')
     expect(abc?.mp4.availability).toBe('missing')
     expect(stone?.status).toBe('error')
-    expect(lot?.mp4.availability).toBe('multiple')
+    expect(lot?.mp4).toEqual({ found: 1, expected: 1, availability: 'multiple' })
   })
 })
 

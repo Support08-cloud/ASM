@@ -25,7 +25,7 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 32px 40px 112px;
+  padding: 32px 40px 48px;
 }
 
 .workspace-scroll.is-flush {
@@ -551,7 +551,8 @@
 
 .card-actions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .check {
@@ -663,7 +664,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin: 0 -40px -112px;
+  margin: 24px -40px -48px;
   padding: 16px 40px;
   border-top: 1px solid var(--border-default);
   background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
@@ -1044,10 +1045,10 @@
 
 @media (max-width: 1280px) {
   .workspace-scroll {
-    padding: 24px 24px 112px;
+    padding: 24px 24px 40px;
   }
   .selection-bar {
-    margin: 0 -24px -112px;
+    margin: 24px -24px -40px;
     padding: 14px 24px;
   }
   .card-grid {
@@ -1077,7 +1078,7 @@
 
 @media (max-width: 800px) {
   .workspace-scroll {
-    padding: 16px 16px 120px;
+    padding: 16px 16px 32px;
   }
   .page-title {
     font-size: 22px;
@@ -1085,7 +1086,7 @@
   .selection-bar {
     flex-direction: column;
     align-items: stretch;
-    margin: 0 -16px -120px;
+    margin: 16px -16px -32px;
     padding: 12px 16px;
   }
 }
