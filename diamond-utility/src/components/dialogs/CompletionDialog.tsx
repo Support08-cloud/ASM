@@ -1,5 +1,14 @@
 import type { ProcessResult } from '../../models/processing'
 
+export function copiedDiamondNames(result: ProcessResult): string[] {
+  return [...new Set(
+    result.files
+      .filter((file) => file.status === 'copied' && !file.outputPath.endsWith('-edit.mp4'))
+      .map((file) => file.diamondName)
+      .filter(Boolean),
+  )]
+}
+
 export function CompletionDialog({
   result,
   onDone,
@@ -8,7 +17,7 @@ export function CompletionDialog({
 }: {
   result: ProcessResult
   onDone: () => void
-  onEdit?: () => void
+  onEdit?: (diamondName: string) => void
   onOpenOutput?: () => void
 }) {
   const tone = result.outcome === 'success' ? 'ok' : result.outcome === 'partial' ? 'warn' : 'bad'
@@ -25,6 +34,7 @@ export function CompletionDialog({
           ? 'Completed with warnings'
           : 'Processing Failed'
   const mark = result.outcome === 'success' ? '✓' : result.outcome === 'partial' ? '⚠' : '✕'
+  const diamonds = copiedDiamondNames(result)
 
   return (
     <div className="completion-panel">
@@ -43,12 +53,17 @@ export function CompletionDialog({
           <span className="mono">{result.errorPath}</span>
         </p>
       ) : null}
-      <div className="btn-row" style={{ marginTop: 20 }}>
-        {onEdit && result.copied > 0 ? (
-          <button type="button" className="btn primary" onClick={onEdit}>
-            Edit videos
-          </button>
-        ) : null}
+      {diamonds.length > 1 ? (
+        <p className="card-sub">The editor opens one diamond at a time. Choose which diamond to edit.</p>
+      ) : null}
+      <div className="btn-row" style={{ marginTop: 20, flexWrap: 'wrap' }}>
+        {onEdit
+          ? diamonds.map((name) => (
+              <button key={name} type="button" className="btn primary" onClick={() => onEdit(name)}>
+                {diamonds.length === 1 ? 'Edit videos' : `Edit ${name}`}
+              </button>
+            ))
+          : null}
         <button type="button" className="btn ghost" onClick={onOpenOutput ?? onDone}>
           Open Output Folder
         </button>

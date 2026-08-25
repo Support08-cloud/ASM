@@ -30,6 +30,7 @@ export interface AppState {
   processResult: ProcessResult | null
   lastProcessResult: ProcessResult | null
   exportProgress: { percent: number; message: string } | null
+  editorDiamond: string | null
   history: HistoryRecord[]
   toasts: ToastItem[]
   settings: AppSettings
@@ -54,6 +55,7 @@ export const initialState: AppState = {
   processResult: null,
   lastProcessResult: null,
   exportProgress: null,
+  editorDiamond: null,
   history: [],
   toasts: [],
   settings: DEFAULT_SETTINGS,
@@ -67,6 +69,8 @@ export type AppAction =
   | { type: 'set-duplicate-policy'; policy: AppSettings['duplicatePolicy'] }
   | { type: 'set-source'; path: string; kind: 'demo' | 'directory' }
   | { type: 'set-output'; path: string }
+  | { type: 'clear-source' }
+  | { type: 'clear-output' }
   | { type: 'scan-start' }
   | { type: 'scan-progress'; progress: ScanProgress }
   | { type: 'scan-success'; diamonds: Diamond[]; foldersScanned: number; scannedAt: string }
@@ -85,7 +89,7 @@ export type AppAction =
   | { type: 'process-start'; progress: ProcessProgress }
   | { type: 'process-progress'; progress: ProcessProgress }
   | { type: 'process-complete'; result: ProcessResult; record: HistoryRecord }
-  | { type: 'open-editor' }
+  | { type: 'open-editor'; diamondName?: string }
   | { type: 'close-editor' }
   | { type: 'export-start' }
   | { type: 'export-progress'; percent: number; message: string }
@@ -126,6 +130,23 @@ export function reducer(state: AppState, action: AppAction): AppState {
       }
     case 'set-output':
       return { ...state, outputPath: action.path }
+    case 'clear-source':
+      return {
+        ...state,
+        sourcePath: null,
+        sourceKind: 'none',
+        diamonds: [],
+        foldersScanned: 0,
+        lastScanAt: null,
+        selectedIds: [],
+        detailsId: null,
+        scanError: null,
+        scanProgress: null,
+        search: '',
+        phase: 'idle',
+      }
+    case 'clear-output':
+      return { ...state, outputPath: null }
     case 'scan-start':
       return {
         ...state,
@@ -212,9 +233,12 @@ export function reducer(state: AppState, action: AppAction): AppState {
       }
     case 'open-editor': {
       const result = state.lastProcessResult ?? state.processResult
-      const copied = result?.files.filter((file) => file.status === 'copied').length ?? 0
-      if (copied === 0) return state
-      return { ...state, phase: 'editing', route: 'operations' }
+      const copied = (result?.files ?? []).filter((file) => file.status === 'copied' && !file.outputPath.endsWith('-edit.mp4'))
+      if (copied.length === 0) return state
+      const names = [...new Set(copied.map((file) => file.diamondName).filter(Boolean))]
+      const diamondName = action.diamondName ?? (names.length === 1 ? names[0] : null)
+      if (!diamondName) return { ...state, phase: 'completed', route: 'operations' }
+      return { ...state, phase: 'editing', route: 'operations', editorDiamond: diamondName }
     }
     case 'close-editor':
       return { ...state, phase: state.lastProcessResult ? 'completed' : 'ready', exportProgress: null }

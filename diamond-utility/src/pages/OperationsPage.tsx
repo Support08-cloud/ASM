@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../app/state/AppStateContext'
-import { CompletionDialog } from '../components/dialogs/CompletionDialog'
+import { CompletionDialog, copiedDiamondNames } from '../components/dialogs/CompletionDialog'
 import { EmptyState } from '../components/common/States'
 import { PageHeader } from '../components/navigation/PageHeader'
 import { ProcessingPanel } from '../components/processing/ProcessingPanel'
@@ -11,15 +11,17 @@ export function OperationsPage() {
   const { state, dispatch, cancelProcessing, openOutput, exportTimeline } = useAppStore()
   const result = state.processResult ?? state.lastProcessResult
   const editorSource = state.lastProcessResult ?? state.processResult
+  const readyDiamonds = result ? copiedDiamondNames(result) : []
 
   const project = useMemo(() => {
     if (!editorSource) return null
     const copied = editorSource.files.filter((file) => file.status === 'copied' && !file.outputPath.endsWith('-edit.mp4'))
     const files = copied.length > 0 ? copied : editorSource.files.filter((file) => file.status === 'copied')
-    if (files.length === 0) return null
-    const diamondName = files[0].diamondName || 'diamond'
-    return projectFromCopiedFiles(files, outputDirFromFiles(files, editorSource.outputPath), diamondName)
-  }, [editorSource])
+    const scoped = state.editorDiamond ? files.filter((file) => file.diamondName === state.editorDiamond) : files
+    if (scoped.length === 0) return null
+    const diamondName = state.editorDiamond || scoped[0].diamondName || 'diamond'
+    return projectFromCopiedFiles(scoped, outputDirFromFiles(scoped, editorSource.outputPath), diamondName)
+  }, [editorSource, state.editorDiamond])
 
   if (state.phase === 'editing' || state.phase === 'exporting') {
     if (!project) {
@@ -57,20 +59,44 @@ export function OperationsPage() {
         <CompletionDialog
           result={state.processResult}
           onDone={() => dispatch({ type: 'dismiss-completion' })}
-          onEdit={() => dispatch({ type: 'open-editor' })}
+          onEdit={(diamondName) => dispatch({ type: 'open-editor', diamondName })}
           onOpenOutput={() => {
             void openOutput(state.processResult?.outputPath ?? '')
           }}
         />
       ) : result ? (
-        <EmptyState
-          title="Ready to edit"
-          body="Open the last extracted diamond videos in the timeline editor."
-          actionLabel="Edit videos"
-          onAction={() => dispatch({ type: 'open-editor' })}
-          secondaryLabel="Go to Dashboard"
-          onSecondary={() => dispatch({ type: 'navigate', route: 'dashboard' })}
-        />
+        <>
+          <EmptyState
+            title="Ready to edit"
+            body={
+              readyDiamonds.length > 1
+                ? 'Choose one diamond. The editor opens a single diamond at a time.'
+                : 'Open the last extracted diamond videos in the timeline editor.'
+            }
+            actionLabel={readyDiamonds.length === 1 ? 'Edit videos' : undefined}
+            onAction={
+              readyDiamonds.length === 1
+                ? () => dispatch({ type: 'open-editor', diamondName: readyDiamonds[0] })
+                : undefined
+            }
+            secondaryLabel="Go to Dashboard"
+            onSecondary={() => dispatch({ type: 'navigate', route: 'dashboard' })}
+          />
+          {readyDiamonds.length > 1 ? (
+            <div className="btn-row" style={{ justifyContent: 'center', flexWrap: 'wrap', marginTop: 8 }}>
+              {readyDiamonds.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  className="btn primary"
+                  onClick={() => dispatch({ type: 'open-editor', diamondName: name })}
+                >
+                  Edit {name}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </>
       ) : (
         <EmptyState
           title="No active operation"

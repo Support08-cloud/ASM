@@ -13,5 +13,8 @@ contextBridge.exposeInMainWorld('desktop', {
   resolveSample: (rel) => ipcRenderer.invoke('desktop:resolve-sample', rel),
   fontFile: () => ipcRenderer.invoke('desktop:font-file'),
   mediaInfo: (filePath) => ipcRenderer.invoke('desktop:media-info', filePath),
-  toMediaUrl: (filePath) => `du-media://local/${encodeURIComponent(filePath)}`,
+  toMediaUrl: (filePath) => {
+    const encoded = Buffer.from(String(filePath), 'utf8').toString('base64url')
+    return `du-media://host/${encoded}`
+  },
 })

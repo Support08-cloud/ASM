@@ -189,7 +189,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
         durationMs = (await window.desktop.mediaInfo?.(picked))?.durationMs || 12000
       }
     }
-    const extra = createExtra('audio', project.playheadMs, {
+    const extra = createExtra('audio', 0, {
       label,
       absolutePath,
       mediaUrl,
@@ -199,12 +199,12 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   }
 
   const addText = () => {
-    const extra = createExtra('text', project.playheadMs)
+    const extra = createExtra('text', 0)
     commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null })
   }
 
   const addFx = () => {
-    const extra = createExtra('fx', project.playheadMs)
+    const extra = createExtra('fx', 0)
     commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null })
   }
 
@@ -268,6 +268,22 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           </button>
         </div>
       </header>
+
+      <ActionToolbar
+        playing={playing}
+        playheadMs={project.playheadMs}
+        durationMs={duration}
+        canUndo={past.length > 0}
+        canRedo={future.length > 0}
+        onPlay={() => setPlaying((value) => !value)}
+        onUndo={undo}
+        onRedo={redo}
+        onSplit={splitAtPlayhead}
+        onAddMedia={() => void addMedia()}
+        onAddMusic={() => void addMusic()}
+        onAddText={addText}
+        onAddFx={addFx}
+      />
 
       <div className="editor-grid">
         <aside className="editor-bin">
@@ -346,21 +362,6 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
                 }
               })
             }}
-          />
-          <ActionToolbar
-            playing={playing}
-            playheadMs={project.playheadMs}
-            durationMs={duration}
-            canUndo={past.length > 0}
-            canRedo={future.length > 0}
-            onPlay={() => setPlaying((value) => !value)}
-            onUndo={undo}
-            onRedo={redo}
-            onSplit={splitAtPlayhead}
-            onAddMedia={() => void addMedia()}
-            onAddMusic={() => void addMusic()}
-            onAddText={addText}
-            onAddFx={addFx}
           />
         </section>
 
@@ -595,7 +596,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           const file = event.target.files?.[0]
           event.target.value = ''
           if (!file) return
-          const extra = createExtra('audio', project.playheadMs, {
+          const extra = createExtra('audio', 0, {
             label: file.name,
             mediaUrl: URL.createObjectURL(file),
           })

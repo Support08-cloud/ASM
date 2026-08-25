@@ -85,4 +85,68 @@ describe('app state machine', () => {
     expect(state.phase).toBe('ready')
     expect(state.search).toBe('Krish')
   })
+
+  it('clears source path, scan results, and selection', () => {
+    const diamonds = buildDemoDiamonds().slice(0, 1)
+    const state = reducer(
+      {
+        ...initialState,
+        phase: 'ready',
+        sourcePath: 'D:/DiamondData',
+        sourceKind: 'directory',
+        diamonds,
+        foldersScanned: 12,
+        lastScanAt: '2026-08-25T10:00:00.000Z',
+        selectedIds: [diamonds[0].folders[0].id],
+        detailsId: diamonds[0].id,
+        search: '260609',
+        scanError: { title: 'Failed', detail: 'x' },
+      },
+      { type: 'clear-source' },
+    )
+    expect(state.sourcePath).toBeNull()
+    expect(state.sourceKind).toBe('none')
+    expect(state.diamonds).toEqual([])
+    expect(state.selectedIds).toEqual([])
+    expect(state.detailsId).toBeNull()
+    expect(state.search).toBe('')
+    expect(state.phase).toBe('idle')
+    expect(state.foldersScanned).toBe(0)
+    expect(state.lastScanAt).toBeNull()
+  })
+
+  it('clears the output path', () => {
+    const state = reducer({ ...initialState, outputPath: 'D:/DiamondOutput' }, { type: 'clear-output' })
+    expect(state.outputPath).toBeNull()
+  })
+
+  it('opens the editor for one named diamond when several were copied', () => {
+    const files = [
+      { diamondName: '260609-151', viewLabel: '1', sourcePath: 's1', outputPath: 'o/260609-151-1.mp4', status: 'copied' as const },
+      { diamondName: '260609-152', viewLabel: '1', sourcePath: 's2', outputPath: 'o/260609-152-1.mp4', status: 'copied' as const },
+    ]
+    const result = {
+      outcome: 'success' as const,
+      copied: 2,
+      skipped: 0,
+      failed: 0,
+      total: 2,
+      outputPath: 'D:/out',
+      files,
+    }
+    const completed = {
+      ...initialState,
+      phase: 'completed' as const,
+      route: 'operations' as const,
+      processResult: result,
+      lastProcessResult: result,
+    }
+    const blocked = reducer(completed, { type: 'open-editor' })
+    expect(blocked.phase).toBe('completed')
+    expect(blocked.editorDiamond).toBeNull()
+
+    const opened = reducer(completed, { type: 'open-editor', diamondName: '260609-151' })
+    expect(opened.phase).toBe('editing')
+    expect(opened.editorDiamond).toBe('260609-151')
+  })
 })

@@ -19,6 +19,8 @@ export function DashboardPage() {
     visibleDiamonds,
     chooseSource,
     chooseOutput,
+    clearSource,
+    clearOutput,
     loadSample,
     rescan,
     startGetMp4,
@@ -31,6 +33,16 @@ export function DashboardPage() {
   const total = state.diamonds.length
   const filterCount = activeFilterCount(state.filters)
   const searching = Boolean(state.search.trim()) || filterCount > 0
+  const getMp4Reason =
+    state.phase === 'scanning'
+      ? 'Scan in progress'
+      : !state.sourcePath
+        ? 'Select a source folder first'
+        : !state.outputPath
+          ? 'Choose an output folder first'
+          : state.selectedIds.length === 0
+            ? 'Select one or more variant folders'
+            : undefined
 
   return (
     <>
@@ -61,12 +73,14 @@ export function DashboardPage() {
           path={state.sourcePath}
           hint={state.lastScanAt ? `Last scanned: ${formatRelativeTime(state.lastScanAt)}` : 'Select an input folder to begin.'}
           onChange={chooseSource}
+          onClear={clearSource}
         />
         <PathCard
           label="Output"
           path={state.outputPath}
           hint="One folder per diamond base name is created here"
           onChange={chooseOutput}
+          onClear={clearOutput}
         />
       </div>
 
@@ -132,6 +146,9 @@ export function DashboardPage() {
             <button type="button" className="btn ghost" onClick={rescan} title="Rescan source (Ctrl+R)">
               Refresh
             </button>
+            <button type="button" className="btn ghost" onClick={() => void loadSample()}>
+              Load sample
+            </button>
           </div>
 
           <div className="toolbar-row">
@@ -182,15 +199,16 @@ export function DashboardPage() {
               ))}
             </div>
           )}
-
-          <SelectionToolbar
-            count={state.selectedIds.length}
-            disabled={!state.outputPath}
-            onClear={() => dispatch({ type: 'clear-selection' })}
-            onProcess={startGetMp4}
-          />
         </>
       ) : null}
+
+      <SelectionToolbar
+        count={state.selectedIds.length}
+        disabled={Boolean(getMp4Reason)}
+        reason={getMp4Reason}
+        onClear={() => dispatch({ type: 'clear-selection' })}
+        onProcess={startGetMp4}
+      />
 
       {detailsDiamond ? (
         <DiamondDetailsDrawer

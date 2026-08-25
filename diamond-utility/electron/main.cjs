@@ -166,10 +166,15 @@ function mediaInfo(filePath) {
 
 app.whenReady().then(() => {
   protocol.handle('du-media', (request) => {
-    const prefix = 'du-media://local/'
-    const encoded = request.url.startsWith(prefix) ? request.url.slice(prefix.length) : request.url.replace(/^du-media:\/\//, '')
-    const filePath = decodeURIComponent(encoded.split('?')[0])
-    return net.fetch(pathToFileURL(filePath).href)
+    try {
+      const parsed = new URL(request.url)
+      const encoded = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
+      const filePath = Buffer.from(encoded, 'base64url').toString('utf8')
+      if (!filePath || !fs.existsSync(filePath)) return new Response('Not found', { status: 404 })
+      return net.fetch(pathToFileURL(filePath).href)
+    } catch {
+      return new Response('Bad request', { status: 400 })
+    }
   })
 
   ipcMain.handle('desktop:pick-directory', async () => {

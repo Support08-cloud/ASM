@@ -34,6 +34,8 @@ interface AppStoreValue {
   loadSample: () => Promise<void>
   chooseSource: () => Promise<void>
   chooseOutput: () => Promise<void>
+  clearSource: () => void
+  clearOutput: () => void
   rescan: () => Promise<void>
   startGetMp4: () => void
   confirmGetMp4: () => Promise<void>
@@ -281,6 +283,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const clearSource = () => {
+    sourceHandleRef.current = null
+    dispatch({ type: 'clear-source' })
+    toast('info', 'Source path cleared')
+  }
+
+  const clearOutput = () => {
+    dispatch({ type: 'clear-output' })
+    toast('info', 'Output path cleared')
+  }
+
   const rescan = async () => {
     if (stateRef.current.sourceKind === 'none' || !stateRef.current.sourcePath) {
       await chooseSource()
@@ -457,6 +470,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     loadSample,
     chooseSource,
     chooseOutput,
+    clearSource,
+    clearOutput,
     rescan,
     startGetMp4,
     confirmGetMp4,
