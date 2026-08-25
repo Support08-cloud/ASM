@@ -8,6 +8,7 @@ export interface ExtractOptions {
   duplicatePolicy: DuplicatePolicy
   signal?: AbortSignal
   onProgress: (progress: ProcessProgress) => void
+  copyFile?: (sourcePath: string, destinationPath: string) => Promise<void>
 }
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
@@ -36,7 +37,7 @@ function outputName(view: DiamondView, fileName: string, index: number): string 
 }
 
 export async function extractMp4s(options: ExtractOptions): Promise<ProcessResult> {
-  const { diamonds, outputPath, duplicatePolicy, signal, onProgress } = options
+  const { diamonds, outputPath, duplicatePolicy, signal, onProgress, copyFile } = options
   const jobs: DiamondProcessJob[] = diamonds.map((diamond) => ({
     diamondId: diamond.id,
     diamondName: diamond.baseName,
@@ -144,6 +145,26 @@ export async function extractMp4s(options: ExtractOptions): Promise<ProcessResul
         const finalPath =
           usedNames.has(key) && duplicatePolicy === 'rename' ? uniquify(destPath, usedNames) : destPath
         usedNames.set(finalPath.toLowerCase(), 1)
+
+        if (copyFile && file.absolutePath) {
+          try {
+            await copyFile(file.absolutePath, finalPath)
+          } catch (error) {
+            failed += 1
+            files.push({
+              diamondName: diamond.baseName,
+              viewLabel: view.view,
+              sourcePath: file.relativePath,
+              outputPath: finalPath,
+              status: 'failed',
+              message: error instanceof Error ? error.message : 'Copy failed',
+            })
+            continue
+          }
+        } else {
+          await sleep(140, signal)
+        }
+
         copied += 1
         files.push({
           diamondName: diamond.baseName,
@@ -152,7 +173,6 @@ export async function extractMp4s(options: ExtractOptions): Promise<ProcessResul
           outputPath: finalPath,
           status: 'copied',
         })
-        await sleep(140, signal)
       }
 
       step.status = countKind(view, 'mp4') > 1 ? 'done' : 'done'
@@ -179,9 +199,13 @@ function uniquify(path: string, used: Map<string, number>): string {
 }
 
 function joinPath(...parts: string[]): string {
+  const root = parts[0] ?? ''
+  const sep = root.includes('\\') ? '\\' : '/'
   return parts
-    .map((part, index) => (index === 0 ? part.replace(/[\\/]+$/, '') : part.replace(/^[\\/]+/, '')))
-    .join('/')
+    .map((part, index) =>
+      index === 0 ? part.replace(/[\\/]+$/, '') : part.replace(/^[\\/]+/, ''),
+    )
+    .join(sep)
 }
 
 function finalize(

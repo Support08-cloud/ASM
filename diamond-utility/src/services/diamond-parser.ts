@@ -22,7 +22,7 @@ export interface ScannedFolderInput {
   relativePath: string
   accessible?: boolean
   errorMessage?: string
-  files: Array<{ name: string; relativePath?: string; size?: number }>
+  files: Array<{ name: string; relativePath?: string; size?: number; absolutePath?: string }>
 }
 
 export function classifyFile(name: string): MediaFile['kind'] {
@@ -69,6 +69,7 @@ export function groupDiamonds(folders: ScannedFolderInput[]): Diamond[] {
         relativePath: file.relativePath ?? `${folder.folderName}/${file.name}`,
         size: file.size ?? 0,
         kind: classifyFile(file.name),
+        absolutePath: file.absolutePath,
       })),
     }
 

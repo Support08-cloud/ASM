@@ -33,6 +33,7 @@ interface AppStoreValue {
   startGetMp4: () => void
   confirmGetMp4: () => Promise<void>
   cancelProcessing: () => void
+  openOutput: (target: string) => Promise<void>
 }
 
 const AppStoreContext = createContext<AppStoreValue | null>(null)
@@ -142,6 +143,40 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         toast('success', `${folders.length} folders scanned`)
         return
       }
+      if (window.desktop?.isElectron) {
+        const root = stateRef.current.sourcePath
+        if (!root) {
+          dispatch({
+            type: 'scan-error',
+            title: 'Unable to read this folder.',
+            detail: 'Choose a source folder again, then retry the scan.',
+          })
+          return
+        }
+        dispatch({
+          type: 'scan-progress',
+          progress: { foldersScanned: 0, filesSeen: 0, percent: 8, message: 'Reading folders and media files' },
+        })
+        const scanned = await window.desktop.scanDirectory(root)
+        if (controller.signal.aborted) return
+        dispatch({
+          type: 'scan-progress',
+          progress: {
+            foldersScanned: scanned.foldersScanned,
+            filesSeen: scanned.filesSeen,
+            percent: 100,
+            message: 'Scan complete',
+          },
+        })
+        dispatch({
+          type: 'scan-success',
+          diamonds: groupDiamonds(scanned.folders),
+          foldersScanned: scanned.foldersScanned,
+          scannedAt: new Date().toISOString(),
+        })
+        toast('success', `${scanned.foldersScanned} folders scanned`)
+        return
+      }
       const handle = sourceHandleRef.current
       if (!handle) {
         dispatch({
@@ -185,6 +220,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }
 
   const chooseSource = async () => {
+    if (window.desktop?.isElectron) {
+      try {
+        const picked = await window.desktop.pickDirectory()
+        if (!picked) return
+        sourceHandleRef.current = null
+        dispatch({ type: 'set-source', path: picked, kind: 'directory' })
+        await runScan('directory')
+      } catch {
+        toast('error', 'Could not open the selected folder')
+      }
+      return
+    }
     if (typeof window.showDirectoryPicker !== 'function') {
       await loadSample()
       toast('info', 'Folder picker is unavailable — loaded sample data')
@@ -202,6 +249,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }
 
   const chooseOutput = async () => {
+    if (window.desktop?.isElectron) {
+      try {
+        const picked = await window.desktop.pickDirectory()
+        if (!picked) return
+        dispatch({ type: 'set-output', path: picked })
+        toast('success', 'Output folder selected')
+      } catch {
+        toast('error', 'Could not open the output folder')
+      }
+      return
+    }
     if (typeof window.showDirectoryPicker !== 'function') {
       dispatch({ type: 'set-output', path: DEMO_OUTPUT_PATH })
       toast('info', 'Using sample output location')
@@ -264,6 +322,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         duplicatePolicy: current.settings.duplicatePolicy,
         signal: controller.signal,
         onProgress: (progress) => dispatch({ type: 'process-progress', progress }),
+        copyFile: window.desktop?.isElectron
+          ? (sourcePath, destinationPath) => window.desktop!.copyFile(sourcePath, destinationPath)
+          : undefined,
       })
       const record = toHistory(result, selected, current.sourcePath ?? 'Unknown', new Date().toISOString())
       dispatch({ type: 'process-complete', result, record })
@@ -294,6 +355,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const openOutput = async (target: string) => {
+    if (window.desktop?.isElectron) {
+      try {
+        await window.desktop.openPath(target)
+      } catch {
+        toast('error', 'Could not open the output folder')
+      }
+      return
+    }
+    toast('info', 'Open the output folder from Explorer')
+  }
+
   const cancelProcessing = () => {
     abortRef.current?.abort()
   }
@@ -312,6 +385,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     startGetMp4,
     confirmGetMp4,
     cancelProcessing,
+    openOutput,
   }
 
   return <AppStoreContext.Provider value={value}>{children}</AppStoreContext.Provider>

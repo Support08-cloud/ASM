@@ -10,6 +10,7 @@ export interface MediaFile {
   relativePath: string
   size: number
   kind: 'mp4' | 'json' | 'image' | 'other'
+  absolutePath?: string
 }
 
 export interface DiamondView {
