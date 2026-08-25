@@ -3,19 +3,27 @@ import type { ProcessResult } from '../../models/processing'
 export function CompletionDialog({
   result,
   onDone,
+  onEdit,
   onOpenOutput,
 }: {
   result: ProcessResult
   onDone: () => void
+  onEdit?: () => void
   onOpenOutput?: () => void
 }) {
   const tone = result.outcome === 'success' ? 'ok' : result.outcome === 'partial' ? 'warn' : 'bad'
   const title =
-    result.outcome === 'success'
-      ? 'Extraction Complete'
-      : result.outcome === 'partial'
-        ? 'Completed with warnings'
-        : 'Processing Failed'
+    result.files.some((file) => file.outputPath.endsWith('-edit.mp4'))
+      ? result.outcome === 'success'
+        ? 'Export Complete'
+        : result.outcome === 'partial'
+          ? 'Exported with warnings'
+          : 'Export Failed'
+      : result.outcome === 'success'
+        ? 'Extraction Complete'
+        : result.outcome === 'partial'
+          ? 'Completed with warnings'
+          : 'Processing Failed'
   const mark = result.outcome === 'success' ? '✓' : result.outcome === 'partial' ? '⚠' : '✕'
 
   return (
@@ -36,10 +44,15 @@ export function CompletionDialog({
         </p>
       ) : null}
       <div className="btn-row" style={{ marginTop: 20 }}>
+        {onEdit && result.copied > 0 ? (
+          <button type="button" className="btn primary" onClick={onEdit}>
+            Edit videos
+          </button>
+        ) : null}
         <button type="button" className="btn ghost" onClick={onOpenOutput ?? onDone}>
           Open Output Folder
         </button>
-        <button type="button" className="btn primary" onClick={onDone}>
+        <button type="button" className="btn ghost" onClick={onDone}>
           Done
         </button>
       </div>

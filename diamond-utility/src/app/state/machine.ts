@@ -28,6 +28,8 @@ export interface AppState {
   detailsId: string | null
   processProgress: ProcessProgress | null
   processResult: ProcessResult | null
+  lastProcessResult: ProcessResult | null
+  exportProgress: { percent: number; message: string } | null
   history: HistoryRecord[]
   toasts: ToastItem[]
   settings: AppSettings
@@ -50,6 +52,8 @@ export const initialState: AppState = {
   detailsId: null,
   processProgress: null,
   processResult: null,
+  lastProcessResult: null,
+  exportProgress: null,
   history: [],
   toasts: [],
   settings: DEFAULT_SETTINGS,
@@ -81,6 +85,11 @@ export type AppAction =
   | { type: 'process-start'; progress: ProcessProgress }
   | { type: 'process-progress'; progress: ProcessProgress }
   | { type: 'process-complete'; result: ProcessResult; record: HistoryRecord }
+  | { type: 'open-editor' }
+  | { type: 'close-editor' }
+  | { type: 'export-start' }
+  | { type: 'export-progress'; percent: number; message: string }
+  | { type: 'export-complete'; result: ProcessResult }
   | { type: 'dismiss-completion' }
   | { type: 'add-toast'; toast: ToastItem }
   | { type: 'dismiss-toast'; id: string }
@@ -197,8 +206,34 @@ export function reducer(state: AppState, action: AppAction): AppState {
         phase: 'completed',
         processProgress: null,
         processResult: action.result,
+        lastProcessResult: action.result,
         history: [action.record, ...state.history].slice(0, 80),
         selectedIds: [],
+      }
+    case 'open-editor': {
+      const result = state.lastProcessResult ?? state.processResult
+      const copied = result?.files.filter((file) => file.status === 'copied').length ?? 0
+      if (copied === 0) return state
+      return { ...state, phase: 'editing', route: 'operations' }
+    }
+    case 'close-editor':
+      return { ...state, phase: state.lastProcessResult ? 'completed' : 'ready', exportProgress: null }
+    case 'export-start':
+      return {
+        ...state,
+        phase: 'exporting',
+        route: 'operations',
+        exportProgress: { percent: 0, message: 'Preparing export' },
+      }
+    case 'export-progress':
+      return { ...state, exportProgress: { percent: action.percent, message: action.message } }
+    case 'export-complete':
+      return {
+        ...state,
+        phase: 'completed',
+        exportProgress: null,
+        processResult: action.result,
+        lastProcessResult: state.lastProcessResult ?? action.result,
       }
     case 'dismiss-completion':
       return { ...state, phase: 'ready', processResult: null, processProgress: null, route: 'dashboard' }

@@ -55,7 +55,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 and click **Load sample dataset**. Search `260602-362`, select the `-1`, `-2`, `-3`, and `-RG` folders, then **Get MP4**.
+Open http://localhost:5173, load the sample dataset, search `260602-362`, select the `-1`, `-2`, `-3`, and `-RG` folders, then **Get MP4**. On Operations, click **Edit videos** for the CapCut-style timeline (trim, speed, transitions, export).
 
 ```bash
 npm test

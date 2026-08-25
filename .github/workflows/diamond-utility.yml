@@ -42,6 +42,13 @@ jobs:
           cache: npm
           cache-dependency-path: diamond-utility/package-lock.json
       - run: npm ci
+      - uses: FedericoCarboni/setup-ffmpeg@v3
+        id: setup-ffmpeg
+      - name: Stage ffmpeg for the portable EXE
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path extra-bin | Out-Null
+          Copy-Item (Get-Command ffmpeg).Source extra-bin\ffmpeg.exe
       - run: npm run build:win
       - uses: actions/upload-artifact@v4
         with:

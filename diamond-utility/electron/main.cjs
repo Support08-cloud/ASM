@@ -1,4 +1,5 @@
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron')
+const { spawn } = require('child_process')
 const fs = require('fs')
 const path = require('path')
 
@@ -127,6 +128,17 @@ app.whenReady().then(() => {
     if (err) throw new Error(err)
   })
 
+  ipcMain.handle('desktop:write-text-file', async (_event, filePath, contents) => {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true })
+    fs.writeFileSync(filePath, contents, 'utf8')
+  })
+
+  ipcMain.handle('desktop:run-ffmpeg', async (_event, args) => {
+    const output = args[args.length - 1]
+    if (typeof output === 'string') fs.mkdirSync(path.dirname(output), { recursive: true })
+    await runFfmpeg(args)
+  })
+
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -136,3 +148,26 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
+
+function ffmpegBinary() {
+  const packed = path.join(process.resourcesPath, 'bin', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg')
+  if (fs.existsSync(packed)) return packed
+  const local = path.join(__dirname, '..', 'extra-bin', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg')
+  if (fs.existsSync(local)) return local
+  return process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'
+}
+
+function runFfmpeg(args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(ffmpegBinary(), args, { windowsHide: true })
+    let stderr = ''
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString()
+    })
+    child.on('error', (error) => reject(error))
+    child.on('close', (code) => {
+      if (code === 0) resolve()
+      else reject(new Error(stderr.trim().slice(-1000) || `ffmpeg exited with code ${code}`))
+    })
+  })
+}

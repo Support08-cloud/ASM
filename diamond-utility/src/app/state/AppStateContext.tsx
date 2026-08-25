@@ -17,7 +17,10 @@ import { loadHistory, loadPaths, loadSettings, saveHistory, savePaths, saveSetti
 import { uid } from '../../utils/format'
 import { initialState, reducer, type AppAction, type AppState } from './machine'
 import { withSelectedFolders, type Diamond } from '../../models/diamond'
+import type { EditorProject } from '../../models/editor'
 import type { ConfirmSummary, HistoryRecord, ProcessResult } from '../../models/processing'
+import { buildExportPlan, concatListContents } from '../../services/ffmpeg-export'
+import { exportFileName } from '../../services/timeline'
 
 interface AppStoreValue {
   state: AppState
@@ -32,6 +35,7 @@ interface AppStoreValue {
   rescan: () => Promise<void>
   startGetMp4: () => void
   confirmGetMp4: () => Promise<void>
+  exportTimeline: (project: EditorProject) => Promise<void>
   cancelProcessing: () => void
   openOutput: (target: string) => Promise<void>
 }
@@ -371,6 +375,73 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     abortRef.current?.abort()
   }
 
+  const exportTimeline = async (project: EditorProject) => {
+    const plan = buildExportPlan(project)
+    dispatch({ type: 'export-start' })
+    try {
+      if (window.desktop?.writeTextFile) {
+        const concatStep = plan.steps.find((step) => step.args.includes('concat'))
+        if (concatStep) {
+          const inputAt = concatStep.args.indexOf('-i')
+          const listPath = concatStep.args[inputAt + 1]
+          if (listPath) await window.desktop.writeTextFile(listPath, concatListContents(project.clips, project.outputDir))
+        }
+      }
+      for (let i = 0; i < plan.steps.length; i += 1) {
+        const step = plan.steps[i]
+        dispatch({
+          type: 'export-progress',
+          percent: Math.round((i / Math.max(plan.steps.length, 1)) * 100),
+          message: step.label,
+        })
+        if (window.desktop?.runFfmpeg) {
+          await window.desktop.runFfmpeg(step.args)
+        } else {
+          await wait(260)
+        }
+      }
+      dispatch({
+        type: 'export-progress',
+        percent: 100,
+        message: 'Finishing',
+      })
+      const result: ProcessResult = {
+        outcome: 'success',
+        copied: 1,
+        skipped: 0,
+        failed: 0,
+        total: 1,
+        outputPath: plan.outputPath,
+        files: [
+          {
+            diamondName: project.diamondName,
+            viewLabel: exportFileName(project.diamondName),
+            sourcePath: 'timeline',
+            outputPath: plan.outputPath,
+            status: 'copied',
+          },
+        ],
+      }
+      dispatch({ type: 'export-complete', result })
+      toast('success', window.desktop?.runFfmpeg ? 'Edited video exported' : `Export planned: ${exportFileName(project.diamondName)}`)
+    } catch (error) {
+      dispatch({
+        type: 'export-complete',
+        result: {
+          outcome: 'error',
+          copied: 0,
+          skipped: 0,
+          failed: 1,
+          total: 1,
+          outputPath: plan.outputPath,
+          files: [],
+          errorMessage: error instanceof Error ? error.message : 'Export failed',
+        },
+      })
+      toast('error', 'Could not export the edited video')
+    }
+  }
+
   const value: AppStoreValue = {
     state,
     dispatch,
@@ -384,6 +455,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     rescan,
     startGetMp4,
     confirmGetMp4,
+    exportTimeline,
     cancelProcessing,
     openOutput,
   }

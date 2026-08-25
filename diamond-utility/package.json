@@ -54,6 +54,12 @@
       "dist/**/*",
       "electron/**/*"
     ],
+    "extraResources": [
+      {
+        "from": "extra-bin",
+        "to": "bin"
+      }
+    ],
     "extraMetadata": {
       "main": "electron/main.cjs"
     },

@@ -48,5 +48,7 @@ interface Window {
     }>
     copyFile: (sourcePath: string, destinationPath: string) => Promise<void>
     openPath: (target: string) => Promise<void>
+    writeTextFile?: (filePath: string, contents: string) => Promise<void>
+    runFfmpeg?: (args: string[]) => Promise<void>
   }
 }
