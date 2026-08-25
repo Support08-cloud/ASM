@@ -44,6 +44,9 @@ jobs:
       - run: npm ci
       - uses: FedericoCarboni/setup-ffmpeg@v3
         id: setup-ffmpeg
+        with:
+          ffmpeg-version: '6.1.1'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Stage ffmpeg for the portable EXE
         shell: pwsh
         run: |
