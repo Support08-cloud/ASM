@@ -29,7 +29,7 @@ export function SearchBar({ value, onChange, resultLabel }: SearchBarProps) {
         ref={ref}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="Search diamonds..."
+        placeholder="Search diamond (e.g. 260602-362)"
         aria-label="Search diamonds"
       />
       <span className="kbd" title={resultLabel}>

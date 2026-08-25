@@ -512,8 +512,7 @@
 .card-title {
   font-size: 15px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .card-sub {
@@ -568,12 +567,98 @@
   color: transparent;
 }
 
+.diamond-card.is-selected,
+.diamond-card.is-partial {
+  border-color: color-mix(in srgb, var(--accent-primary) 55%, var(--border-default));
+}
+
+.diamond-card.is-partial {
+  background: color-mix(in srgb, var(--accent-soft) 40%, var(--surface-card));
+}
+
+.folder-list {
+  display: grid;
+  gap: 6px;
+}
+
+.folder-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-default);
+  background: var(--bg-tertiary);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.folder-row:hover,
+.folder-row:focus-visible {
+  background: var(--surface-card-hover);
+}
+
+.folder-row.is-selected {
+  border-color: color-mix(in srgb, var(--accent-primary) 45%, var(--border-default));
+  background: var(--accent-soft);
+}
+
+.folder-name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.folder-meta {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.list-group {
+  padding: 10px 12px 12px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.list-group-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0 10px;
+}
+
+.list-folders {
+  padding-left: 28px;
+}
+
+.output-preview {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+}
+
+.output-group {
+  display: grid;
+  gap: 4px;
+}
+
 .diamond-card.is-selected .check,
 .check.is-on,
+.check.is-partial,
 .row-check.is-on {
   background: var(--accent-primary);
   border-color: var(--accent-primary);
   color: #0c0e12;
+}
+
+.check.is-partial {
+  background: color-mix(in srgb, var(--accent-primary) 42%, var(--surface-card));
 }
 
 .status-badge {
@@ -640,8 +725,7 @@
 .table-name {
   color: var(--text-primary);
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .list-wrap {

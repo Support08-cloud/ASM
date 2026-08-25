@@ -49,7 +49,7 @@
     "directories": {
       "output": "release"
     },
-    "publish": null,
+    "publish": [],
     "files": [
       "dist/**/*",
       "electron/**/*"

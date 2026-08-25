@@ -16,7 +16,7 @@ import { countSelectedFolders, countSelectedMp4s, extractMp4s } from '../../serv
 import { loadHistory, loadPaths, loadSettings, saveHistory, savePaths, saveSettings } from '../../services/settings'
 import { uid } from '../../utils/format'
 import { initialState, reducer, type AppAction, type AppState } from './machine'
-import type { Diamond } from '../../models/diamond'
+import { withSelectedFolders, type Diamond } from '../../models/diamond'
 import type { ConfirmSummary, HistoryRecord, ProcessResult } from '../../models/processing'
 
 interface AppStoreValue {
@@ -86,7 +86,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   )
 
   const selectedDiamonds = useMemo(
-    () => state.diamonds.filter((diamond) => state.selectedIds.includes(diamond.id)),
+    () => withSelectedFolders(state.diamonds, state.selectedIds),
     [state.diamonds, state.selectedIds],
   )
 
@@ -289,7 +289,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       return
     }
     if (stateRef.current.selectedIds.length === 0) {
-      toast('info', 'Select one or more diamonds to enable processing.')
+      toast('info', 'Select one or more variant folders to enable processing.')
       return
     }
     dispatch({ type: 'open-confirm' })
@@ -297,7 +297,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const confirmGetMp4 = async () => {
     const current = stateRef.current
-    const selected = current.diamonds.filter((diamond) => current.selectedIds.includes(diamond.id))
+    const selected = withSelectedFolders(current.diamonds, current.selectedIds)
     if (selected.length === 0 || !current.outputPath) return
 
     abortRef.current?.abort()

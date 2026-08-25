@@ -12,7 +12,7 @@ export function SelectionToolbar({ count, disabled, onClear, onProcess }: Select
     <div className="selection-bar">
       <div>
         <div className="selection-copy">
-          {count} diamond{count === 1 ? '' : 's'} selected
+          {count} folder{count === 1 ? '' : 's'} selected
         </div>
         <button type="button" className="btn" onClick={onClear}>
           Clear Selection

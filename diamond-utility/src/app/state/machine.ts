@@ -70,6 +70,7 @@ export type AppAction =
   | { type: 'set-search'; search: string }
   | { type: 'set-filters'; filters: Filters }
   | { type: 'toggle-select'; id: string }
+  | { type: 'toggle-group'; ids: string[] }
   | { type: 'select-visible'; ids: string[] }
   | { type: 'clear-selection' }
   | { type: 'set-view-mode'; viewMode: ViewMode }
@@ -155,6 +156,15 @@ export function reducer(state: AppState, action: AppAction): AppState {
         ? state.selectedIds.filter((id) => id !== action.id)
         : [...state.selectedIds, action.id]
       return { ...state, selectedIds: selected }
+    }
+    case 'toggle-group': {
+      const allOn = action.ids.length > 0 && action.ids.every((id) => state.selectedIds.includes(id))
+      return {
+        ...state,
+        selectedIds: allOn
+          ? state.selectedIds.filter((id) => !action.ids.includes(id))
+          : unique([...state.selectedIds, ...action.ids]),
+      }
     }
     case 'select-visible':
       return { ...state, selectedIds: unique(action.ids) }

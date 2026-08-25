@@ -27,7 +27,7 @@ export function OperationsPage() {
       ) : (
         <EmptyState
           title="No active operation"
-          body="Select diamonds on the Dashboard, then run Get MP4. Live progress appears here."
+          body="Select variant folders on the Dashboard, then run Get MP4. Live progress appears here."
           actionLabel="Go to Dashboard"
           onAction={() => dispatch({ type: 'navigate', route: 'dashboard' })}
         />

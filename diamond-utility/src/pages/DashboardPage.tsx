@@ -24,6 +24,7 @@ export function DashboardPage() {
     startGetMp4,
     confirmGetMp4,
     detailsDiamond,
+    confirmSummary,
   } = useAppStore()
 
   const showing = visibleDiamonds.length
@@ -36,7 +37,7 @@ export function DashboardPage() {
       <PageHeader
         eyebrow="Workspace"
         title="Diamond Data"
-        description="Select and process diamond folders from your local source."
+        description="Search a diamond, select the variant folders you need, then Get MP4."
         meta={
           total > 0 ? (
             <>
@@ -64,7 +65,7 @@ export function DashboardPage() {
         <PathCard
           label="Output"
           path={state.outputPath}
-          hint="New diamond folders will be created here"
+          hint="One folder per diamond base name is created here"
           onChange={chooseOutput}
         />
       </div>
@@ -99,7 +100,7 @@ export function DashboardPage() {
               <div className="section-label">Diamond data</div>
               <div className="results-count">{total.toLocaleString()} diamonds</div>
               <div className="results-sub">
-                {state.selectedIds.length} selected
+                {state.selectedIds.length} folder{state.selectedIds.length === 1 ? '' : 's'} selected
                 {searching ? ` · Showing ${showing} of ${total} diamonds` : null}
               </div>
             </div>
@@ -138,7 +139,12 @@ export function DashboardPage() {
               <button
                 type="button"
                 className="btn ghost"
-                onClick={() => dispatch({ type: 'select-visible', ids: visibleDiamonds.map((item) => item.id) })}
+                onClick={() =>
+                  dispatch({
+                    type: 'select-visible',
+                    ids: visibleDiamonds.flatMap((item) => item.folders.map((folder) => folder.id)),
+                  })
+                }
               >
                 Select All
               </button>
@@ -154,7 +160,10 @@ export function DashboardPage() {
             <DiamondTable
               diamonds={visibleDiamonds}
               selectedIds={state.selectedIds}
-              onToggle={(id) => dispatch({ type: 'toggle-select', id })}
+              onToggleDiamond={(diamond) =>
+                dispatch({ type: 'toggle-group', ids: diamond.folders.map((folder) => folder.id) })
+              }
+              onToggleFolder={(id) => dispatch({ type: 'toggle-select', id })}
               onDetails={(id) => dispatch({ type: 'open-details', id })}
             />
           ) : (
@@ -163,8 +172,11 @@ export function DashboardPage() {
                 <DiamondCard
                   key={diamond.id}
                   diamond={diamond}
-                  selected={state.selectedIds.includes(diamond.id)}
-                  onToggle={() => dispatch({ type: 'toggle-select', id: diamond.id })}
+                  selectedIds={state.selectedIds}
+                  onToggleDiamond={() =>
+                    dispatch({ type: 'toggle-group', ids: diamond.folders.map((folder) => folder.id) })
+                  }
+                  onToggleFolder={(id) => dispatch({ type: 'toggle-select', id })}
                   onDetails={() => dispatch({ type: 'open-details', id: diamond.id })}
                 />
               ))}
@@ -188,23 +200,13 @@ export function DashboardPage() {
         />
       ) : null}
 
-      {state.phase === 'confirming' && (
+      {state.phase === 'confirming' && confirmSummary ? (
         <ConfirmationDialog
-          summary={{
-            diamondCount: state.selectedIds.length,
-            folderCount: state.diamonds
-              .filter((diamond) => state.selectedIds.includes(diamond.id))
-              .reduce((sum, diamond) => sum + diamond.sourceFolderCount, 0),
-            mp4Count: state.diamonds
-              .filter((diamond) => state.selectedIds.includes(diamond.id))
-              .reduce((sum, diamond) => sum + diamond.mp4.found, 0),
-            diamonds: [],
-            outputPath: state.outputPath ?? '',
-          }}
+          summary={confirmSummary}
           onCancel={() => dispatch({ type: 'cancel-confirm' })}
           onConfirm={confirmGetMp4}
         />
-      )}
+      ) : null}
     </>
   )
 }

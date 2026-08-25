@@ -19,7 +19,7 @@ describe('app state machine', () => {
     })
     expect(state.phase).toBe('ready')
 
-    state = reducer(state, { type: 'toggle-select', id: diamonds[0].id })
+    state = reducer(state, { type: 'toggle-select', id: diamonds[0].folders[0].id })
     state = reducer(state, { type: 'open-confirm' })
     expect(state.phase).toBe('confirming')
 
@@ -61,6 +61,18 @@ describe('app state machine', () => {
     state = reducer(state, { type: 'dismiss-completion' })
     expect(state.phase).toBe('ready')
     expect(state.route).toBe('dashboard')
+  })
+
+  it('toggles every folder in a diamond group together', () => {
+    const diamonds = buildDemoDiamonds()
+    const ids = diamonds[0].folders.map((folder) => folder.id)
+    let state = reducer(
+      { ...initialState, phase: 'ready', diamonds, outputPath: 'D:/out' },
+      { type: 'toggle-group', ids },
+    )
+    expect(state.selectedIds).toEqual(ids)
+    state = reducer(state, { type: 'toggle-group', ids })
+    expect(state.selectedIds).toEqual([])
   })
 
   it('does not confirm without a selection and output path', () => {

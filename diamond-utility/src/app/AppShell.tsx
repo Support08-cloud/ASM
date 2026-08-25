@@ -39,7 +39,10 @@ export function AppShell() {
 
       if (isModKey(event) && event.key.toLowerCase() === 'a' && !typing && state.route === 'dashboard') {
         event.preventDefault()
-        dispatch({ type: 'select-visible', ids: visibleDiamonds.map((item) => item.id) })
+        dispatch({
+          type: 'select-visible',
+          ids: visibleDiamonds.flatMap((item) => item.folders.map((folder) => folder.id)),
+        })
       }
       if (isModKey(event) && event.key.toLowerCase() === 'r') {
         event.preventDefault()
