@@ -10,14 +10,16 @@ import { outputDirFromFiles, projectFromCopiedFiles } from '../services/timeline
 export function OperationsPage() {
   const { state, dispatch, cancelProcessing, openOutput, exportTimeline } = useAppStore()
   const result = state.processResult ?? state.lastProcessResult
+  const editorSource = state.lastProcessResult ?? state.processResult
 
   const project = useMemo(() => {
-    if (!result) return null
-    const copied = result.files.filter((file) => file.status === 'copied')
-    if (copied.length === 0) return null
-    const diamondName = copied[0].diamondName || 'diamond'
-    return projectFromCopiedFiles(copied, outputDirFromFiles(copied, result.outputPath), diamondName)
-  }, [result])
+    if (!editorSource) return null
+    const copied = editorSource.files.filter((file) => file.status === 'copied' && !file.outputPath.endsWith('-edit.mp4'))
+    const files = copied.length > 0 ? copied : editorSource.files.filter((file) => file.status === 'copied')
+    if (files.length === 0) return null
+    const diamondName = files[0].diamondName || 'diamond'
+    return projectFromCopiedFiles(files, outputDirFromFiles(files, editorSource.outputPath), diamondName)
+  }, [editorSource])
 
   if (state.phase === 'editing' || state.phase === 'exporting') {
     if (!project) {
