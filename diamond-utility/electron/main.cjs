@@ -1,9 +1,24 @@
-const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron')
+const { app, BrowserWindow, dialog, ipcMain, shell, protocol, net } = require('electron')
 const { spawn } = require('child_process')
 const fs = require('fs')
 const path = require('path')
+const { pathToFileURL } = require('url')
 
 const MEDIA = /\.(mp4|m4v|mov|json|jpe?g|png|webp|tiff?|bmp)$/i
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'du-media',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true,
+      bypassCSP: true,
+      corsEnabled: true,
+    },
+  },
+])
 
 function stateFile() {
   return path.join(app.getPath('userData'), 'window.json')
@@ -104,11 +119,79 @@ function scanDirectory(root) {
   return { folders, foldersScanned, filesSeen }
 }
 
+function samplesDir() {
+  const packaged = path.join(__dirname, '..', 'dist', 'samples')
+  if (fs.existsSync(packaged)) return packaged
+  return path.join(__dirname, '..', 'public', 'samples')
+}
+
+function resolveSample(rel) {
+  const name = String(rel || '').replace(/^(\.\/)?samples\//, '').replace(/^.*[/\\]/, '')
+  return path.join(samplesDir(), name)
+}
+
+function fontFile() {
+  if (process.platform === 'win32') {
+    const arial = 'C:\\Windows\\Fonts\\arial.ttf'
+    if (fs.existsSync(arial)) return arial
+  }
+  const linux = [
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+    '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+    '/usr/share/fonts/truetype/freefont/FreeSans.ttf',
+  ]
+  return linux.find((file) => fs.existsSync(file)) ?? null
+}
+
+function parseMediaInfo(stderr) {
+  const match = stderr.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/)
+  let durationMs = 0
+  if (match) {
+    durationMs = Math.round((Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3])) * 1000)
+  }
+  return { durationMs, hasAudio: /Audio:/i.test(stderr) }
+}
+
+function mediaInfo(filePath) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(ffmpegBinary(), ['-hide_banner', '-i', filePath], { windowsHide: true })
+    let stderr = ''
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString()
+    })
+    child.on('error', reject)
+    child.on('close', () => resolve(parseMediaInfo(stderr)))
+  })
+}
+
 app.whenReady().then(() => {
+  protocol.handle('du-media', (request) => {
+    const prefix = 'du-media://local/'
+    const encoded = request.url.startsWith(prefix) ? request.url.slice(prefix.length) : request.url.replace(/^du-media:\/\//, '')
+    const filePath = decodeURIComponent(encoded.split('?')[0])
+    return net.fetch(pathToFileURL(filePath).href)
+  })
+
   ipcMain.handle('desktop:pick-directory', async () => {
     const result = await dialog.showOpenDialog({
       title: 'Select folder',
       properties: ['openDirectory'],
+    })
+    if (result.canceled || !result.filePaths[0]) return null
+    return result.filePaths[0]
+  })
+
+  ipcMain.handle('desktop:pick-media', async (_event, kind) => {
+    const audio = [
+      { name: 'Audio', extensions: ['mp3', 'wav', 'm4a', 'aac', 'ogg'] },
+    ]
+    const video = [
+      { name: 'Video', extensions: ['mp4', 'mov', 'm4v', 'mkv', 'webm'] },
+    ]
+    const result = await dialog.showOpenDialog({
+      title: kind === 'audio' ? 'Add music' : 'Add media',
+      properties: ['openFile'],
+      filters: kind === 'audio' ? audio : video,
     })
     if (result.canceled || !result.filePaths[0]) return null
     return result.filePaths[0]
@@ -137,6 +220,18 @@ app.whenReady().then(() => {
     const output = args[args.length - 1]
     if (typeof output === 'string') fs.mkdirSync(path.dirname(output), { recursive: true })
     await runFfmpeg(args)
+  })
+
+  ipcMain.handle('desktop:resolve-sample', async (_event, rel) => {
+    return resolveSample(rel)
+  })
+
+  ipcMain.handle('desktop:font-file', async () => {
+    return fontFile()
+  })
+
+  ipcMain.handle('desktop:media-info', async (_event, filePath) => {
+    return mediaInfo(filePath)
   })
 
   createWindow()

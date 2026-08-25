@@ -1,15 +1,21 @@
 import {
+  AUDIO_COLOR,
   CLIP_COLORS,
   DEFAULT_CLIP_DURATION_MS,
   DEFAULT_TRANSITION_MS,
+  FX_COLOR,
   MAX_TIMELINE_CLIPS,
   MIN_CLIP_MS,
+  TEXT_COLOR,
   type EditorClip,
   type EditorProject,
+  type ExtraClip,
+  type ExtraKind,
   type TransitionId,
 } from '../models/editor'
 import type { ProcessFileResult } from '../models/processing'
 import { uid } from '../utils/format'
+import { isDemoPath, sampleMediaUrl, sampleMusicUrl } from './sample-media'
 
 export function clipPlayDurationMs(clip: EditorClip): number {
   const span = Math.max(0, clip.outMs - clip.inMs)
@@ -31,11 +37,21 @@ export function timelineDurationMs(clips: EditorClip[]): number {
   return Math.max(0, total)
 }
 
+export function extraEndMs(extra: ExtraClip): number {
+  return extra.startMs + extra.durationMs
+}
+
+export function projectDurationMs(project: Pick<EditorProject, 'clips' | 'extraClips'>): number {
+  const extras = project.extraClips.length === 0 ? 0 : Math.max(...project.extraClips.map(extraEndMs))
+  return Math.max(timelineDurationMs(project.clips), extras, 1000)
+}
+
 export interface TimelineHit {
   index: number
   clip: EditorClip
   localMs: number
   startMs: number
+  overlapMs: number
 }
 
 export function clipAtTime(clips: EditorClip[], timeMs: number): TimelineHit | null {
@@ -47,17 +63,19 @@ export function clipAtTime(clips: EditorClip[], timeMs: number): TimelineHit | n
     const start = cursor
     const end = cursor + duration
     if (timeMs < end || i === clips.length - 1) {
+      const intoTail = Math.max(0, timeMs - (end - overlap))
       return {
         index: i,
         clip: clips[i],
         localMs: Math.min(Math.max(0, timeMs - start), duration),
         startMs: start,
+        overlapMs: overlap > 0 && timeMs >= end - overlap ? intoTail : 0,
       }
     }
     cursor = end - overlap
   }
   const last = clips[clips.length - 1]
-  return { index: clips.length - 1, clip: last, localMs: clipPlayDurationMs(last), startMs: cursor }
+  return { index: clips.length - 1, clip: last, localMs: clipPlayDurationMs(last), startMs: cursor, overlapMs: 0 }
 }
 
 export function clipStartMs(clips: EditorClip[], index: number): number {
@@ -85,6 +103,22 @@ export function setSpeed(clip: EditorClip, speed: number): EditorClip {
   return { ...clip, speed: clamp(speed, 0.25, 4) }
 }
 
+export function setVolume(clip: EditorClip, volume: number): EditorClip {
+  return { ...clip, volume: clamp(volume, 0, 1) }
+}
+
+export function applyDuration(clip: EditorClip, durationMs: number): EditorClip {
+  const next = Math.max(MIN_CLIP_MS, Math.round(durationMs))
+  if (clip.durationProbed) return clip
+  const outMs = clip.inMs === 0 && clip.outMs === clip.sourceDurationMs ? next : Math.min(clip.outMs, next)
+  return {
+    ...clip,
+    sourceDurationMs: next,
+    outMs: Math.max(clip.inMs + MIN_CLIP_MS, outMs),
+    durationProbed: true,
+  }
+}
+
 export function splitClip(clip: EditorClip, localMs: number): [EditorClip, EditorClip] | null {
   const play = clipPlayDurationMs(clip)
   if (localMs <= MIN_CLIP_MS / clip.speed || play - localMs <= MIN_CLIP_MS / clip.speed) return null
@@ -103,6 +137,39 @@ export function moveClip(clips: EditorClip[], from: number, to: number): EditorC
   return next
 }
 
+export function extrasAtTime(extras: ExtraClip[], timeMs: number): ExtraClip[] {
+  return extras.filter((extra) => timeMs >= extra.startMs && timeMs < extraEndMs(extra))
+}
+
+export function moveExtra(extra: ExtraClip, deltaMs: number): ExtraClip {
+  return { ...extra, startMs: Math.max(0, extra.startMs + deltaMs) }
+}
+
+export function trimExtra(extra: ExtraClip, edge: 'in' | 'out', deltaMs: number): ExtraClip {
+  if (edge === 'in') {
+    const startMs = Math.max(0, extra.startMs + deltaMs)
+    const durationMs = Math.max(MIN_CLIP_MS, extraEndMs(extra) - startMs)
+    return { ...extra, startMs, durationMs }
+  }
+  return { ...extra, durationMs: Math.max(MIN_CLIP_MS, extra.durationMs + deltaMs) }
+}
+
+export function createExtra(kind: ExtraKind, startMs: number, patch?: Partial<ExtraClip>): ExtraClip {
+  const base: ExtraClip = {
+    id: uid(kind),
+    kind,
+    label: kind === 'audio' ? 'Music' : kind === 'text' ? 'Title' : 'Effect',
+    startMs: Math.max(0, startMs),
+    durationMs: kind === 'audio' ? 12000 : 4000,
+    volume: kind === 'audio' ? 0.8 : 1,
+    text: kind === 'text' ? 'Vision360' : undefined,
+    fx: kind === 'fx' ? 'vignette' : undefined,
+    mediaUrl: kind === 'audio' ? sampleMusicUrl() : undefined,
+    color: kind === 'audio' ? AUDIO_COLOR : kind === 'text' ? TEXT_COLOR : FX_COLOR,
+  }
+  return { ...base, ...patch }
+}
+
 export function projectFromCopiedFiles(
   files: ProcessFileResult[],
   outputDir: string,
@@ -114,24 +181,33 @@ export function projectFromCopiedFiles(
     diamondName,
     outputDir,
     clips,
+    extraClips: [],
     selectedClipId: clips[0]?.id ?? null,
+    selectedExtraId: null,
     selectedTransitionIndex: null,
     playheadMs: 0,
     pixelsPerSecond: 80,
+    masterVolume: 1,
   }
 }
 
 export function createClipFromFile(file: ProcessFileResult, index: number): EditorClip {
   const duration = DEFAULT_CLIP_DURATION_MS
+  const output = file.outputPath || file.sourcePath
+  const demo = isDemoPath(output) || isDemoPath(file.sourcePath)
   return {
     id: uid('clip'),
     label: fileName(file.outputPath || file.viewLabel),
-    sourcePath: file.outputPath || file.sourcePath,
+    sourcePath: output,
     absolutePath: file.outputPath || undefined,
+    mediaUrl: sampleMediaUrl(file.outputPath || file.viewLabel),
+    hasAudio: demo ? true : undefined,
     sourceDurationMs: duration,
     inMs: 0,
     outMs: duration,
     speed: 1,
+    volume: 1,
+    filter: 'none',
     animationIn: index === 0 ? 'fade' : 'none',
     animationOut: 'none',
     transition: 'fade',
@@ -163,3 +239,5 @@ function fileName(path: string): string {
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
+
+export { clamp }

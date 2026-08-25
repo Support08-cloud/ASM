@@ -20,6 +20,8 @@ import { withSelectedFolders, type Diamond } from '../../models/diamond'
 import type { EditorProject } from '../../models/editor'
 import type { ConfirmSummary, HistoryRecord, ProcessResult } from '../../models/processing'
 import { buildExportPlan, concatListContents } from '../../services/ffmpeg-export'
+import { ffmpegInputPath } from '../../services/media-url'
+import { isRealDiskPath } from '../../services/sample-media'
 import { exportFileName } from '../../services/timeline'
 
 interface AppStoreValue {
@@ -376,15 +378,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }
 
   const exportTimeline = async (project: EditorProject) => {
-    const plan = buildExportPlan(project)
     dispatch({ type: 'export-start' })
     try {
+      const prepared = await prepareProjectForExport(project)
+      const fontFile = (await window.desktop?.fontFile?.()) ?? undefined
+      const plan = buildExportPlan(prepared, { fontFile })
       if (window.desktop?.writeTextFile) {
         const concatStep = plan.steps.find((step) => step.args.includes('concat'))
         if (concatStep) {
           const inputAt = concatStep.args.indexOf('-i')
           const listPath = concatStep.args[inputAt + 1]
-          if (listPath) await window.desktop.writeTextFile(listPath, concatListContents(project.clips, project.outputDir))
+          if (listPath) await window.desktop.writeTextFile(listPath, concatListContents(prepared.clips, prepared.outputDir))
         }
       }
       for (let i = 0; i < plan.steps.length; i += 1) {
@@ -395,7 +399,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           message: step.label,
         })
         if (window.desktop?.runFfmpeg) {
-          await window.desktop.runFfmpeg(step.args)
+          const args = await Promise.all(step.args.map((arg) => resolveExportArg(arg)))
+          await window.desktop.runFfmpeg(args)
         } else {
           await wait(260)
         }
@@ -433,7 +438,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           skipped: 0,
           failed: 1,
           total: 1,
-          outputPath: plan.outputPath,
+          outputPath: project.outputDir,
           files: [],
           errorMessage: error instanceof Error ? error.message : 'Export failed',
         },
@@ -471,6 +476,47 @@ export function useAppStore(): AppStoreValue {
 
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms))
+}
+
+async function resolveExportArg(arg: string): Promise<string> {
+  if (!window.desktop?.resolveSample) return arg
+  if (arg.startsWith('./samples/') || /(?:^|[\\/])samples[\\/]/.test(arg)) {
+    return window.desktop.resolveSample(arg)
+  }
+  return arg
+}
+
+async function prepareProjectForExport(project: EditorProject): Promise<EditorProject> {
+  if (!window.desktop?.mediaInfo && !window.desktop?.resolveSample) return project
+  const clips = []
+  for (const clip of project.clips) {
+    const input = await resolveExportArg(ffmpegInputPath(clip))
+    let hasAudio = clip.hasAudio
+    try {
+      const info = await window.desktop.mediaInfo?.(input)
+      if (info) hasAudio = info.hasAudio
+    } catch {
+      hasAudio = false
+    }
+    clips.push({
+      ...clip,
+      hasAudio,
+      absolutePath: isRealDiskPath(clip.absolutePath) ? clip.absolutePath : input,
+    })
+  }
+  const extraClips = []
+  for (const extra of project.extraClips) {
+    if (extra.kind !== 'audio') {
+      extraClips.push(extra)
+      continue
+    }
+    const input = extra.absolutePath || extra.mediaUrl
+    extraClips.push({
+      ...extra,
+      absolutePath: input ? await resolveExportArg(input) : extra.absolutePath,
+    })
+  }
+  return { ...project, clips, extraClips }
 }
 
 function toHistory(

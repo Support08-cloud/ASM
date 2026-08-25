@@ -35,6 +35,7 @@ interface Window {
   desktop?: {
     isElectron: true
     pickDirectory: () => Promise<string | null>
+    pickMedia?: (kind: 'video' | 'audio') => Promise<string | null>
     scanDirectory: (root: string) => Promise<{
       folders: Array<{
         folderName: string
@@ -50,5 +51,9 @@ interface Window {
     openPath: (target: string) => Promise<void>
     writeTextFile?: (filePath: string, contents: string) => Promise<void>
     runFfmpeg?: (args: string[]) => Promise<void>
+    resolveSample?: (rel: string) => Promise<string>
+    fontFile?: () => Promise<string | null>
+    mediaInfo?: (filePath: string) => Promise<{ durationMs: number; hasAudio: boolean }>
+    toMediaUrl?: (filePath: string) => string
   }
 }
