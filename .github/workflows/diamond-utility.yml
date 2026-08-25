@@ -42,16 +42,20 @@ jobs:
           cache: npm
           cache-dependency-path: diamond-utility/package-lock.json
       - run: npm ci
-      - uses: FedericoCarboni/setup-ffmpeg@v3
-        id: setup-ffmpeg
-        with:
-          ffmpeg-version: '6.1.1'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Stage ffmpeg for the portable EXE
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path extra-bin | Out-Null
-          Copy-Item (Get-Command ffmpeg).Source extra-bin\ffmpeg.exe
+          $dest = Join-Path $env:RUNNER_TEMP 'ffmpeg-gyan'
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          gh release download 9.0.1 --repo GyanD/codexffmpeg --pattern 'ffmpeg-9.0.1-essentials_build.zip' --dir $dest
+          $zip = Get-ChildItem $dest -Filter *.zip | Select-Object -First 1
+          if (-not $zip) { throw 'ffmpeg zip not downloaded' }
+          Expand-Archive -LiteralPath $zip.FullName -DestinationPath (Join-Path $dest 'extracted') -Force
+          $exe = Get-ChildItem (Join-Path $dest 'extracted') -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+          if (-not $exe) { throw 'ffmpeg.exe not found in the Gyan build' }
+          Copy-Item $exe.FullName extra-bin\ffmpeg.exe
+          & extra-bin\ffmpeg.exe -hide_banner -version | Select-Object -First 1
       - run: npm run build:win
       - uses: actions/upload-artifact@v4
         with:
