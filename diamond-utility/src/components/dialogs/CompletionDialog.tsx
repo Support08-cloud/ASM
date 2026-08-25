@@ -1,11 +1,14 @@
 import type { ProcessResult } from '../../models/processing'
 
-interface CompletionDialogProps {
+export function CompletionDialog({
+  result,
+  onDone,
+  onOpenOutput,
+}: {
   result: ProcessResult
   onDone: () => void
-}
-
-export function CompletionDialog({ result, onDone }: CompletionDialogProps) {
+  onOpenOutput?: () => void
+}) {
   const tone = result.outcome === 'success' ? 'ok' : result.outcome === 'partial' ? 'warn' : 'bad'
   const title =
     result.outcome === 'success'
@@ -33,7 +36,7 @@ export function CompletionDialog({ result, onDone }: CompletionDialogProps) {
         </p>
       ) : null}
       <div className="btn-row" style={{ marginTop: 20 }}>
-        <button type="button" className="btn ghost" onClick={onDone}>
+        <button type="button" className="btn ghost" onClick={onOpenOutput ?? onDone}>
           Open Output Folder
         </button>
         <button type="button" className="btn primary" onClick={onDone}>

@@ -5,7 +5,7 @@ import { PageHeader } from '../components/navigation/PageHeader'
 import { ProcessingPanel } from '../components/processing/ProcessingPanel'
 
 export function OperationsPage() {
-  const { state, dispatch, cancelProcessing } = useAppStore()
+  const { state, dispatch, cancelProcessing, openOutput } = useAppStore()
 
   return (
     <>
@@ -17,7 +17,13 @@ export function OperationsPage() {
       {state.phase === 'processing' && state.processProgress ? (
         <ProcessingPanel progress={state.processProgress} onCancel={cancelProcessing} />
       ) : state.phase === 'completed' && state.processResult ? (
-        <CompletionDialog result={state.processResult} onDone={() => dispatch({ type: 'dismiss-completion' })} />
+        <CompletionDialog
+          result={state.processResult}
+          onDone={() => dispatch({ type: 'dismiss-completion' })}
+          onOpenOutput={() => {
+            void openOutput(state.processResult?.outputPath ?? '')
+          }}
+        />
       ) : (
         <EmptyState
           title="No active operation"
