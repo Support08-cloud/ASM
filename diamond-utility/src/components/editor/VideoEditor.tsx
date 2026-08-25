@@ -16,7 +16,7 @@ import {
 } from '../../models/editor'
 import { buildExportPlan } from '../../services/ffmpeg-export'
 import { toVideoSrc } from '../../services/media-url'
-import { sampleMediaUrl } from '../../services/sample-media'
+import { sampleMediaUrl, sampleMusicUrl } from '../../services/sample-media'
 import { captureFilmstrip } from '../../services/thumbnails'
 import {
   applyDuration,
@@ -176,20 +176,26 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   }
 
   const addMusic = async () => {
+    let absolutePath: string | undefined
+    let mediaUrl = sampleMusicUrl()
+    let label = 'Sample music'
+    let durationMs = 12000
     if (window.desktop?.pickMedia) {
       const picked = await window.desktop.pickMedia('audio')
-      if (!picked) return
-      const info = await window.desktop.mediaInfo?.(picked)
-      const extra = createExtra('audio', project.playheadMs, {
-        label: picked.split(/[/\\]/).pop() ?? 'Music',
-        absolutePath: picked,
-        mediaUrl: window.desktop.toMediaUrl?.(picked),
-        durationMs: info?.durationMs || 12000,
-      })
-      commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null })
-      return
+      if (picked) {
+        absolutePath = picked
+        mediaUrl = window.desktop.toMediaUrl?.(picked) ?? sampleMusicUrl()
+        label = picked.split(/[/\\]/).pop() ?? 'Music'
+        durationMs = (await window.desktop.mediaInfo?.(picked))?.durationMs || 12000
+      }
     }
-    musicInputRef.current?.click()
+    const extra = createExtra('audio', project.playheadMs, {
+      label,
+      absolutePath,
+      mediaUrl,
+      durationMs,
+    })
+    commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null })
   }
 
   const addText = () => {

@@ -4,7 +4,6 @@ export async function captureFilmstrip(src: string, count = 5): Promise<string[]
   video.muted = true
   video.playsInline = true
   video.preload = 'auto'
-  video.crossOrigin = 'anonymous'
   video.src = src
   try {
     await waitFor(video, 'loadedmetadata', 4000)
@@ -33,6 +32,10 @@ export async function captureFilmstrip(src: string, count = 5): Promise<string[]
 
 function waitFor(video: HTMLVideoElement, event: string, timeoutMs: number): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (event === 'loadedmetadata' && video.readyState >= 1) {
+      resolve()
+      return
+    }
     const timer = window.setTimeout(() => {
       cleanup()
       reject(new Error('timeout'))

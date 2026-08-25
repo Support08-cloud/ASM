@@ -86,6 +86,7 @@ export function PreviewStage({
     <div className={`editor-stage${animationClass}${fxClass(fx)}`} style={{ background: clip?.color ?? '#011843' }}>
       {src ? (
         <video
+          key={clip?.id ?? 'empty'}
           ref={videoRef}
           className="stage-video"
           style={{
