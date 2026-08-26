@@ -15,13 +15,16 @@ interface TimelineBoardProps {
   onTrimExtra: (id: string, edge: 'in' | 'out', deltaMs: number) => void
   onMoveClip: (from: number, to: number) => void
   onMoveExtra: (id: string, deltaMs: number) => void
+  onAddText: () => void
+  onAddAudio: () => void
+  onZoom: (pixelsPerSecond: number) => void
+  onFit: () => void
 }
 
-const LANES: Array<{ id: 'video' | 'audio' | 'text' | 'fx'; label: string }> = [
-  { id: 'video', label: 'Video' },
-  { id: 'audio', label: 'Music' },
+const LANES: Array<{ id: 'text' | 'video' | 'audio'; label: string }> = [
   { id: 'text', label: 'Text' },
-  { id: 'fx', label: 'FX' },
+  { id: 'video', label: 'Video' },
+  { id: 'audio', label: 'Audio' },
 ]
 
 export function TimelineBoard({
@@ -36,6 +39,10 @@ export function TimelineBoard({
   onTrimExtra,
   onMoveClip,
   onMoveExtra,
+  onAddText,
+  onAddAudio,
+  onZoom,
+  onFit,
 }: TimelineBoardProps) {
   const width = Math.max(720, (duration / 1000) * project.pixelsPerSecond)
   const playX = (project.playheadMs / Math.max(duration, 1)) * width
@@ -43,7 +50,6 @@ export function TimelineBoard({
   const extrasByKind = {
     audio: project.extraClips.filter((extra) => extra.kind === 'audio'),
     text: project.extraClips.filter((extra) => extra.kind === 'text'),
-    fx: project.extraClips.filter((extra) => extra.kind === 'fx'),
   }
 
   const seekFromClientX = (clientX: number, innerLeft: number) => {
@@ -52,10 +58,21 @@ export function TimelineBoard({
   }
 
   return (
-    <div className="timeline">
+    <div className="nle-timeline">
       <div className="timeline-head">
         <div className="eyebrow">Timeline</div>
-        <span className="card-sub">{formatTimecode(duration)} · drag edges to trim · click the ruler to seek</span>
+        <div className="btn-row">
+          <button type="button" className="btn ghost" onClick={() => onZoom(Math.max(40, project.pixelsPerSecond - 20))}>
+            −
+          </button>
+          <button type="button" className="btn ghost" onClick={() => onZoom(Math.min(220, project.pixelsPerSecond + 20))}>
+            +
+          </button>
+          <button type="button" className="btn ghost" onClick={onFit}>
+            Fit
+          </button>
+          <span className="card-sub">{formatTimecode(duration)}</span>
+        </div>
       </div>
       <div className="timeline-board">
         <div className="timeline-gutter">
@@ -67,11 +84,14 @@ export function TimelineBoard({
           ))}
         </div>
         <div className="timeline-track">
-          <div className="ruler" onClick={(event) => {
-            const inner = event.currentTarget.querySelector('.ruler-inner')
-            if (!inner) return
-            seekFromClientX(event.clientX, inner.getBoundingClientRect().left)
-          }}>
+          <div
+            className="ruler"
+            onClick={(event) => {
+              const inner = event.currentTarget.querySelector('.ruler-inner')
+              if (!inner) return
+              seekFromClientX(event.clientX, inner.getBoundingClientRect().left)
+            }}
+          >
             <div className="ruler-inner" style={{ width }}>
               {ticks.map((tick) => (
                 <span key={tick.ms} className={`ruler-tick${tick.major ? ' is-major' : ''}`} style={{ left: tick.x }}>
@@ -80,10 +100,35 @@ export function TimelineBoard({
               ))}
             </div>
           </div>
-          <div className="timeline-lanes" style={{ width }} onClick={(event) => {
-            if (event.target !== event.currentTarget && !(event.target as HTMLElement).classList.contains('tl-lane')) return
-            seekFromClientX(event.clientX, event.currentTarget.getBoundingClientRect().left)
-          }}>
+          <div
+            className="timeline-lanes"
+            style={{ width }}
+            onClick={(event) => {
+              if (event.target !== event.currentTarget && !(event.target as HTMLElement).classList.contains('tl-lane')) return
+              seekFromClientX(event.clientX, event.currentTarget.getBoundingClientRect().left)
+            }}
+          >
+            <div className="tl-lane is-text">
+              {extrasByKind.text.length === 0 ? (
+                <button type="button" className="tl-add" onClick={onAddText}>
+                  + Add text
+                </button>
+              ) : (
+                extrasByKind.text.map((extra) => (
+                  <ExtraBlock
+                    key={extra.id}
+                    extra={extra}
+                    duration={duration}
+                    width={width}
+                    selected={extra.id === project.selectedExtraId}
+                    pixelsPerSecond={project.pixelsPerSecond}
+                    onSelect={onSelectExtra}
+                    onTrim={onTrimExtra}
+                    onMove={onMoveExtra}
+                  />
+                ))
+              )}
+            </div>
             <div className="tl-lane is-video">
               {project.clips.map((clip, index) => {
                 const start = clipStartMs(project.clips, index)
@@ -120,6 +165,7 @@ export function TimelineBoard({
                         onMouseDown={(event) => startDrag(event, (delta) => onTrimClip(clip.id, 'in', delta), project.pixelsPerSecond)}
                       />
                       <span className="tl-name">{clip.label.replace('.mp4', '')}</span>
+                      {clip.muted ? <span className="tl-mute">M</span> : null}
                       <span
                         className="tl-handle is-end"
                         onMouseDown={(event) => startDrag(event, (delta) => onTrimClip(clip.id, 'out', delta), project.pixelsPerSecond)}
@@ -142,9 +188,13 @@ export function TimelineBoard({
                 )
               })}
             </div>
-            {(['audio', 'text', 'fx'] as const).map((kind) => (
-              <div key={kind} className={`tl-lane is-${kind}`}>
-                {extrasByKind[kind].map((extra) => (
+            <div className="tl-lane is-audio">
+              {extrasByKind.audio.length === 0 ? (
+                <button type="button" className="tl-add" onClick={onAddAudio}>
+                  + Add audio
+                </button>
+              ) : (
+                extrasByKind.audio.map((extra) => (
                   <ExtraBlock
                     key={extra.id}
                     extra={extra}
@@ -156,9 +206,9 @@ export function TimelineBoard({
                     onTrim={onTrimExtra}
                     onMove={onMoveExtra}
                   />
-                ))}
-              </div>
-            ))}
+                ))
+              )}
+            </div>
             <div className="playhead" style={{ left: playX }} />
           </div>
         </div>
@@ -202,15 +252,9 @@ function ExtraBlock({
         startDrag(event, (delta) => onMove(extra.id, delta), pixelsPerSecond)
       }}
     >
-      <span
-        className="tl-handle"
-        onMouseDown={(event) => startDrag(event, (delta) => onTrim(extra.id, 'in', delta), pixelsPerSecond)}
-      />
+      <span className="tl-handle" onMouseDown={(event) => startDrag(event, (delta) => onTrim(extra.id, 'in', delta), pixelsPerSecond)} />
       <span className="tl-name">{extra.label}</span>
-      <span
-        className="tl-handle is-end"
-        onMouseDown={(event) => startDrag(event, (delta) => onTrim(extra.id, 'out', delta), pixelsPerSecond)}
-      />
+      <span className="tl-handle is-end" onMouseDown={(event) => startDrag(event, (delta) => onTrim(extra.id, 'out', delta), pixelsPerSecond)} />
     </button>
   )
 }

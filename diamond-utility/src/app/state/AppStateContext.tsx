@@ -19,7 +19,7 @@ import { initialState, reducer, type AppAction, type AppState } from './machine'
 import { withSelectedFolders, type Diamond } from '../../models/diamond'
 import type { EditorProject } from '../../models/editor'
 import type { ConfirmSummary, HistoryRecord, ProcessResult } from '../../models/processing'
-import { buildExportPlan, concatListContents } from '../../services/ffmpeg-export'
+import { buildExportPlan, concatListContents, durationMatches } from '../../services/ffmpeg-export'
 import { ffmpegInputPath } from '../../services/media-url'
 import { isRealDiskPath } from '../../services/sample-media'
 import { exportFileName } from '../../services/timeline'
@@ -418,6 +418,13 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           await wait(260)
         }
       }
+      if (window.desktop?.runFfmpeg) {
+        const info = await window.desktop.mediaInfo?.(plan.outputPath).catch(() => null)
+        if (!info?.durationMs) throw new Error('Export finished but the output file was not readable.')
+        if (!durationMatches(info.durationMs, plan.durationMs)) {
+          throw new Error(`Exported duration ${info.durationMs}ms does not match the timeline ${plan.durationMs}ms.`)
+        }
+      }
       dispatch({
         type: 'export-progress',
         percent: 100,
@@ -456,7 +463,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           errorMessage: error instanceof Error ? error.message : 'Export failed',
         },
       })
-      toast('error', 'Could not export the edited video')
+      toast('error', error instanceof Error ? error.message.slice(0, 180) : 'Could not export the edited video')
     }
   }
 

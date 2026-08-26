@@ -1,22 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  ANIMATION_OPTIONS,
-  FILTER_OPTIONS,
-  FX_OPTIONS,
   MAX_TIMELINE_CLIPS,
-  SPEED_OPTIONS,
   TRANSITION_OPTIONS,
-  type AnimationId,
   type EditorClip,
   type EditorProject,
   type ExtraClip,
-  type FilterId,
-  type FxId,
+  type InspectorTab,
   type TransitionId,
 } from '../../models/editor'
-import { buildExportPlan } from '../../services/ffmpeg-export'
 import { toVideoSrc } from '../../services/media-url'
-import { sampleMediaUrl, sampleMusicUrl } from '../../services/sample-media'
+import { prepareEditorProject } from '../../services/prepare-media'
+import { sampleMusicUrl } from '../../services/sample-media'
 import { captureFilmstrip } from '../../services/thumbnails'
 import {
   applyDuration,
@@ -31,15 +25,15 @@ import {
   moveExtra,
   projectDurationMs,
   setSpeed,
-  setVolume,
   splitClip,
   trimClip,
   trimExtra,
 } from '../../services/timeline'
 import { formatTimecode, isModKey } from '../../utils/format'
-import { ActionToolbar } from './ActionToolbar'
+import { InspectorPanel } from './InspectorPanel'
 import { PreviewStage } from './PreviewStage'
 import { TimelineBoard } from './TimelineBoard'
+import { TransportBar } from './TransportBar'
 
 interface VideoEditorProps {
   project: EditorProject
@@ -60,10 +54,15 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   const [past, setPast] = useState<Snapshot[]>([])
   const [future, setFuture] = useState<Snapshot[]>([])
   const [thumbs, setThumbs] = useState<Record<string, string[]>>({})
+  const [preparing, setPreparing] = useState<{ current: number; total: number; message: string } | null>({
+    current: 0,
+    total: initial.clips.length,
+    message: 'Preparing clips',
+  })
   const mediaInputRef = useRef<HTMLInputElement>(null)
   const musicInputRef = useRef<HTMLInputElement>(null)
+  const timelineRef = useRef<HTMLDivElement>(null)
   const boundaryLock = useRef(false)
-
   const projectRef = useRef(project)
   projectRef.current = project
 
@@ -83,6 +82,21 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
     setFuture([])
     setProject((value) => ({ ...value, ...patch }))
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const next = await prepareEditorProject(initial, (progress) => {
+        if (!cancelled) setPreparing(progress)
+      })
+      if (cancelled) return
+      setProject(next)
+      setPreparing(null)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [initial])
 
   const undo = () => {
     const previous = past[past.length - 1]
@@ -122,10 +136,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
 
   const deleteSelected = () => {
     if (selectedExtra) {
-      commit({
-        extraClips: project.extraClips.filter((extra) => extra.id !== selectedExtra.id),
-        selectedExtraId: null,
-      })
+      commit({ extraClips: project.extraClips.filter((extra) => extra.id !== selectedExtra.id), selectedExtraId: null })
       return
     }
     if (!selected || project.clips.length <= 1) return
@@ -136,7 +147,13 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   }
 
   const updateClip = (id: string, patch: Partial<EditorClip>) => {
-    commit({ clips: project.clips.map((clip) => (clip.id === id ? { ...clip, ...patch } : clip)) })
+    commit({
+      clips: project.clips.map((clip) => {
+        if (clip.id !== id) return clip
+        const next = { ...clip, ...patch }
+        return patch.speed != null ? setSpeed(next, patch.speed) : next
+      }),
+    })
   }
 
   const updateExtra = (id: string, patch: Partial<ExtraClip>) => {
@@ -157,7 +174,6 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
       project.clips.length,
     )
     clip.absolutePath = mediaUrl ? undefined : path
-    clip.mediaUrl = mediaUrl ?? (window.desktop?.toMediaUrl ? undefined : sampleMediaUrl(name))
     if (mediaUrl) clip.mediaUrl = mediaUrl
     if (durationMs) Object.assign(clip, applyDuration(clip, durationMs))
     if (hasAudio != null) clip.hasAudio = hasAudio
@@ -178,33 +194,22 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   const addMusic = async () => {
     let absolutePath: string | undefined
     let mediaUrl = sampleMusicUrl()
-    let label = 'Sample music'
+    let label = 'Music'
     let durationMs = 12000
     if (window.desktop?.pickMedia) {
       const picked = await window.desktop.pickMedia('audio')
-      if (picked) {
-        absolutePath = picked
-        mediaUrl = window.desktop.toMediaUrl?.(picked) ?? sampleMusicUrl()
-        label = picked.split(/[/\\]/).pop() ?? 'Music'
-        durationMs = (await window.desktop.mediaInfo?.(picked))?.durationMs || 12000
-      }
+      if (!picked) return
+      absolutePath = picked
+      mediaUrl = window.desktop.toMediaUrl?.(picked) ?? sampleMusicUrl()
+      label = picked.split(/[/\\]/).pop() ?? 'Music'
+      durationMs = (await window.desktop.mediaInfo?.(picked))?.durationMs || 12000
     }
-    const extra = createExtra('audio', 0, {
-      label,
-      absolutePath,
-      mediaUrl,
-      durationMs,
-    })
-    commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null })
+    const extra = createExtra('audio', project.playheadMs, { label, absolutePath, mediaUrl, durationMs })
+    commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null, inspectorTab: 'audio' })
   }
 
   const addText = () => {
-    const extra = createExtra('text', 0)
-    commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null })
-  }
-
-  const addFx = () => {
-    const extra = createExtra('fx', 0)
+    const extra = createExtra('text', project.playheadMs)
     commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null })
   }
 
@@ -216,7 +221,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
       for (const clip of missing) {
         const src = toVideoSrc(clip)
         if (!src) continue
-        const frames = await captureFilmstrip(src, Math.min(6, Math.max(3, Math.round(clipPlayDurationMs(clip) / 1000))))
+        const frames = await captureFilmstrip(src, Math.min(8, Math.max(4, Math.round(clipPlayDurationMs(clip) / 800))))
         if (cancelled || frames.length === 0) continue
         setThumbs((current) => ({ ...current, [clip.id]: frames }))
       }
@@ -229,8 +234,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const tag = (event.target as HTMLElement)?.tagName
-      const typing = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA'
-      if (typing) return
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
       if (event.code === 'Space') {
         event.preventDefault()
         setPlaying((value) => !value)
@@ -253,8 +257,8 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
     overlap > 0 && hit?.clip.transition !== 'none' ? Math.max(0.35, 1 - overlap / transitionMs) : 1
 
   return (
-    <div className="editor-shell">
-      <header className="editor-top">
+    <div className="nle-shell">
+      <header className="nle-top">
         <div>
           <div className="eyebrow">Edit · Vision360</div>
           <h2 style={{ margin: '4px 0 0' }}>{project.diamondName}</h2>
@@ -263,61 +267,50 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           <button type="button" className="btn ghost" onClick={onClose}>
             Back
           </button>
-          <button type="button" className="btn primary" onClick={() => onExport(project)} disabled={Boolean(exporting)}>
+          <button type="button" className="btn primary" onClick={() => onExport(project)} disabled={Boolean(exporting || preparing)}>
             Export
           </button>
         </div>
       </header>
 
-      <ActionToolbar
-        playing={playing}
-        playheadMs={project.playheadMs}
-        durationMs={duration}
-        canUndo={past.length > 0}
-        canRedo={future.length > 0}
-        onPlay={() => setPlaying((value) => !value)}
-        onUndo={undo}
-        onRedo={redo}
-        onSplit={splitAtPlayhead}
-        onAddMedia={() => void addMedia()}
-        onAddMusic={() => void addMusic()}
-        onAddText={addText}
-        onAddFx={addFx}
-      />
+      <div className="nle-body">
+        <nav className="nle-rail" aria-label="Library">
+          <button type="button" className="is-on">Media</button>
+          <button type="button" onClick={addText}>Text</button>
+          <button type="button" onClick={() => commit({ selectedTransitionIndex: Math.max(0, (hit?.index ?? 1) - 1), inspectorTab: 'fade' })}>
+            Fade
+          </button>
+        </nav>
 
-      <div className="editor-grid">
-        <aside className="editor-bin">
-          <div className="eyebrow">Media</div>
-          <p className="card-sub">{project.clips.length} / {MAX_TIMELINE_CLIPS} clips</p>
-          {project.clips.map((clip, index) => (
-            <button
-              key={clip.id}
-              type="button"
-              className={`bin-clip${clip.id === project.selectedClipId ? ' is-on' : ''}`}
-              onClick={() =>
-                setProject((current) => ({
-                  ...current,
-                  selectedClipId: clip.id,
-                  selectedExtraId: null,
-                  selectedTransitionIndex: null,
-                  playheadMs: clipStartMs(current.clips, index),
-                }))
-              }
-            >
-              {thumbs[clip.id]?.[0] ? (
-                <img className="bin-swatch" src={thumbs[clip.id][0]} alt="" />
-              ) : (
-                <span className="bin-swatch" style={{ background: clip.color }} />
-              )}
-              <span>
-                <strong>{clip.label}</strong>
-                <span className="card-sub">{formatTimecode(clipPlayDurationMs(clip))} · {clip.speed}x</span>
-              </span>
-            </button>
-          ))}
+        <aside className="nle-bin">
+          <button type="button" className="btn primary" onClick={() => void addMedia()}>
+            Import media
+          </button>
+          <div className="nle-bin-grid">
+            {project.clips.map((clip, index) => (
+              <button
+                key={clip.id}
+                type="button"
+                className={`nle-bin-card${clip.id === project.selectedClipId ? ' is-on' : ''}`}
+                onClick={() =>
+                  setProject((current) => ({
+                    ...current,
+                    selectedClipId: clip.id,
+                    selectedExtraId: null,
+                    selectedTransitionIndex: null,
+                    playheadMs: clipStartMs(current.clips, index),
+                  }))
+                }
+              >
+                {thumbs[clip.id]?.[0] ? <img src={thumbs[clip.id][0]} alt="" /> : <span className="nle-bin-swatch" style={{ background: clip.color }} />}
+                <strong>{clip.label.replace('.mp4', '')}</strong>
+                <span>{formatTimecode(clipPlayDurationMs(clip))}</span>
+              </button>
+            ))}
+          </div>
         </aside>
 
-        <section className="editor-stage-wrap">
+        <section className="nle-center">
           <PreviewStage
             clip={hit?.clip}
             localMs={hit?.localMs ?? 0}
@@ -326,11 +319,10 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
             masterVolume={project.masterVolume}
             extras={activeExtras}
             transitionOpacity={transitionOpacity}
-            animationClass={previewAnimationClass(hit?.clip, hit?.localMs ?? 0)}
             onDuration={(id, durationMs) => {
               setProject((current) => ({
                 ...current,
-                clips: current.clips.map((clip) => (clip.id === id ? applyDuration(clip, durationMs) : clip)),
+                clips: current.clips.map((clip) => (clip.id === id && !clip.durationProbed ? applyDuration(clip, durationMs) : clip)),
               }))
             }}
             onSourceTime={(sourceMs) => {
@@ -363,205 +355,129 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
               })
             }}
           />
+          <TransportBar
+            playing={playing}
+            playheadMs={project.playheadMs}
+            durationMs={duration}
+            canUndo={past.length > 0}
+            canRedo={future.length > 0}
+            onPlay={() => setPlaying((value) => !value)}
+            onUndo={undo}
+            onRedo={redo}
+            onSplit={splitAtPlayhead}
+            onStep={(delta) => {
+              setPlaying(false)
+              setProject((current) => ({
+                ...current,
+                playheadMs: Math.max(0, Math.min(projectDurationMs(current), current.playheadMs + delta)),
+              }))
+            }}
+          />
         </section>
 
-        <aside className="editor-inspector">
-          <div className="eyebrow">Inspector</div>
-          <label className="field">
-            <span>Master volume</span>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={project.masterVolume}
-              onChange={(event) => commit({ masterVolume: Number(event.target.value) })}
-            />
-          </label>
-          {selected ? (
-            <>
-              <h3 style={{ margin: '8px 0' }}>{selected.label}</h3>
-              <label className="field">
-                <span>Speed</span>
-                <select
-                  value={selected.speed}
-                  onChange={(event) => updateClip(selected.id, setSpeed(selected, Number(event.target.value)))}
-                >
-                  {SPEED_OPTIONS.map((speed) => (
-                    <option key={speed} value={speed}>
-                      {speed}x
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                <span>Volume</span>
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={selected.volume}
-                  onChange={(event) => updateClip(selected.id, setVolume(selected, Number(event.target.value)))}
-                />
-              </label>
-              <label className="field">
-                <span>Filter</span>
-                <select
-                  value={selected.filter}
-                  onChange={(event) => updateClip(selected.id, { filter: event.target.value as FilterId })}
-                >
-                  {FILTER_OPTIONS.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                <span>In animation</span>
-                <select
-                  value={selected.animationIn}
-                  onChange={(event) => updateClip(selected.id, { animationIn: event.target.value as AnimationId })}
-                >
-                  {ANIMATION_OPTIONS.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                <span>Out animation</span>
-                <select
-                  value={selected.animationOut}
-                  onChange={(event) => updateClip(selected.id, { animationOut: event.target.value as AnimationId })}
-                >
-                  {ANIMATION_OPTIONS.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <p className="card-sub">
-                Trim {formatTimecode(selected.inMs)} → {formatTimecode(selected.outMs)}. Drag clip edges on the timeline.
-              </p>
-            </>
-          ) : selectedExtra ? (
-            <>
-              <h3 style={{ margin: '8px 0' }}>{selectedExtra.label}</h3>
-              {selectedExtra.kind === 'text' ? (
-                <label className="field">
-                  <span>Title</span>
-                  <input
-                    value={selectedExtra.text ?? ''}
-                    onChange={(event) => updateExtra(selectedExtra.id, { text: event.target.value, label: event.target.value || 'Title' })}
-                  />
-                </label>
-              ) : null}
-              {selectedExtra.kind === 'audio' ? (
-                <label className="field">
-                  <span>Volume</span>
-                  <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.05}
-                    value={selectedExtra.volume}
-                    onChange={(event) => updateExtra(selectedExtra.id, { volume: Number(event.target.value) })}
-                  />
-                </label>
-              ) : null}
-              {selectedExtra.kind === 'fx' ? (
-                <label className="field">
-                  <span>Effect</span>
-                  <select
-                    value={selectedExtra.fx}
-                    onChange={(event) => updateExtra(selectedExtra.id, { fx: event.target.value as FxId, label: event.target.value })}
-                  >
-                    {FX_OPTIONS.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-              <p className="card-sub">Drag the clip to move it. Delete removes it from the timeline.</p>
-            </>
-          ) : (
-            <p>Select a clip to trim, change speed, volume, or apply a filter.</p>
-          )}
-          {project.selectedTransitionIndex != null && project.clips[project.selectedTransitionIndex] ? (
-            <label className="field" style={{ marginTop: 16 }}>
-              <span>Transition</span>
-              <select
-                value={project.clips[project.selectedTransitionIndex].transition}
-                onChange={(event) => {
-                  const index = project.selectedTransitionIndex!
-                  commit({
-                    clips: project.clips.map((clip, clipIndex) =>
-                      clipIndex === index ? applyTransition(clip, event.target.value as TransitionId) : clip,
-                    ),
-                  })
-                }}
-              >
-                {TRANSITION_OPTIONS.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : (
-            <p className="card-sub">Click a cut between clips to choose a transition.</p>
-          )}
-        </aside>
+        <InspectorPanel
+          tab={project.inspectorTab}
+          onTab={(inspectorTab: InspectorTab) => setProject((current) => ({ ...current, inspectorTab }))}
+          masterVolume={project.masterVolume}
+          onMasterVolume={(masterVolume) => commit({ masterVolume })}
+          selected={selected}
+          selectedExtra={selectedExtra}
+          onClip={(patch) => selected && updateClip(selected.id, patch)}
+          onExtra={(patch) => selectedExtra && updateExtra(selectedExtra.id, patch)}
+        />
       </div>
 
-      <TimelineBoard
-        project={project}
-        duration={duration}
-        thumbs={thumbs}
-        onSeek={(playheadMs) => {
-          setPlaying(false)
-          setProject((current) => ({ ...current, playheadMs }))
-        }}
-        onSelectClip={(id) =>
-          setProject((current) => ({ ...current, selectedClipId: id, selectedExtraId: null, selectedTransitionIndex: null }))
-        }
-        onSelectExtra={(id) =>
-          setProject((current) => ({ ...current, selectedExtraId: id, selectedClipId: null, selectedTransitionIndex: null }))
-        }
-        onSelectTransition={(index) =>
-          setProject((current) => ({
-            ...current,
-            selectedTransitionIndex: index,
-            selectedClipId: current.clips[index]?.id ?? null,
-            selectedExtraId: null,
-          }))
-        }
-        onTrimClip={(id, edge, delta) => {
-          setProject((current) => ({
-            ...current,
-            clips: current.clips.map((clip) => (clip.id === id ? trimClip(clip, edge, delta) : clip)),
-          }))
-        }}
-        onTrimExtra={(id, edge, delta) => {
-          setProject((current) => ({
-            ...current,
-            extraClips: current.extraClips.map((extra) => (extra.id === id ? trimExtra(extra, edge, delta) : extra)),
-          }))
-        }}
-        onMoveClip={(from, to) => commit({ clips: moveClip(project.clips, from, to) })}
-        onMoveExtra={(id, delta) => {
-          setProject((current) => ({
-            ...current,
-            extraClips: current.extraClips.map((extra) => (extra.id === id ? moveExtra(extra, delta) : extra)),
-          }))
-        }}
-      />
+      <div ref={timelineRef}>
+        <TimelineBoard
+          project={project}
+          duration={duration}
+          thumbs={thumbs}
+          onSeek={(playheadMs) => {
+            setPlaying(false)
+            setProject((current) => ({ ...current, playheadMs }))
+          }}
+          onSelectClip={(id) =>
+            setProject((current) => ({ ...current, selectedClipId: id, selectedExtraId: null, selectedTransitionIndex: null }))
+          }
+          onSelectExtra={(id) =>
+            setProject((current) => ({ ...current, selectedExtraId: id, selectedClipId: null, selectedTransitionIndex: null }))
+          }
+          onSelectTransition={(index) =>
+            setProject((current) => ({
+              ...current,
+              selectedTransitionIndex: index,
+              selectedClipId: current.clips[index]?.id ?? null,
+              selectedExtraId: null,
+              inspectorTab: 'fade',
+            }))
+          }
+          onTrimClip={(id, edge, delta) => {
+            setProject((current) => ({
+              ...current,
+              clips: current.clips.map((clip) => (clip.id === id ? trimClip(clip, edge, delta) : clip)),
+            }))
+          }}
+          onTrimExtra={(id, edge, delta) => {
+            setProject((current) => ({
+              ...current,
+              extraClips: current.extraClips.map((extra) => (extra.id === id ? trimExtra(extra, edge, delta) : extra)),
+            }))
+          }}
+          onMoveClip={(from, to) => commit({ clips: moveClip(project.clips, from, to) })}
+          onMoveExtra={(id, delta) => {
+            setProject((current) => ({
+              ...current,
+              extraClips: current.extraClips.map((extra) => (extra.id === id ? moveExtra(extra, delta) : extra)),
+            }))
+          }}
+          onAddText={addText}
+          onAddAudio={() => void addMusic()}
+          onZoom={(pixelsPerSecond) => setProject((current) => ({ ...current, pixelsPerSecond }))}
+          onFit={() => {
+            const el = timelineRef.current?.querySelector('.timeline-track')
+            const w = el instanceof HTMLElement ? el.clientWidth - 8 : 720
+            setProject((current) => ({
+              ...current,
+              pixelsPerSecond: Math.max(40, Math.min(220, w / Math.max(projectDurationMs(current) / 1000, 1))),
+            }))
+          }}
+        />
+      </div>
+
+      {project.selectedTransitionIndex != null && project.clips[project.selectedTransitionIndex] ? (
+        <div className="nle-transition-bar">
+          <span>Transition</span>
+          <select
+            value={project.clips[project.selectedTransitionIndex].transition}
+            onChange={(event) => {
+              const index = project.selectedTransitionIndex!
+              commit({
+                clips: project.clips.map((clip, clipIndex) =>
+                  clipIndex === index ? applyTransition(clip, event.target.value as TransitionId) : clip,
+                ),
+              })
+            }}
+          >
+            {TRANSITION_OPTIONS.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
+      {preparing ? (
+        <div className="editor-export">
+          <div>
+            <div className="eyebrow">Preparing clips</div>
+            <p>{preparing.message}</p>
+            <div className="progress-track">
+              <div className="progress-fill" style={{ width: `${Math.round((preparing.current / Math.max(preparing.total, 1)) * 100)}%` }} />
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {exporting ? (
         <div className="editor-export">
@@ -596,24 +512,10 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           const file = event.target.files?.[0]
           event.target.value = ''
           if (!file) return
-          const extra = createExtra('audio', 0, {
-            label: file.name,
-            mediaUrl: URL.createObjectURL(file),
-          })
+          const extra = createExtra('audio', project.playheadMs, { label: file.name, mediaUrl: URL.createObjectURL(file) })
           commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null })
         }}
       />
-
-      <span className="sr-only">{buildExportPlan(project).outputPath}</span>
     </div>
   )
-}
-
-function previewAnimationClass(clip: EditorClip | undefined, localMs: number): string {
-  if (!clip) return ''
-  const play = clipPlayDurationMs(clip)
-  const classes: string[] = []
-  if (clip.animationIn !== 'none' && localMs < 350) classes.push(`anim-in-${clip.animationIn}`)
-  if (clip.animationOut !== 'none' && play - localMs < 350) classes.push(`anim-out-${clip.animationOut}`)
-  return classes.length ? ` ${classes.join(' ')}` : ''
 }

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import watermark from '../../assets/brand/v360-wordmark-white.png'
 import type { EditorClip, ExtraClip } from '../../models/editor'
-import { cssFilterFor, toVideoSrc } from '../../services/media-url'
-import { sourceTimeMs } from '../../services/timeline'
+import { cssClipPathForClip, cssFilterForClip, cssTransformForClip } from '../../services/edit-graph'
+import { toVideoSrc } from '../../services/media-url'
+import { clipPlayDurationMs, sourceTimeMs } from '../../services/timeline'
 
 interface PreviewStageProps {
   clip: EditorClip | undefined
@@ -12,7 +13,6 @@ interface PreviewStageProps {
   masterVolume: number
   extras: ExtraClip[]
   transitionOpacity: number
-  animationClass: string
   onDuration: (clipId: string, durationMs: number) => void
   onSourceTime: (sourceMs: number) => void
   onClipBoundary: () => void
@@ -26,7 +26,6 @@ export function PreviewStage({
   masterVolume,
   extras,
   transitionOpacity,
-  animationClass,
   onDuration,
   onSourceTime,
   onClipBoundary,
@@ -38,8 +37,9 @@ export function PreviewStage({
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const src = clip ? toVideoSrc(clip) : undefined
   const titles = extras.filter((extra) => extra.kind === 'text')
-  const fx = extras.filter((extra) => extra.kind === 'fx')
   const music = extras.find((extra) => extra.kind === 'audio')
+  const play = clip ? clipPlayDurationMs(clip) : 0
+  const fadeOpacity = fadeOpacityFor(clip, localMs, play)
 
   useEffect(() => {
     const video = videoRef.current
@@ -52,7 +52,7 @@ export function PreviewStage({
     const start = Math.max(0, sourceTimeMs(clip, playingRef.current ? 0 : localMs) / 1000)
     const apply = () => {
       video.playbackRate = Math.max(0.25, clip.speed)
-      video.volume = Math.min(1, Math.max(0, clip.volume * masterVolume))
+      video.volume = clip.muted ? 0 : Math.min(1, Math.max(0, clip.volume * masterVolume))
       video.muted = video.volume === 0
       if (Math.abs(video.currentTime - start) > 0.08) video.currentTime = start
       if (playingRef.current) void video.play().catch(() => undefined)
@@ -65,9 +65,9 @@ export function PreviewStage({
     const video = videoRef.current
     if (!video || !clip) return
     video.playbackRate = Math.max(0.25, clip.speed)
-    video.volume = Math.min(1, Math.max(0, clip.volume * masterVolume))
+    video.volume = clip.muted ? 0 : Math.min(1, Math.max(0, clip.volume * masterVolume))
     video.muted = video.volume === 0
-  }, [clip?.speed, clip?.volume, masterVolume])
+  }, [clip?.speed, clip?.volume, clip?.muted, masterVolume])
 
   useEffect(() => {
     const video = videoRef.current
@@ -113,28 +113,30 @@ export function PreviewStage({
     audio.pause()
   }, [playing, playheadMs, music?.id, music?.startMs])
 
+  const effectClass = clip && clip.effect !== 'none' ? ` is-fx-${clip.effect}` : ''
+
   return (
-    <div className={`editor-stage${animationClass}${fxClass(fx)}`}>
-      {src ? (
+    <div className={`nle-stage${effectClass}`}>
+      {src && clip ? (
         <video
           ref={videoRef}
-          className="stage-video"
+          className="nle-video"
           style={{
-            filter: cssFilterFor(clip?.filter ?? 'none'),
-            opacity: transitionOpacity,
+            filter: cssFilterForClip(clip),
+            transform: cssTransformForClip(clip),
+            clipPath: cssClipPathForClip(clip),
+            opacity: fadeOpacity * transitionOpacity * clip.grade.transparency,
           }}
           playsInline
           preload="auto"
           onLoadedMetadata={(event) => {
-            if (!clip) return
             setStatus('ready')
             onDuration(clip.id, event.currentTarget.duration * 1000)
           }}
           onCanPlay={() => setStatus('ready')}
-          onWaiting={() => setStatus('loading')}
           onError={() => setStatus('error')}
           onTimeUpdate={(event) => {
-            if (!playing || !clip) return
+            if (!playing) return
             const sourceMs = event.currentTarget.currentTime * 1000
             onSourceTime(sourceMs)
             if (sourceMs >= clip.outMs - 30) onClipBoundary()
@@ -142,26 +144,35 @@ export function PreviewStage({
           onEnded={onClipBoundary}
         />
       ) : (
-        <div className="stage-label">{clip?.label ?? 'Add a clip'}</div>
+        <div className="stage-label">{clip?.error ?? clip?.label ?? 'Add a clip'}</div>
       )}
       {status === 'loading' && src ? <div className="stage-status">Loading video…</div> : null}
-      {status === 'error' ? <div className="stage-status is-error">This MP4 could not be played. Export still uses the original file.</div> : null}
+      {status === 'error' || clip?.error ? (
+        <div className="stage-status is-error">{clip?.error || 'This MP4 could not be played. Preparing a playback copy may still be running.'}</div>
+      ) : null}
       {titles.map((title) => (
         <div key={title.id} className="stage-title">
           {title.text || 'Title'}
         </div>
       ))}
-      {fx.some((item) => item.fx === 'vignette') ? <div className="stage-vignette" /> : null}
-      {fx.some((item) => item.fx === 'grain') ? <div className="stage-grain" /> : null}
+      {clip?.effect === 'vignette' ? <div className="stage-vignette" /> : null}
+      {clip?.effect === 'grain' ? <div className="stage-grain" /> : null}
+      <div className="nle-handles" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <span />
+      </div>
       <img className="stage-mark" src={watermark} alt="Vision360" />
       <audio ref={audioRef} preload="auto" />
     </div>
   )
 }
 
-function fxClass(fx: ExtraClip[]): string {
-  const names = fx.map((item) => item.fx)
-  if (names.includes('flash')) return ' is-flash'
-  if (names.includes('blur')) return ' is-blur'
-  return ''
+function fadeOpacityFor(clip: EditorClip | undefined, localMs: number, play: number): number {
+  if (!clip) return 1
+  let opacity = 1
+  if (clip.fadeInMs > 0 && localMs < clip.fadeInMs) opacity = Math.max(0.05, localMs / clip.fadeInMs)
+  if (clip.fadeOutMs > 0 && play - localMs < clip.fadeOutMs) opacity = Math.min(opacity, Math.max(0.05, (play - localMs) / clip.fadeOutMs))
+  return opacity
 }

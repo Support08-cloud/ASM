@@ -59,26 +59,16 @@ describe('ffmpeg export plan', () => {
         volume: 1,
         color: '#0c2939',
       },
-      {
-        id: 'fx-1',
-        kind: 'fx',
-        label: 'vignette',
-        startMs: 0,
-        durationMs: 2000,
-        fx: 'vignette',
-        volume: 1,
-        color: '#34434d',
-      },
     ]
     const plan = buildExportPlan(project, { fontFile: '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf' })
     const prepare = plan.steps[0].args.join(' ')
     expect(prepare).toContain('setpts=PTS/2')
     expect(prepare).toContain('atempo=2')
+    expect(prepare.indexOf('-i')).toBeLessThan(prepare.indexOf('-ss'))
     expect(prepare).toContain('volume=0.500')
     expect(prepare).toContain('gamma_r=1.12')
     const finish = plan.steps.at(-1)?.args.join(' ') ?? ''
     expect(finish).toContain('drawtext')
-    expect(finish).toContain('vignette')
     expect(finish).toContain('amix')
     expect(plan.outputPath).toBe('D:/Output_Testing/260602-362/260602-362-edit.mp4')
   })

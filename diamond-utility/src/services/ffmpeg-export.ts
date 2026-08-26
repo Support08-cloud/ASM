@@ -1,4 +1,5 @@
-import type { EditorClip, EditorProject, ExtraClip, FilterId, FxId } from '../models/editor'
+import type { EditorClip, EditorProject, ExtraClip } from '../models/editor'
+import { atempoChain, proxyOutputPath, videoFiltersForClip } from './edit-graph'
 import { ffmpegInputPath } from './media-url'
 import { clipPlayDurationMs, exportFileName, projectDurationMs, transitionOverlapMs } from './timeline'
 
@@ -35,19 +36,18 @@ export function buildExportPlan(project: EditorProject, options: ExportPlanOptio
     joinPath(project.outputDir, `.edit-cache/${index}-${safe(clip.id)}.mp4`),
   )
 
-  const merged = extrasNeedReencode(project)
-    ? joinPath(project.outputDir, '.edit-cache/merged.mp4')
-    : outputPath
+  const extras = extrasNeedReencode(project)
+  const merged = extras ? joinPath(project.outputDir, '.edit-cache/merged.mp4') : outputPath
 
   if (project.clips.length === 1) {
     steps.push({
-      label: extrasNeedReencode(project) ? 'Write video bed' : 'Write output',
-      args: ['-y', '-i', intermediates[0], '-c', 'copy', merged],
+      label: extras ? 'Write video bed' : 'Write output',
+      args: ['-y', '-i', intermediates[0], '-c:v', 'libx264', '-preset', 'veryfast', '-c:a', 'aac', merged],
     })
   } else if (project.clips.every((clip, index) => index === project.clips.length - 1 || clip.transition === 'none')) {
     const listPath = joinPath(project.outputDir, '.edit-cache/concat.txt')
     steps.push({
-      label: extrasNeedReencode(project) ? 'Concatenate' : 'Concatenate',
+      label: 'Concatenate',
       args: ['-y', '-f', 'concat', '-safe', '0', '-i', listPath, '-c:v', 'libx264', '-preset', 'veryfast', '-c:a', 'aac', merged],
     })
   } else {
@@ -57,9 +57,9 @@ export function buildExportPlan(project: EditorProject, options: ExportPlanOptio
     })
   }
 
-  if (extrasNeedReencode(project)) {
+  if (extras) {
     steps.push({
-      label: 'Mix music, titles, and effects',
+      label: 'Mix music and titles',
       args: buildFinishArgs(project, merged, outputPath, options.fontFile),
     })
   }
@@ -71,27 +71,20 @@ export function buildPrepareArgs(clip: EditorClip, output: string, masterVolume:
   const playSec = clipPlayDurationMs(clip) / 1000
   const spanSec = (clip.outMs - clip.inMs) / 1000
   const input = ffmpegInputPath(clip)
-  const videoFilters = [
-    `setpts=PTS/${clip.speed}`,
-    colorFilter(clip.filter),
-    animationFilter(clip, playSec),
-    'scale=1920:1080:force_original_aspect_ratio=decrease',
-    'pad=1920:1080:(ow-iw)/2:(oh-ih)/2',
-    'fps=30',
-    'format=yuv420p',
-  ].filter(Boolean)
-  const volume = clamp(clip.volume * masterVolume, 0, 4)
-  const audioFilters = [atempoFilter(clip.speed), `volume=${volume.toFixed(3)}`].filter(Boolean)
+  const videoFilters = videoFiltersForClip(clip, playSec)
+  const volume = clip.muted ? 0 : clamp(clip.volume * masterVolume, 0, 4)
+  const tempo = atempoChain(clip.speed)
+  const audioFilters = [tempo, `volume=${volume.toFixed(3)}`].filter(Boolean)
 
   if (clip.hasAudio === false) {
     return [
       '-y',
+      '-i',
+      input,
       '-ss',
       (clip.inMs / 1000).toFixed(3),
       '-t',
       spanSec.toFixed(3),
-      '-i',
-      input,
       '-f',
       'lavfi',
       '-t',
@@ -117,12 +110,12 @@ export function buildPrepareArgs(clip: EditorClip, output: string, masterVolume:
 
   return [
     '-y',
+    '-i',
+    input,
     '-ss',
     (clip.inMs / 1000).toFixed(3),
     '-t',
     spanSec.toFixed(3),
-    '-i',
-    input,
     '-vf',
     videoFilters.join(','),
     '-af',
@@ -133,6 +126,57 @@ export function buildPrepareArgs(clip: EditorClip, output: string, masterVolume:
     'veryfast',
     '-c:a',
     'aac',
+    output,
+  ]
+}
+
+export function buildProxyArgs(input: string, output: string, hasAudio: boolean): string[] {
+  const vf = 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p'
+  if (!hasAudio) {
+    return [
+      '-y',
+      '-i',
+      input,
+      '-f',
+      'lavfi',
+      '-i',
+      'anullsrc=channel_layout=stereo:sample_rate=44100',
+      '-vf',
+      vf,
+      '-map',
+      '0:v:0',
+      '-map',
+      '1:a:0',
+      '-c:v',
+      'libx264',
+      '-preset',
+      'veryfast',
+      '-c:a',
+      'aac',
+      '-shortest',
+      '-movflags',
+      '+faststart',
+      output,
+    ]
+  }
+  return [
+    '-y',
+    '-i',
+    input,
+    '-vf',
+    vf,
+    '-c:v',
+    'libx264',
+    '-preset',
+    'veryfast',
+    '-c:a',
+    'aac',
+    '-ac',
+    '2',
+    '-ar',
+    '44100',
+    '-movflags',
+    '+faststart',
     output,
   ]
 }
@@ -200,13 +244,6 @@ function buildFinishArgs(project: EditorProject, merged: string, outputPath: str
   const videoChain: string[] = []
   let videoLabel = '[0:v]'
   project.extraClips
-    .filter((extra) => extra.kind === 'fx')
-    .forEach((extra, index) => {
-      const out = `[fx${index}]`
-      videoChain.push(`${videoLabel}${fxFilter(extra.fx ?? 'vignette', extra)}${out}`)
-      videoLabel = out
-    })
-  project.extraClips
     .filter((extra) => extra.kind === 'text' && extra.text)
     .forEach((extra, index) => {
       const out = `[tx${index}]`
@@ -215,10 +252,8 @@ function buildFinishArgs(project: EditorProject, merged: string, outputPath: str
     })
   if (videoLabel === '[0:v]') {
     videoChain.push('[0:v]format=yuv420p[outv]')
-    videoLabel = '[outv]'
-  } else if (videoLabel !== '[outv]') {
+  } else {
     videoChain.push(`${videoLabel}format=yuv420p[outv]`)
-    videoLabel = '[outv]'
   }
 
   const audioChain: string[] = []
@@ -256,14 +291,6 @@ function buildFinishArgs(project: EditorProject, merged: string, outputPath: str
   return args
 }
 
-function fxFilter(fx: FxId, extra: ExtraClip): string {
-  const enable = enableBetween(extra)
-  if (fx === 'flash') return `eq=brightness=0.25:${enable}`
-  if (fx === 'blur') return `gblur=sigma=8:${enable}`
-  if (fx === 'grain') return `noise=alls=12:allf=t:${enable}`
-  return `vignette=angle=PI/4:${enable}`
-}
-
 function drawTextFilter(extra: ExtraClip, fontFile?: string): string {
   const text = escapeDrawtext(extra.text || 'Title')
   const enable = enableBetween(extra)
@@ -273,12 +300,8 @@ function drawTextFilter(extra: ExtraClip, fontFile?: string): string {
 
 function enableBetween(extra: ExtraClip): string {
   const start = (extra.startMs / 1000).toFixed(3)
-  const end = (extraEnd(extra) / 1000).toFixed(3)
+  const end = ((extra.startMs + extra.durationMs) / 1000).toFixed(3)
   return `enable='between(t,${start},${end})'`
-}
-
-function extraEnd(extra: ExtraClip): number {
-  return extra.startMs + extra.durationMs
 }
 
 function escapeDrawtext(text: string): string {
@@ -295,28 +318,6 @@ function xfadeName(id: EditorClip['transition']): string {
   if (id === 'wipeleft') return 'wipeleft'
   if (id === 'circleopen') return 'circleopen'
   return 'fade'
-}
-
-function animationFilter(clip: EditorClip, durationSec: number): string {
-  const fade = 0.35
-  const filters: string[] = []
-  if (clip.animationIn === 'fade') filters.push(`fade=t=in:st=0:d=${fade}`)
-  if (clip.animationOut === 'fade') filters.push(`fade=t=out:st=${Math.max(0, durationSec - fade).toFixed(3)}:d=${fade}`)
-  if (clip.animationIn === 'zoom') filters.push('zoompan=z=min(zoom+0.0015,1.12):d=1:s=1920x1080')
-  return filters.join(',')
-}
-
-function colorFilter(id: FilterId): string {
-  if (id === 'warm') return 'eq=gamma_r=1.12:gamma_g=1.04:gamma_b=0.88:saturation=1.08'
-  if (id === 'cool') return 'eq=gamma_r=0.9:gamma_g=1.0:gamma_b=1.12:saturation=1.05'
-  if (id === 'contrast') return 'eq=contrast=1.25:brightness=0.03'
-  if (id === 'mono') return 'hue=s=0'
-  return ''
-}
-
-function atempoFilter(speed: number): string {
-  if (Math.abs(speed - 1) < 0.01) return ''
-  return `atempo=${speed}`
 }
 
 function joinPath(...parts: string[]): string {
@@ -340,3 +341,10 @@ export function concatListContents(clips: EditorClip[], outputDir: string): stri
     .map((clip, index) => `file '${joinPath(outputDir, `.edit-cache/${index}-${safe(clip.id)}.mp4`).replace(/'/g, "'\\''")}'`)
     .join('\n')
 }
+
+export function durationMatches(actualMs: number, expectedMs: number): boolean {
+  const slack = Math.max(400, expectedMs * 0.04)
+  return actualMs > 0 && Math.abs(actualMs - expectedMs) <= slack
+}
+
+export { proxyOutputPath }

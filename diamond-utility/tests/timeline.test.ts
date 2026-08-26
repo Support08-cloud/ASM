@@ -30,8 +30,9 @@ describe('timeline', () => {
     expect(project.masterVolume).toBe(1)
     expect(project.clips[0].volume).toBe(1)
     expect(project.clips[0].filter).toBe('none')
-    expect(project.clips[0].mediaUrl).toBe('./samples/clip-1.mp4')
-    expect(project.clips[3].mediaUrl).toBe('./samples/clip-rg.mp4')
+    expect(project.clips[0].mediaUrl).toBeUndefined()
+    expect(project.clips[0].effect).toBe('none')
+    expect(project.clips[0].grade.transparency).toBe(1)
     expect(project.clips.map((clip) => clip.label)).toEqual([
       '260602-362-1.mp4',
       '260602-362-2.mp4',

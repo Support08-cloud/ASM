@@ -2,8 +2,9 @@ import {
   AUDIO_COLOR,
   CLIP_COLORS,
   DEFAULT_CLIP_DURATION_MS,
+  DEFAULT_GRADE,
+  DEFAULT_TRANSFORM,
   DEFAULT_TRANSITION_MS,
-  FX_COLOR,
   MAX_TIMELINE_CLIPS,
   MIN_CLIP_MS,
   TEXT_COLOR,
@@ -15,7 +16,8 @@ import {
 } from '../models/editor'
 import type { ProcessFileResult } from '../models/processing'
 import { uid } from '../utils/format'
-import { isDemoPath, sampleMediaUrl, sampleMusicUrl } from './sample-media'
+import { clampSpeed } from './edit-graph'
+import { isDemoPath, isRealDiskPath, sampleMediaUrl, sampleMusicUrl } from './sample-media'
 
 export function clipPlayDurationMs(clip: EditorClip): number {
   const span = Math.max(0, clip.outMs - clip.inMs)
@@ -100,7 +102,7 @@ export function trimClip(clip: EditorClip, edge: 'in' | 'out', deltaMs: number):
 }
 
 export function setSpeed(clip: EditorClip, speed: number): EditorClip {
-  return { ...clip, speed: clamp(speed, 0.25, 4) }
+  return { ...clip, speed: clampSpeed(speed) }
 }
 
 export function setVolume(clip: EditorClip, volume: number): EditorClip {
@@ -163,9 +165,8 @@ export function createExtra(kind: ExtraKind, startMs: number, patch?: Partial<Ex
     durationMs: kind === 'audio' ? 12000 : 4000,
     volume: kind === 'audio' ? 0.8 : 1,
     text: kind === 'text' ? 'Vision360' : undefined,
-    fx: kind === 'fx' ? 'vignette' : undefined,
     mediaUrl: kind === 'audio' ? sampleMusicUrl() : undefined,
-    color: kind === 'audio' ? AUDIO_COLOR : kind === 'text' ? TEXT_COLOR : FX_COLOR,
+    color: kind === 'audio' ? AUDIO_COLOR : TEXT_COLOR,
   }
   return { ...base, ...patch }
 }
@@ -185,6 +186,7 @@ export function projectFromCopiedFiles(
     selectedClipId: clips[0]?.id ?? null,
     selectedExtraId: null,
     selectedTransitionIndex: null,
+    inspectorTab: 'speed',
     playheadMs: 0,
     pixelsPerSecond: 80,
     masterVolume: 1,
@@ -195,21 +197,26 @@ export function createClipFromFile(file: ProcessFileResult, index: number): Edit
   const duration = DEFAULT_CLIP_DURATION_MS
   const output = file.outputPath || file.sourcePath
   const demo = isDemoPath(output) || isDemoPath(file.sourcePath)
+  const real = isRealDiskPath(output)
   return {
     id: uid('clip'),
     label: fileName(file.outputPath || file.viewLabel),
     sourcePath: output,
     absolutePath: file.outputPath || undefined,
-    mediaUrl: sampleMediaUrl(file.outputPath || file.viewLabel),
+    mediaUrl: real ? undefined : demo ? sampleMediaUrl(file.outputPath || file.viewLabel) : undefined,
     hasAudio: demo ? true : undefined,
     sourceDurationMs: duration,
     inMs: 0,
     outMs: duration,
     speed: 1,
     volume: 1,
+    muted: false,
     filter: 'none',
-    animationIn: index === 0 ? 'fade' : 'none',
-    animationOut: 'none',
+    effect: 'none',
+    grade: { ...DEFAULT_GRADE },
+    transform: { ...DEFAULT_TRANSFORM },
+    fadeInMs: index === 0 ? 350 : 0,
+    fadeOutMs: 0,
     transition: 'fade',
     transitionMs: DEFAULT_TRANSITION_MS,
     color: CLIP_COLORS[index % CLIP_COLORS.length],
