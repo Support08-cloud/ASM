@@ -435,6 +435,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
             ducking={project.ducking}
             transitionOpacity={transitionOpacity}
             showCrop={!playing && Boolean(selected?.transform.cropEnabled)}
+            selectedExtraId={project.selectedExtraId}
             onDuration={(id, durationMs) => {
               setProject((current) => ({
                 ...current,

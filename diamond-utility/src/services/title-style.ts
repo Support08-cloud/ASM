@@ -15,7 +15,7 @@ export function titleOpacity(extra: ExtraClip, playheadMs: number): number {
   const fadeIn = titleAnimMs(extra, 'in')
   const fadeOut = titleAnimMs(extra, 'out')
   let opacity = 1
-  if (fadeIn > 0 && local < fadeIn) opacity = Math.max(0, local / fadeIn)
+  if (fadeIn > 0 && local < fadeIn) opacity = Math.max(0.2, local / fadeIn)
   if (fadeOut > 0 && duration - local < fadeOut) opacity = Math.min(opacity, Math.max(0, (duration - local) / fadeOut))
   return opacity
 }

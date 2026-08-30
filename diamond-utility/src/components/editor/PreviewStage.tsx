@@ -18,6 +18,7 @@ interface PreviewStageProps {
   ducking?: DuckingSettings
   transitionOpacity: number
   showCrop: boolean
+  selectedExtraId?: string | null
   onDuration: (clipId: string, durationMs: number) => void
   onSourceTime: (sourceMs: number) => void
   onClipBoundary: () => void
@@ -33,6 +34,7 @@ export function PreviewStage({
   ducking,
   transitionOpacity,
   showCrop,
+  selectedExtraId,
   onDuration,
   onSourceTime,
   onClipBoundary,
@@ -203,11 +205,15 @@ export function PreviewStage({
       {status === 'error' || clip?.error ? (
         <div className="v360-stage-status is-error">{clip?.error || 'This MP4 could not be played.'}</div>
       ) : null}
-      {titles.map((title) => (
-        <div key={title.id} className={`v360-title is-anim-${title.animIn ?? 'none'}`} style={titleBoxStyle(title, playheadMs)}>
-          {title.text || 'Title Overlay'}
-        </div>
-      ))}
+      {titles.map((title) => {
+        const style = titleBoxStyle(title, playheadMs)
+        if (title.id === selectedExtraId) style.opacity = Math.max(Number(style.opacity ?? 0), 0.9)
+        return (
+          <div key={title.id} className={`v360-title is-anim-${title.animIn ?? 'none'}`} style={style}>
+            {title.text || 'Title Overlay'}
+          </div>
+        )
+      })}
       {clip?.effect === 'vignette' ? <div className="v360-vignette" /> : null}
       {clip?.effect === 'grain' ? <div className="v360-grain" /> : null}
       {cropOn && insets ? (
