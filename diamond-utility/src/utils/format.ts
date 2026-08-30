@@ -47,3 +47,12 @@ export function formatFrames(ms: number, fps = 24): string {
 export function estimateExportBytes(durationMs: number, bitrateMbps: number): number {
   return Math.max(0, (durationMs / 1000) * (bitrateMbps * 1_000_000) / 8)
 }
+
+export function linearToDb(value: number): number {
+  const linear = Math.max(0.0001, value)
+  return Math.round(20 * Math.log10(linear) * 10) / 10
+}
+
+export function dbToLinear(db: number): number {
+  return Math.min(1, Math.max(0, 10 ** (db / 20)))
+}

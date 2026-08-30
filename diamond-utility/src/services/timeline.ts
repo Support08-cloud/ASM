@@ -103,6 +103,23 @@ export function trimClip(clip: EditorClip, edge: 'in' | 'out', deltaMs: number):
   return { ...clip, outMs: nextOut }
 }
 
+export function slipClip(clip: EditorClip, deltaMs: number): EditorClip {
+  const span = clip.outMs - clip.inMs
+  const nextIn = clamp(clip.inMs + deltaMs, 0, Math.max(0, clip.sourceDurationMs - span))
+  return { ...clip, inMs: nextIn, outMs: nextIn + span }
+}
+
+export function skipPlayhead(clips: EditorClip[], playheadMs: number, direction: -1 | 1): number {
+  const hit = clipAtTime(clips, playheadMs)
+  if (!hit) return 0
+  if (direction < 0) {
+    if (hit.localMs > 240) return hit.startMs
+    return clipStartMs(clips, Math.max(0, hit.index - 1))
+  }
+  if (hit.index >= clips.length - 1) return timelineDurationMs(clips)
+  return clipStartMs(clips, hit.index + 1)
+}
+
 export function setSpeed(clip: EditorClip, speed: number): EditorClip {
   return { ...clip, speed: clampSpeed(speed) }
 }
@@ -162,13 +179,20 @@ export function createExtra(kind: ExtraKind, startMs: number, patch?: Partial<Ex
   const base: ExtraClip = {
     id: uid(kind),
     kind,
-    label: kind === 'audio' ? 'Music' : kind === 'text' ? 'Title' : 'Effect',
+    label: kind === 'audio' ? 'Music' : kind === 'text' ? 'Title' : kind === 'overlay' ? 'Overlay' : 'Effect',
     startMs: Math.max(0, startMs),
     durationMs: kind === 'audio' ? 12000 : 4000,
     volume: kind === 'audio' ? 0.8 : 1,
     text: kind === 'text' ? 'Title Overlay' : undefined,
     fontFamily: kind === 'text' ? 'Geist' : undefined,
     fontSize: kind === 'text' ? 48 : undefined,
+    textColor: kind === 'text' ? '#ffffff' : undefined,
+    textAlign: kind === 'text' ? 'center' : undefined,
+    posX: 0.5,
+    posY: kind === 'text' ? 0.82 : 0.5,
+    animIn: kind === 'text' ? 'fade' : 'none',
+    animOut: kind === 'text' ? 'fade' : 'none',
+    overlayScale: 0.45,
     fadeInMs: kind === 'audio' ? 500 : 0,
     fadeOutMs: kind === 'audio' ? 500 : 0,
     interpolation: 'bezier',

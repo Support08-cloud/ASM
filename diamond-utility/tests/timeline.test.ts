@@ -7,6 +7,8 @@ import {
   projectDurationMs,
   projectFromCopiedFiles,
   setVolume,
+  skipPlayhead,
+  slipClip,
   splitClip,
   timelineDurationMs,
   trimClip,
@@ -73,5 +75,15 @@ describe('timeline', () => {
     const music = createExtra('audio', 2000, { durationMs: 8000 })
     expect(projectDurationMs({ clips: project.clips, extraClips: [music] })).toBe(10000)
     expect(clipPlayDurationMs(project.clips[0])).toBe(4000)
+  })
+
+  it('slips media without changing duration and skips clip to clip', () => {
+    const project = projectFromCopiedFiles([file('A'), file('B')], '/out', 'A')
+    const clip = { ...project.clips[0], sourceDurationMs: 8000, outMs: 4000 }
+    const slipped = slipClip(clip, 500)
+    expect(slipped.outMs - slipped.inMs).toBe(4000)
+    expect(slipped.inMs).toBe(500)
+    expect(skipPlayhead(project.clips, 100, 1)).toBeGreaterThan(0)
+    expect(skipPlayhead(project.clips, 100, -1)).toBe(0)
   })
 })

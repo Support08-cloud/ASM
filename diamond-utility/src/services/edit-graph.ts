@@ -37,21 +37,36 @@ export function cssTransformForClip(clip: EditorClip): string {
   const t = clip.transform
   const flips = `${t.flipH ? ' scaleX(-1)' : ''}${t.flipV ? ' scaleY(-1)' : ''}`
   const rotate = t.rotation ? ` rotate(${t.rotation}deg)` : ''
-  return `translate(${t.x * 40}%, ${t.y * 40}%) scale(${Math.max(0.2, t.scale)})${flips}${rotate}`
+  return `translate(${t.x * 50}%, ${t.y * 50}%) scale(${Math.max(0.2, t.scale)})${flips}${rotate}`
 }
 
 export function cropInsets(clip: EditorClip): { top: number; right: number; bottom: number; left: number } {
   const t = clip.transform
-  if (t.cropEnabled) {
-    return {
-      top: clamp01(t.cropTop),
-      right: clamp01(t.cropRight),
-      bottom: clamp01(t.cropBottom),
-      left: clamp01(t.cropLeft),
+  let top = t.cropEnabled ? clamp01(t.cropTop) : clamp01(t.crop)
+  let right = t.cropEnabled ? clamp01(t.cropRight) : clamp01(t.crop)
+  let bottom = t.cropEnabled ? clamp01(t.cropBottom) : clamp01(t.crop)
+  let left = t.cropEnabled ? clamp01(t.cropLeft) : clamp01(t.crop)
+  const aspect = t.cropEnabled ? t.cropAspect : 'free'
+  if (aspect && aspect !== 'free') {
+    const [aw, ah] = aspect.split(':').map(Number)
+    const target = aw / ah
+    const frameAR = 16 / 9
+    let width = Math.max(0.2, 1 - left - right)
+    let height = Math.max(0.2, 1 - top - bottom)
+    const boxAR = (width * frameAR) / height
+    if (boxAR > target) {
+      width = (height * target) / frameAR
+      const extra = 1 - left - right - width
+      left = clamp01(left + extra / 2)
+      right = clamp01(1 - left - width)
+    } else if (boxAR < target) {
+      height = (width * frameAR) / target
+      const extra = 1 - top - bottom - height
+      top = clamp01(top + extra / 2)
+      bottom = clamp01(1 - top - height)
     }
   }
-  const crop = Math.min(0.4, Math.max(0, t.crop))
-  return { top: crop, right: crop, bottom: crop, left: crop }
+  return { top, right, bottom, left }
 }
 
 export function cssClipPathForClip(clip: EditorClip): string | undefined {
@@ -68,7 +83,7 @@ function clamp01(value: number): number {
   return Math.min(0.4, Math.max(0, value || 0))
 }
 
-export function videoFiltersForClip(clip: EditorClip, playSec: number): string[] {
+export function videoFiltersForClip(clip: EditorClip, playSec: number, fps = 30): string[] {
   const inset = cropInsets(clip)
   const cropW = 1 - inset.left - inset.right
   const cropH = 1 - inset.top - inset.bottom
@@ -77,8 +92,8 @@ export function videoFiltersForClip(clip: EditorClip, playSec: number): string[]
       ? `crop=iw*${cropW.toFixed(3)}:ih*${cropH.toFixed(3)}:iw*${inset.left.toFixed(3)}:ih*${inset.top.toFixed(3)}`
       : ''
   const scale = Math.max(0.2, clip.transform.scale)
-  const ox = Math.round((clip.transform.x + 0.5) * 1920 - 960 * scale)
-  const oy = Math.round((clip.transform.y + 0.5) * 1080 - 540 * scale)
+  const ox = Math.round((1 - scale) * 960 + clip.transform.x * 960)
+  const oy = Math.round((1 - scale) * 540 + clip.transform.y * 540)
   const sized = `scale=${Math.round(1920 * scale)}:${Math.round(1080 * scale)}:force_original_aspect_ratio=decrease`
   const pad = `pad=1920:1080:${ox}:${oy}:black`
   const rotate =
@@ -108,7 +123,7 @@ export function videoFiltersForClip(clip: EditorClip, playSec: number): string[]
     `setpts=PTS/${Math.max(clip.speed, 0.01)}`,
     fadeIn,
     fadeOut,
-    'fps=30',
+    `fps=${fps}`,
     'format=yuv420p',
   ].filter(Boolean)
 }
@@ -160,6 +175,7 @@ function gradeEqFilter(clip: EditorClip): string {
 function effectCss(id: EffectId): string {
   if (id === 'blur') return 'blur(5px)'
   if (id === 'flash') return 'brightness(1.28) contrast(1.08)'
+  if (id === 'pulse') return 'contrast(1.08)'
   return ''
 }
 

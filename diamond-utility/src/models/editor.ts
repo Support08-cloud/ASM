@@ -51,6 +51,13 @@ export const LIBRARY_TABS = [
   { id: 'effects', label: 'Effects', icon: 'auto_fix_high' },
 ] as const
 
+export const TEXT_ANIMS = [
+  { id: 'none', label: 'None' },
+  { id: 'fade', label: 'Fade' },
+  { id: 'slide', label: 'Slide' },
+  { id: 'zoom', label: 'Zoom' },
+] as const
+
 export const CROP_ASPECTS = ['free', '1:1', '4:5', '16:9', '9:16'] as const
 export const TEXT_FONTS = ['Geist', 'Inter', 'Roboto'] as const
 export const KEYFRAME_INTERPOLATIONS = [
@@ -64,7 +71,9 @@ export type FilterId = (typeof FILTER_OPTIONS)[number]['id']
 export type EffectId = (typeof EFFECT_OPTIONS)[number]['id']
 export type InspectorTab = (typeof INSPECTOR_TABS)[number]['id']
 export type LibraryTab = (typeof LIBRARY_TABS)[number]['id']
-export type ExtraKind = 'audio' | 'text'
+export type ExtraKind = 'audio' | 'text' | 'overlay'
+export type TextAnim = (typeof TEXT_ANIMS)[number]['id']
+export type TextAlign = 'left' | 'center' | 'right'
 export type CropAspect = (typeof CROP_ASPECTS)[number]
 export type KeyframeInterpolation = (typeof KEYFRAME_INTERPOLATIONS)[number]['id']
 export type ExportFormat = 'h264' | 'prores' | 'hevc'
@@ -157,6 +166,13 @@ export interface ExtraClip {
   text?: string
   fontFamily?: string
   fontSize?: number
+  textColor?: string
+  textAlign?: TextAlign
+  posX?: number
+  posY?: number
+  animIn?: TextAnim
+  animOut?: TextAnim
+  overlayScale?: number
   fadeInMs?: number
   fadeOutMs?: number
   interpolation?: KeyframeInterpolation
@@ -226,11 +242,7 @@ export const CLIP_COLORS = ['#4A6478', '#4A5568', '#3d5a73', '#2C4A5E', '#5A7184
 export const AUDIO_COLOR = '#2C7A7B'
 export const TEXT_COLOR = '#FF6B00'
 
-/** @deprecated kept so older snippets type-check during the editor rewrite */
-export const ANIMATION_OPTIONS = [
-  { id: 'none', label: 'None' },
-  { id: 'fade', label: 'Fade' },
-] as const
+export const ANIMATION_OPTIONS = TEXT_ANIMS
 export const FX_OPTIONS = EFFECT_OPTIONS.filter((item) => item.id !== 'none')
-export type AnimationId = 'none' | 'fade'
+export type AnimationId = TextAnim
 export type FxId = EffectId

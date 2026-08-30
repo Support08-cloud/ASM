@@ -41,6 +41,8 @@ interface AppStoreValue {
   confirmGetMp4: () => Promise<void>
   exportTimeline: (project: EditorProject) => Promise<void>
   cancelProcessing: () => void
+  cancelExport: () => void
+  saveEditor: (project: EditorProject) => void
   openOutput: (target: string) => Promise<void>
 }
 
@@ -49,6 +51,7 @@ const AppStoreContext = createContext<AppStoreValue | null>(null)
 export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState)
   const abortRef = useRef<AbortController | null>(null)
+  const exportAbortRef = useRef<AbortController | null>(null)
   const sourceHandleRef = useRef<FileSystemDirectoryHandle | null>(null)
   const stateRef = useRef(state)
 
@@ -390,7 +393,22 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     abortRef.current?.abort()
   }
 
+  const cancelExport = () => {
+    exportAbortRef.current?.abort()
+    dispatch({ type: 'export-cancel' })
+    toast('info', 'Export cancelled')
+  }
+
+  const saveEditor = (project: EditorProject) => {
+    dispatch({ type: 'save-editor', project })
+    toast('success', 'Project saved')
+  }
+
   const exportTimeline = async (project: EditorProject) => {
+    exportAbortRef.current?.abort()
+    const controller = new AbortController()
+    exportAbortRef.current = controller
+    dispatch({ type: 'save-editor', project })
     dispatch({ type: 'export-start' })
     try {
       const prepared = await prepareProjectForExport(project)
@@ -405,6 +423,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         }
       }
       for (let i = 0; i < plan.steps.length; i += 1) {
+        if (controller.signal.aborted) throw Object.assign(new Error('Cancelled'), { name: 'AbortError' })
         const step = plan.steps[i]
         dispatch({
           type: 'export-progress',
@@ -450,6 +469,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'export-complete', result })
       toast('success', window.desktop?.runFfmpeg ? 'Edited video exported' : `Export planned: ${exportFileName(project.diamondName)}`)
     } catch (error) {
+      if ((error as Error).name === 'AbortError') {
+        dispatch({ type: 'export-cancel' })
+        return
+      }
       dispatch({
         type: 'export-complete',
         result: {
@@ -484,6 +507,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     confirmGetMp4,
     exportTimeline,
     cancelProcessing,
+    cancelExport,
+    saveEditor,
     openOutput,
   }
 

@@ -17,9 +17,13 @@ interface TimelineBoardProps {
   onMoveExtra: (id: string, deltaMs: number) => void
   onAddText: () => void
   onAddAudio: () => void
+  onAddOverlay: () => void
   onZoom: (pixelsPerSecond: number) => void
   onTool: (tool: TimelineTool) => void
   onSplit: () => void
+  onSplitAt: (clipId: string, localMs: number) => void
+  onSlip: (id: string, deltaMs: number) => void
+  onMuteClip: (id: string) => void
 }
 
 const LANES = [
@@ -44,16 +48,20 @@ export function TimelineBoard({
   onMoveExtra,
   onAddText,
   onAddAudio,
+  onAddOverlay,
   onZoom,
   onTool,
   onSplit,
+  onSplitAt,
+  onSlip,
+  onMuteClip,
 }: TimelineBoardProps) {
   const width = Math.max(720, (duration / 1000) * project.pixelsPerSecond)
   const playX = (project.playheadMs / Math.max(duration, 1)) * width
   const ticks = useMemo(() => rulerTicks(duration, project.pixelsPerSecond), [duration, project.pixelsPerSecond])
   const texts = project.extraClips.filter((extra) => extra.kind === 'text')
   const music = project.extraClips.filter((extra) => extra.kind === 'audio')
-  const graded = project.clips.some((clip) => clip.filter !== 'none' || clip.effect !== 'none' || Math.abs(clip.grade.exposure) > 0.01)
+  const overlays = project.extraClips.filter((extra) => extra.kind === 'overlay')
 
   const seekFromClientX = (clientX: number, innerLeft: number) => {
     onSeek(Math.max(0, Math.min(duration, ((clientX - innerLeft) / width) * duration)))
@@ -69,13 +77,13 @@ export function TimelineBoard({
           <button
             type="button"
             className={project.timelineTool === 'blade' ? 'is-on' : undefined}
-            title="Split (S)"
-            onClick={() => {
-              onTool('blade')
-              onSplit()
-            }}
+            title="Blade — click a clip to split (B)"
+            onClick={() => onTool(project.timelineTool === 'blade' ? 'select' : 'blade')}
           >
             ✂
+          </button>
+          <button type="button" title="Split at playhead (S)" onClick={onSplit}>
+            Split
           </button>
           <button type="button" className={project.timelineTool === 'slip' ? 'is-on' : undefined} title="Slip (Y)" onClick={() => onTool('slip')}>
             ↔
@@ -133,33 +141,42 @@ export function TimelineBoard({
             }}
           >
             <div className="v360-lane is-text">
-              {texts.length === 0 ? (
-                <button type="button" className="v360-lane-add" onClick={onAddText}>
-                  + Title
-                </button>
-              ) : (
-                texts.map((extra) => (
-                  <ExtraBlock
-                    key={extra.id}
-                    extra={extra}
-                    duration={duration}
-                    width={width}
-                    selected={extra.id === project.selectedExtraId}
-                    pixelsPerSecond={project.pixelsPerSecond}
-                    variant="text"
-                    onSelect={onSelectExtra}
-                    onTrim={onTrimExtra}
-                    onMove={onMoveExtra}
-                  />
-                ))
-              )}
+              {texts.map((extra) => (
+                <ExtraBlock
+                  key={extra.id}
+                  extra={extra}
+                  duration={duration}
+                  width={width}
+                  selected={extra.id === project.selectedExtraId}
+                  pixelsPerSecond={project.pixelsPerSecond}
+                  variant="text"
+                  onSelect={onSelectExtra}
+                  onTrim={onTrimExtra}
+                  onMove={onMoveExtra}
+                />
+              ))}
+              <button type="button" className="v360-lane-add is-end" onClick={onAddText}>
+                + Title
+              </button>
             </div>
             <div className="v360-lane is-v2">
-              {graded ? (
-                <div className="v360-grade" style={{ left: 0, width: Math.max(48, (timelineSpan(project) / Math.max(duration, 1)) * width) }}>
-                  Color Grade 1
-                </div>
-              ) : null}
+              {overlays.map((extra) => (
+                <ExtraBlock
+                  key={extra.id}
+                  extra={extra}
+                  duration={duration}
+                  width={width}
+                  selected={extra.id === project.selectedExtraId}
+                  pixelsPerSecond={project.pixelsPerSecond}
+                  variant="overlay"
+                  onSelect={onSelectExtra}
+                  onTrim={onTrimExtra}
+                  onMove={onMoveExtra}
+                />
+              ))}
+              <button type="button" className="v360-lane-add is-end" onClick={onAddOverlay}>
+                + Overlay
+              </button>
             </div>
             <div className="v360-lane is-video">
               {project.clips.map((clip, index) => {
@@ -175,12 +192,19 @@ export function TimelineBoard({
                       className={`v360-clip${clip.id === project.selectedClipId ? ' is-on' : ''}`}
                       onClick={(event) => {
                         event.stopPropagation()
+                        const rect = event.currentTarget.getBoundingClientRect()
+                        const localMs = ((event.clientX - rect.left) / Math.max(rect.width, 1)) * clipPlayDurationMs(clip)
                         if (project.timelineTool === 'blade') {
-                          onSeek(start + clipPlayDurationMs(clip) / 2)
-                          onSplit()
+                          onSeek(start + localMs)
+                          onSplitAt(clip.id, localMs)
                           return
                         }
                         onSelectClip(clip.id)
+                      }}
+                      onMouseDown={(event) => {
+                        if (project.timelineTool !== 'slip') return
+                        if ((event.target as HTMLElement).classList.contains('v360-handle')) return
+                        startDrag(event, (delta) => onSlip(clip.id, delta), project.pixelsPerSecond)
                       }}
                       onDragStart={(event) => event.dataTransfer.setData('text/plain', String(index))}
                       onDragOver={(event) => event.preventDefault()}
@@ -221,34 +245,44 @@ export function TimelineBoard({
                 const left = (start / Math.max(duration, 1)) * width
                 const clipWidth = Math.max(24, (clipPlayDurationMs(clip) / Math.max(duration, 1)) * width)
                 return (
-                  <div key={`a1-${clip.id}`} className="v360-audio-link" style={{ left, width: clipWidth }}>
-                    {clip.label.replace('.mp4', '')} [A]
-                  </div>
+                  <button
+                    key={`a1-${clip.id}`}
+                    type="button"
+                    className={`v360-audio-link${clip.muted ? ' is-muted' : ''}${clip.id === project.selectedClipId ? ' is-on' : ''}`}
+                    style={{ left, width: clipWidth }}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onSelectClip(clip.id)
+                    }}
+                    onDoubleClick={(event) => {
+                      event.stopPropagation()
+                      onMuteClip(clip.id)
+                    }}
+                  >
+                    {clip.muted ? 'MUTE' : `${clip.label.replace('.mp4', '')} [A]`}
+                  </button>
                 )
               })}
             </div>
             <div className="v360-lane is-audio">
-              {music.length === 0 ? (
-                <button type="button" className="v360-lane-add" onClick={onAddAudio}>
-                  + Audio
-                </button>
-              ) : (
-                music.map((extra) => (
-                  <ExtraBlock
-                    key={extra.id}
-                    extra={extra}
-                    duration={duration}
-                    width={width}
-                    selected={extra.id === project.selectedExtraId}
-                    pixelsPerSecond={project.pixelsPerSecond}
-                    variant="audio"
-                    ducked={project.ducking.enabled}
-                    onSelect={onSelectExtra}
-                    onTrim={onTrimExtra}
-                    onMove={onMoveExtra}
-                  />
-                ))
-              )}
+              {music.map((extra) => (
+                <ExtraBlock
+                  key={extra.id}
+                  extra={extra}
+                  duration={duration}
+                  width={width}
+                  selected={extra.id === project.selectedExtraId}
+                  pixelsPerSecond={project.pixelsPerSecond}
+                  variant="audio"
+                  ducked={project.ducking.enabled}
+                  onSelect={onSelectExtra}
+                  onTrim={onTrimExtra}
+                  onMove={onMoveExtra}
+                />
+              ))}
+              <button type="button" className="v360-lane-add is-end" onClick={onAddAudio}>
+                + Audio
+              </button>
             </div>
             <div className="v360-playhead" style={{ left: playX }}>
               <span>{formatFrames(project.playheadMs)}</span>
@@ -277,7 +311,7 @@ function ExtraBlock({
   width: number
   selected: boolean
   pixelsPerSecond: number
-  variant: 'text' | 'audio'
+  variant: 'text' | 'audio' | 'overlay'
   ducked?: boolean
   onSelect: (id: string) => void
   onTrim: (id: string, edge: 'in' | 'out', deltaMs: number) => void
@@ -307,12 +341,6 @@ function ExtraBlock({
       <span className="v360-handle is-end" onMouseDown={(event) => startDrag(event, (delta) => onTrim(extra.id, 'out', delta), pixelsPerSecond)} />
     </button>
   )
-}
-
-function timelineSpan(project: EditorProject): number {
-  if (project.clips.length === 0) return 0
-  const last = project.clips.length - 1
-  return clipStartMs(project.clips, last) + clipPlayDurationMs(project.clips[last])
 }
 
 function rulerTicks(duration: number, pps: number) {

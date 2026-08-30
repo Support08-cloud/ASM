@@ -20,6 +20,7 @@ export function AppShell() {
 
       if (event.key === 'Escape') {
         if (state.phase === 'confirming') dispatch({ type: 'cancel-confirm' })
+        else if (state.phase === 'exporting') dispatch({ type: 'export-cancel' })
         else if (state.phase === 'editing') dispatch({ type: 'close-editor' })
         else if (state.detailsId) dispatch({ type: 'close-details' })
         return

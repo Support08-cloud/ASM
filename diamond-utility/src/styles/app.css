@@ -1923,6 +1923,34 @@
   gap: 8px;
 }
 
+.v360-top-left {
+  position: relative;
+}
+
+.v360-menu {
+  position: absolute;
+  top: 32px;
+  left: 88px;
+  z-index: 20;
+  display: grid;
+  min-width: 160px;
+  background: #201f1f;
+  border: 1px solid var(--v360-line);
+}
+
+.v360-menu button {
+  height: 28px;
+  text-align: left;
+  padding: 0 10px;
+  background: transparent;
+  border: 0;
+  color: var(--v360-text);
+}
+
+.v360-menu button:hover {
+  background: #353434;
+}
+
 .v360-top-left strong {
   font-size: 14px;
 }
@@ -2111,9 +2139,52 @@
   place-items: center;
 }
 
+.v360-fx {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.v360-fx.is-fx-pulse {
+  animation: v360Pulse 1.2s ease-in-out infinite;
+}
+
+.v360-fx.is-fx-spin {
+  animation: v360Spin 8s linear infinite;
+}
+
+.v360-fx.is-fx-slowzoom {
+  animation: v360Zoom 8s ease-in-out infinite;
+}
+
+.v360-fx.is-fx-flash .v360-video {
+  filter: brightness(1.28) contrast(1.08);
+}
+
+@keyframes v360Pulse {
+  50% { transform: scale(1.05); }
+}
+
+@keyframes v360Spin {
+  50% { transform: rotate(8deg); }
+}
+
+@keyframes v360Zoom {
+  50% { transform: scale(1.1); }
+}
+
 .v360-video {
   width: 100%;
   height: 100%;
+  object-fit: contain;
+}
+
+.v360-overlay {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  max-height: 70%;
+  pointer-events: none;
   object-fit: contain;
 }
 
@@ -2141,11 +2212,12 @@
 .v360-title {
   position: absolute;
   left: 50%;
-  bottom: 12%;
-  transform: translateX(-50%);
+  top: 82%;
+  transform: translate(-50%, -50%);
   color: #fff;
   text-shadow: 0 2px 8px #000;
   pointer-events: none;
+  white-space: nowrap;
 }
 
 .v360-mark {
@@ -2167,6 +2239,13 @@
   height: 48px;
   background: var(--v360-panel);
   border-top: 1px solid var(--v360-line);
+  gap: 8px;
+}
+
+.v360-scrub {
+  flex: 1;
+  min-width: 72px;
+  accent-color: var(--v360-orange);
 }
 
 .v360-clock.is-now {
@@ -2394,6 +2473,8 @@
 .v360-audio-link { background: #4a6478; }
 .v360-extra.is-text { background: rgba(255, 107, 0, 0.35); border: 1px solid rgba(255, 107, 0, 0.6); }
 .v360-extra.is-audio { background: rgba(20, 184, 166, 0.4); border: 1px solid rgba(20, 184, 166, 0.6); }
+.v360-extra.is-overlay { background: rgba(139, 92, 246, 0.4); border: 1px solid #8b5cf6; }
+.v360-audio-link.is-muted { opacity: 0.45; text-decoration: line-through; }
 .v360-grade { background: rgba(139, 92, 246, 0.35); border: 1px solid #8b5cf6; display: flex; align-items: center; padding: 0 6px; }
 
 .v360-film {
@@ -2461,6 +2542,13 @@
   border: 1px dashed var(--v360-line);
   background: transparent;
   color: var(--v360-muted);
+}
+
+.v360-lane-add.is-end {
+  position: absolute;
+  right: 8px;
+  top: 2px;
+  z-index: 2;
 }
 
 .v360-cut {

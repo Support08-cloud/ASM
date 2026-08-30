@@ -8,7 +8,7 @@ import { VideoEditor } from '../components/editor/VideoEditor'
 import { outputDirFromFiles, projectFromCopiedFiles } from '../services/timeline'
 
 export function OperationsPage() {
-  const { state, dispatch, cancelProcessing, openOutput, exportTimeline } = useAppStore()
+  const { state, dispatch, cancelProcessing, cancelExport, openOutput, exportTimeline, saveEditor } = useAppStore()
   const result = state.processResult ?? state.lastProcessResult
   const editorSource = state.lastProcessResult ?? state.processResult
   const readyDiamonds = result ? copiedDiamondNames(result) : []
@@ -20,8 +20,10 @@ export function OperationsPage() {
     const scoped = state.editorDiamond ? files.filter((file) => file.diamondName === state.editorDiamond) : files
     if (scoped.length === 0) return null
     const diamondName = state.editorDiamond || scoped[0].diamondName || 'diamond'
+    const draft = state.editorDrafts[diamondName]
+    if (draft && draft.clips.length > 0) return { ...draft, outputDir: draft.outputDir || outputDirFromFiles(scoped, editorSource.outputPath) }
     return projectFromCopiedFiles(scoped, outputDirFromFiles(scoped, editorSource.outputPath), diamondName)
-  }, [editorSource, state.editorDiamond])
+  }, [editorSource, state.editorDiamond, state.editorDrafts])
 
   if (state.phase === 'editing' || state.phase === 'exporting') {
     if (!project) {
@@ -38,7 +40,12 @@ export function OperationsPage() {
       <VideoEditor
         project={project}
         exporting={state.exportProgress}
-        onClose={() => dispatch({ type: 'close-editor' })}
+        onClose={(next) => {
+          if (next) saveEditor(next)
+          dispatch({ type: 'close-editor' })
+        }}
+        onSave={saveEditor}
+        onCancelExport={cancelExport}
         onExport={(next) => {
           void exportTimeline(next)
         }}

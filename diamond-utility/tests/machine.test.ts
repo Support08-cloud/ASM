@@ -149,4 +149,41 @@ describe('app state machine', () => {
     expect(opened.phase).toBe('editing')
     expect(opened.editorDiamond).toBe('260609-151')
   })
+
+  it('keeps original copied files after export so Edit stays available', () => {
+    const files = [
+      { diamondName: '260609-151', viewLabel: '1', sourcePath: 's1', outputPath: 'o/260609-151-1.mp4', status: 'copied' as const },
+    ]
+    const result = {
+      outcome: 'success' as const,
+      copied: 1,
+      skipped: 0,
+      failed: 0,
+      total: 1,
+      outputPath: 'D:/out',
+      files,
+    }
+    const opened = {
+      ...initialState,
+      phase: 'exporting' as const,
+      lastProcessResult: result,
+      editorDrafts: {},
+    }
+    const done = reducer(opened, {
+      type: 'export-complete',
+      result: {
+        outcome: 'success',
+        copied: 1,
+        skipped: 0,
+        failed: 0,
+        total: 1,
+        outputPath: 'D:/out/260609-151-edit.mp4',
+        files: [
+          { diamondName: '260609-151', viewLabel: '260609-151-edit.mp4', sourcePath: 'timeline', outputPath: 'D:/out/260609-151-edit.mp4', status: 'copied' },
+        ],
+      },
+    })
+    expect(done.processResult?.files.some((file) => file.outputPath.endsWith('260609-151-1.mp4'))).toBe(true)
+    expect(done.processResult?.files.some((file) => file.outputPath.endsWith('-edit.mp4'))).toBe(true)
+  })
 })

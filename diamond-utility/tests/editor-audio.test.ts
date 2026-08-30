@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_DUCKING, DEFAULT_EXPORT, DEFAULT_GRADE, DEFAULT_TRANSFORM, type ExtraClip } from '../src/models/editor'
-import { addVolumeKeyframe, duckingGain, interpolateVolume } from '../src/services/editor-audio'
+import { addVolumeKeyframe, duckingGain, interpolateVolume, volumeKeyframeExpr } from '../src/services/editor-audio'
 import { cropInsets, cssClipPathForClip, videoFiltersForClip } from '../src/services/edit-graph'
 import { projectFromCopiedFiles } from '../src/services/timeline'
 import { formatFrames } from '../src/utils/format'
@@ -79,5 +79,10 @@ describe('professional editor model', () => {
 
   it('formats frame timecode', () => {
     expect(formatFrames(12004, 24)).toBe('00:00:12:00')
+  })
+
+  it('writes a ffmpeg volume expression from keyframes', () => {
+    const keyed = addVolumeKeyframe(addVolumeKeyframe(extra(), 0, 1), 1000, 0.2)
+    expect(volumeKeyframeExpr(keyed, 1)).toContain('if(lt(t')
   })
 })

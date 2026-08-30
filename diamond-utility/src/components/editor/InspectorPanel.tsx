@@ -2,19 +2,24 @@ import { useState, type ReactNode } from 'react'
 import {
   CROP_ASPECTS,
   DEFAULT_DUCKING,
-  DEFAULT_TRANSFORM,
   EFFECT_OPTIONS,
   FILTER_OPTIONS,
   KEYFRAME_INTERPOLATIONS,
   SPEED_MAX,
   SPEED_MIN,
+  TEXT_ANIMS,
   TEXT_FONTS,
+  TRANSITION_OPTIONS,
   type CropAspect,
   type DuckingSettings,
   type EditorClip,
   type ExtraClip,
   type KeyframeInterpolation,
+  type TextAlign,
+  type TextAnim,
+  type TransitionId,
 } from '../../models/editor'
+import { linearToDb } from '../../utils/format'
 
 interface InspectorPanelProps {
   masterVolume: number
@@ -27,6 +32,7 @@ interface InspectorPanelProps {
   onClip: (patch: Partial<EditorClip>) => void
   onExtra: (patch: Partial<ExtraClip>) => void
   onAddKeyframe: () => void
+  onRemoveKeyframe: (id: string) => void
 }
 
 export function InspectorPanel({
@@ -40,6 +46,7 @@ export function InspectorPanel({
   onClip,
   onExtra,
   onAddKeyframe,
+  onRemoveKeyframe,
 }: InspectorPanelProps) {
   const [open, setOpen] = useState<Record<string, boolean>>({
     transform: true,
@@ -48,11 +55,21 @@ export function InspectorPanel({
     text: true,
     audio: true,
     ducking: true,
-    look: false,
+    look: true,
+    fade: true,
   })
   const toggle = (key: string) => setOpen((current) => ({ ...current, [key]: !current[key] }))
   const title = selected?.label ?? selectedExtra?.label ?? 'Nothing selected'
-  const kind = selected ? 'Video Clip' : selectedExtra?.kind === 'audio' ? 'Audio Clip' : selectedExtra ? 'Title' : 'Inspector'
+  const kind =
+    selectedExtra?.kind === 'audio'
+      ? 'Audio Clip'
+      : selectedExtra?.kind === 'overlay'
+        ? 'Overlay'
+        : selectedExtra
+          ? 'Title'
+          : selected
+            ? 'Video Clip'
+            : 'Inspector'
 
   return (
     <aside className="v360-inspector">
@@ -77,9 +94,9 @@ export function InspectorPanel({
                   X
                   <input
                     type="number"
-                    value={Math.round(960 + selected.transform.x * 960)}
+                    value={Math.round(selected.transform.x * 960)}
                     onChange={(event) =>
-                      onClip({ transform: { ...selected.transform, x: (Number(event.target.value) - 960) / 960 } })
+                      onClip({ transform: { ...selected.transform, x: Number(event.target.value) / 960 } })
                     }
                   />
                 </label>
@@ -87,9 +104,9 @@ export function InspectorPanel({
                   Y
                   <input
                     type="number"
-                    value={Math.round(540 + selected.transform.y * 540)}
+                    value={Math.round(selected.transform.y * 540)}
                     onChange={(event) =>
-                      onClip({ transform: { ...selected.transform, y: (Number(event.target.value) - 540) / 540 } })
+                      onClip({ transform: { ...selected.transform, y: Number(event.target.value) / 540 } })
                     }
                   />
                 </label>
@@ -117,7 +134,22 @@ export function InspectorPanel({
                 <button type="button" className={selected.transform.flipV ? 'is-on' : undefined} onClick={() => onClip({ transform: { ...selected.transform, flipV: !selected.transform.flipV } })}>
                   Flip V
                 </button>
-                <button type="button" onClick={() => onClip({ transform: { ...DEFAULT_TRANSFORM } })}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onClip({
+                      transform: {
+                        ...selected.transform,
+                        x: 0,
+                        y: 0,
+                        scale: 1,
+                        rotation: 0,
+                        flipH: false,
+                        flipV: false,
+                      },
+                    })
+                  }
+                >
                   Reset
                 </button>
               </div>
@@ -224,6 +256,68 @@ export function InspectorPanel({
                 <input type="number" min={12} max={160} value={selectedExtra.fontSize ?? 48} onChange={(event) => onExtra({ fontSize: Number(event.target.value) || 48 })} />
               </label>
             </div>
+            <div className="v360-crop-grid">
+              <label className="v360-field">
+                <span>Color</span>
+                <input type="color" value={selectedExtra.textColor ?? '#ffffff'} onChange={(event) => onExtra({ textColor: event.target.value })} />
+              </label>
+              <label className="v360-field">
+                <span>Align</span>
+                <select value={selectedExtra.textAlign ?? 'center'} onChange={(event) => onExtra({ textAlign: event.target.value as TextAlign })}>
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                  <option value="right">Right</option>
+                </select>
+              </label>
+            </div>
+            <div className="v360-crop-grid">
+              <label className="v360-field">
+                <span>In animation</span>
+                <select value={selectedExtra.animIn ?? 'fade'} onChange={(event) => onExtra({ animIn: event.target.value as TextAnim })}>
+                  {TEXT_ANIMS.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="v360-field">
+                <span>Out animation</span>
+                <select value={selectedExtra.animOut ?? 'fade'} onChange={(event) => onExtra({ animOut: event.target.value as TextAnim })}>
+                  {TEXT_ANIMS.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <Slider label="Position X" value={selectedExtra.posX ?? 0.5} min={0} max={1} step={0.01} suffix="" onChange={(value) => onExtra({ posX: value })} />
+            <Slider label="Position Y" value={selectedExtra.posY ?? 0.82} min={0} max={1} step={0.01} suffix="" onChange={(value) => onExtra({ posY: value })} />
+          </Group>
+        ) : null}
+
+        {selectedExtra?.kind === 'overlay' ? (
+          <Group title="Overlay" open={open.transform} onToggle={() => toggle('transform')} enabled>
+            <Slider label="Scale" value={(selectedExtra.overlayScale ?? 0.45) * 100} min={20} max={100} suffix="%" onChange={(value) => onExtra({ overlayScale: value / 100 })} />
+            <Slider label="Position X" value={selectedExtra.posX ?? 0.5} min={0} max={1} step={0.01} suffix="" onChange={(value) => onExtra({ posX: value })} />
+            <Slider label="Position Y" value={selectedExtra.posY ?? 0.5} min={0} max={1} step={0.01} suffix="" onChange={(value) => onExtra({ posY: value })} />
+          </Group>
+        ) : null}
+
+        {selected ? (
+          <Group title="Transition" open={open.fade} onToggle={() => toggle('fade')} enabled>
+            <label className="v360-field">
+              <span>Style</span>
+              <select value={selected.transition} onChange={(event) => onClip({ transition: event.target.value as TransitionId })}>
+                {TRANSITION_OPTIONS.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Slider label="Duration" value={selected.transitionMs} min={0} max={1500} step={50} suffix="ms" onChange={(value) => onClip({ transitionMs: value })} />
           </Group>
         ) : null}
 
@@ -231,7 +325,15 @@ export function InspectorPanel({
           <Slider label="Master" value={masterVolume} min={0} max={1} step={0.05} suffix="" onChange={onMasterVolume} />
           {selected ? (
             <>
-              <Slider label="Clip volume" value={selected.volume} min={0} max={1} step={0.05} suffix="" onChange={(value) => onClip({ volume: value })} />
+              <Slider
+                label={`Clip volume (${linearToDb(selected.volume)} dB)`}
+                value={selected.volume}
+                min={0}
+                max={1}
+                step={0.05}
+                suffix=""
+                onChange={(value) => onClip({ volume: value })}
+              />
               <label className="v360-check">
                 <input type="checkbox" checked={selected.muted} onChange={(event) => onClip({ muted: event.target.checked })} />
                 Mute clip
@@ -242,7 +344,15 @@ export function InspectorPanel({
           ) : null}
           {selectedExtra?.kind === 'audio' ? (
             <>
-              <Slider label="Volume (dB)" value={selectedExtra.volume} min={0} max={1} step={0.05} suffix="" onChange={(value) => onExtra({ volume: value })} />
+              <Slider
+                label={`Volume (${linearToDb(selectedExtra.volume)} dB)`}
+                value={selectedExtra.volume}
+                min={0}
+                max={1}
+                step={0.05}
+                suffix=""
+                onChange={(value) => onExtra({ volume: value })}
+              />
               <label className="v360-field">
                 <span>Interpolation</span>
                 <select
@@ -262,6 +372,16 @@ export function InspectorPanel({
                 </button>
                 <span>{Math.round(playheadMs)} ms</span>
               </div>
+              {(selectedExtra.keyframes ?? []).map((key) => (
+                <div key={key.id} className="v360-keyframe-row">
+                  <span>
+                    {Math.round(key.timeMs)} ms · {linearToDb(key.value)} dB
+                  </span>
+                  <button type="button" className="v360-ghost" onClick={() => onRemoveKeyframe(key.id)}>
+                    Delete
+                  </button>
+                </div>
+              ))}
               <div className="v360-crop-grid">
                 <label className="v360-field">
                   <span>Fade In</span>
@@ -317,6 +437,11 @@ export function InspectorPanel({
 
         {selected ? (
           <Group title="Look" open={open.look} onToggle={() => toggle('look')}>
+            <Slider label="Exposure" value={selected.grade.exposure} min={-1} max={1} step={0.05} suffix="" onChange={(value) => onClip({ grade: { ...selected.grade, exposure: value } })} />
+            <Slider label="Contrast" value={selected.grade.contrast} min={-1} max={1} step={0.05} suffix="" onChange={(value) => onClip({ grade: { ...selected.grade, contrast: value } })} />
+            <Slider label="Saturation" value={selected.grade.saturation} min={-1} max={1} step={0.05} suffix="" onChange={(value) => onClip({ grade: { ...selected.grade, saturation: value } })} />
+            <Slider label="Temperature" value={selected.grade.temperature} min={-1} max={1} step={0.05} suffix="" onChange={(value) => onClip({ grade: { ...selected.grade, temperature: value } })} />
+            <Slider label="Opacity" value={selected.grade.transparency} min={0.2} max={1} step={0.05} suffix="" onChange={(value) => onClip({ grade: { ...selected.grade, transparency: value } })} />
             <div className="v360-tile-grid">
               {FILTER_OPTIONS.map((item) => (
                 <button key={item.id} type="button" className={selected.filter === item.id ? 'is-on' : undefined} onClick={() => onClip({ filter: item.id })}>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_GRADE, DEFAULT_TRANSFORM, type EditorClip } from '../src/models/editor'
-import { atempoChain, videoFiltersForClip } from '../src/services/edit-graph'
+import { atempoChain, cropInsets, videoFiltersForClip } from '../src/services/edit-graph'
 
 const clip = (patch: Partial<EditorClip> = {}): EditorClip => ({
   id: 'c1',
@@ -48,5 +48,16 @@ describe('edit graph', () => {
     expect(vf).toContain('setpts=PTS/2')
     expect(vf).toContain('fade=t=in')
     expect(vf).toContain('gamma_r=1.12')
+  })
+
+  it('locks crop sides to the chosen aspect', () => {
+    const boxed = cropInsets(
+      clip({
+        transform: { ...DEFAULT_TRANSFORM, cropEnabled: true, cropTop: 0, cropBottom: 0, cropLeft: 0.1, cropRight: 0.1, cropAspect: '1:1' },
+      }),
+    )
+    const width = 1 - boxed.left - boxed.right
+    const height = 1 - boxed.top - boxed.bottom
+    expect(width / height).toBeCloseTo(9 / 16, 2)
   })
 })

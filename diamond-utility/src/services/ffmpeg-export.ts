@@ -1,6 +1,8 @@
 import type { EditorClip, EditorProject, ExtraClip } from '../models/editor'
+import { volumeKeyframeExpr } from './editor-audio'
 import { atempoChain, proxyOutputPath, videoFiltersForClip } from './edit-graph'
 import { ffmpegInputPath } from './media-url'
+import { drawtextAlphaExpr, drawtextXY } from './title-style'
 import { clipPlayDurationMs, exportFileName, projectDurationMs, transitionOverlapMs } from './timeline'
 
 export interface FfmpegStep {
@@ -28,7 +30,7 @@ export function buildExportPlan(project: EditorProject, options: ExportPlanOptio
     const trimmed = joinPath(project.outputDir, `.edit-cache/${index}-${safe(clip.id)}.mp4`)
     steps.push({
       label: `Prepare ${clip.label}`,
-      args: buildPrepareArgs(clip, trimmed, master),
+      args: buildPrepareArgs(clip, trimmed, master, project.exportSettings?.fps ?? 30),
     })
   })
 
@@ -75,24 +77,40 @@ function applyExportSettings(args: string[], project: EditorProject): string[] {
   if (!settings) return args
   const next = [...args]
   const out = next.pop()
+  const strip = (flag: string) => {
+    const index = next.lastIndexOf(flag)
+    if (index >= 0) next.splice(index, 2)
+  }
   if (settings.resolution && settings.resolution !== '1920x1080') {
+    strip('-s')
     next.push('-s', settings.resolution)
   }
+  strip('-r')
   next.push('-r', String(settings.fps ?? 24))
-  if (settings.format === 'hevc') next.push('-c:v', 'libx265')
-  if (settings.format === 'prores') next.push('-c:v', 'prores_ks')
+  if (settings.format === 'hevc') {
+    strip('-c:v')
+    next.push('-c:v', 'libx265')
+  } else if (settings.format === 'prores') {
+    strip('-c:v')
+    next.push('-c:v', 'prores_ks')
+  }
+  strip('-b:v')
   next.push('-b:v', `${settings.bitrateMbps}M`)
-  if (settings.audioFormat === 'wav') next.push('-c:a', 'pcm_s16le')
+  if (settings.audioFormat === 'wav') {
+    strip('-c:a')
+    next.push('-c:a', 'pcm_s16le')
+  }
+  strip('-ar')
   next.push('-ar', String(settings.sampleRate ?? 48000))
   if (out) next.push(out)
   return next
 }
 
-export function buildPrepareArgs(clip: EditorClip, output: string, masterVolume: number): string[] {
+export function buildPrepareArgs(clip: EditorClip, output: string, masterVolume: number, fps = 30): string[] {
   const playSec = clipPlayDurationMs(clip) / 1000
   const spanSec = (clip.outMs - clip.inMs) / 1000
   const input = ffmpegInputPath(clip)
-  const videoFilters = videoFiltersForClip(clip, playSec)
+  const videoFilters = videoFiltersForClip(clip, playSec, fps)
   const volume = clip.muted ? 0 : clamp(clip.volume * masterVolume, 0, 4)
   const tempo = atempoChain(clip.speed)
   const audioFilters = [tempo, `volume=${volume.toFixed(3)}`].filter(Boolean)
@@ -258,12 +276,27 @@ function extrasNeedReencode(project: EditorProject): boolean {
 function buildFinishArgs(project: EditorProject, merged: string, outputPath: string, fontFile?: string): string[] {
   const args: string[] = ['-y', '-i', merged]
   const audioExtras = project.extraClips.filter((extra) => extra.kind === 'audio')
+  const overlays = project.extraClips.filter((extra) => extra.kind === 'overlay')
   audioExtras.forEach((extra) => {
+    args.push('-i', extra.absolutePath || extra.mediaUrl || '')
+  })
+  overlays.forEach((extra) => {
     args.push('-i', extra.absolutePath || extra.mediaUrl || '')
   })
 
   const videoChain: string[] = []
   let videoLabel = '[0:v]'
+  overlays.forEach((extra, index) => {
+    const input = 1 + audioExtras.length + index
+    const scaled = `[ov${index}]`
+    const out = `[vox${index}]`
+    const size = Math.round(1920 * (extra.overlayScale ?? 0.45))
+    const x = Math.round((extra.posX ?? 0.5) * 1920 - size / 2)
+    const y = Math.round((extra.posY ?? 0.5) * 1080 - size / 2)
+    videoChain.push(`[${input}:v]scale=${size}:-2${scaled}`)
+    videoChain.push(`${videoLabel}${scaled}overlay=${x}:${y}:enable='${enableRaw(extra)}'${out}`)
+    videoLabel = out
+  })
   project.extraClips
     .filter((extra) => extra.kind === 'text' && extra.text)
     .forEach((extra, index) => {
@@ -287,9 +320,12 @@ function buildFinishArgs(project: EditorProject, merged: string, outputPath: str
       const duck = project.ducking?.enabled
         ? Math.pow(10, (project.ducking.depthDb * Math.min(1, Math.max(0.1, project.ducking.sensitivity))) / 20)
         : 1
-      const vol = clamp(extra.volume * project.masterVolume * duck, 0, 4)
+      const fade = Math.max(0.02, (project.ducking?.enabled ? project.ducking.fadeMs : extra.fadeInMs ?? 0) / 1000)
+      const vol = volumeKeyframeExpr(extra, project.masterVolume * duck)
       const dur = (extra.durationMs / 1000).toFixed(3)
-      audioChain.push(`[${index + 1}:a]atrim=0:${dur},asetpts=PTS-STARTPTS,adelay=${delay}|${delay},volume=${vol.toFixed(3)}[mus${index}]`)
+      audioChain.push(
+        `[${index + 1}:a]atrim=0:${dur},asetpts=PTS-STARTPTS,adelay=${delay}|${delay},volume='${vol}',afade=t=in:d=${fade.toFixed(3)}[mus${index}]`,
+      )
       mixInputs.push(`[mus${index}]`)
     })
     audioChain.push(`${mixInputs.join('')}amix=inputs=${mixInputs.length}:duration=first:dropout_transition=0[outa]`)
@@ -319,8 +355,17 @@ function drawTextFilter(extra: ExtraClip, fontFile?: string): string {
   const text = escapeDrawtext(extra.text || 'Title')
   const enable = enableBetween(extra)
   const font = fontFile ? `:fontfile=${escapePath(fontFile)}` : ''
-  const size = extra.fontSize ?? 54
-  return `drawtext=text='${text}'${font}:fontsize=${size}:fontcolor=white:borderw=2:bordercolor=black@0.6:x=(w-text_w)/2:y=h-140:${enable}`
+  const size = extra.fontSize ?? 48
+  const color = (extra.textColor ?? '#ffffff').replace('#', '')
+  const { x, y } = drawtextXY(extra)
+  const alpha = drawtextAlphaExpr(extra)
+  return `drawtext=text='${text}'${font}:fontsize=${size}:fontcolor=0x${color}:borderw=2:bordercolor=black@0.6:x=${x}:y=${y}:alpha='${alpha}':${enable}`
+}
+
+function enableRaw(extra: ExtraClip): string {
+  const start = (extra.startMs / 1000).toFixed(3)
+  const end = ((extra.startMs + extra.durationMs) / 1000).toFixed(3)
+  return `between(t,${start},${end})`
 }
 
 function enableBetween(extra: ExtraClip): string {

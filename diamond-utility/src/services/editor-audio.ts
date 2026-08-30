@@ -59,6 +59,24 @@ export function musicAtTime(extras: ExtraClip[], timeMs: number): ExtraClip | un
   return extrasAtTime(extras, timeMs).find((extra) => extra.kind === 'audio')
 }
 
+export function volumeKeyframeExpr(extra: ExtraClip, master = 1): string {
+  const keys = [...(extra.keyframes ?? [])].sort((a, b) => a.timeMs - b.timeMs)
+  if (keys.length === 0) return (extra.volume * master).toFixed(3)
+  let expr = (keys[keys.length - 1].value * master).toFixed(3)
+  for (let i = keys.length - 2; i >= 0; i -= 1) {
+    const left = keys[i]
+    const right = keys[i + 1]
+    const t2 = (right.timeMs / 1000).toFixed(3)
+    const v1 = (left.value * master).toFixed(3)
+    const v2 = (right.value * master).toFixed(3)
+    const t1 = (left.timeMs / 1000).toFixed(3)
+    const span = Math.max(0.001, right.timeMs / 1000 - left.timeMs / 1000).toFixed(3)
+    const mid = extra.interpolation === 'hold' ? v1 : `${v1}+(${v2}-${v1})*(t-${t1})/${span}`
+    expr = `if(lt(t\\,${t2})\\,${mid}\\,${expr})`
+  }
+  return expr
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }

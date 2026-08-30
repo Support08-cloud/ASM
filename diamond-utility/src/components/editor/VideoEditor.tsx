@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   DEFAULT_DUCKING,
   DEFAULT_EXPORT,
+  EFFECT_OPTIONS,
   LIBRARY_TABS,
   MAX_TIMELINE_CLIPS,
   TRANSITION_OPTIONS,
@@ -13,7 +14,7 @@ import {
   type TimelineTool,
   type TransitionId,
 } from '../../models/editor'
-import { addVolumeKeyframe } from '../../services/editor-audio'
+import { addVolumeKeyframe, removeVolumeKeyframe } from '../../services/editor-audio'
 import { toVideoSrc } from '../../services/media-url'
 import { prepareEditorProject } from '../../services/prepare-media'
 import { sampleMusicUrl } from '../../services/sample-media'
@@ -31,6 +32,8 @@ import {
   moveExtra,
   projectDurationMs,
   setSpeed,
+  skipPlayhead,
+  slipClip,
   splitClip,
   trimClip,
   trimExtra,
@@ -46,7 +49,9 @@ import { TransportBar } from './TransportBar'
 interface VideoEditorProps {
   project: EditorProject
   exporting?: { percent: number; message: string } | null
-  onClose: () => void
+  onClose: (project?: EditorProject) => void
+  onSave: (project: EditorProject) => void
+  onCancelExport: () => void
   onExport: (project: EditorProject) => void
 }
 
@@ -55,15 +60,19 @@ interface Snapshot {
   extraClips: ExtraClip[]
   masterVolume: number
   ducking: DuckingSettings
+  selectedClipId: string | null
+  selectedExtraId: string | null
 }
 
-export function VideoEditor({ project: initial, exporting, onClose, onExport }: VideoEditorProps) {
+export function VideoEditor({ project: initial, exporting, onClose, onSave, onCancelExport, onExport }: VideoEditorProps) {
   const [project, setProject] = useState(() => withDefaults(initial))
   const [playing, setPlaying] = useState(false)
   const [past, setPast] = useState<Snapshot[]>([])
   const [future, setFuture] = useState<Snapshot[]>([])
   const [thumbs, setThumbs] = useState<Record<string, string[]>>({})
   const [exportOpen, setExportOpen] = useState(false)
+  const [menu, setMenu] = useState<'file' | 'view' | 'timeline' | null>(null)
+  const [query, setQuery] = useState('')
   const [preparing, setPreparing] = useState<{ current: number; total: number; message: string } | null>({
     current: 0,
     total: initial.clips.length,
@@ -71,6 +80,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   })
   const mediaInputRef = useRef<HTMLInputElement>(null)
   const musicInputRef = useRef<HTMLInputElement>(null)
+  const overlayInputRef = useRef<HTMLInputElement>(null)
   const boundaryLock = useRef(false)
   const projectRef = useRef(project)
   projectRef.current = project
@@ -95,7 +105,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
         if (!cancelled) setPreparing(progress)
       })
       if (cancelled) return
-      setProject(withDefaults(next))
+      setProject((current) => withDefaults({ ...next, playheadMs: current.playheadMs, extraClips: current.extraClips.length ? current.extraClips : next.extraClips }))
       setPreparing(null)
     })()
     return () => {
@@ -121,12 +131,18 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
 
   const splitAtPlayhead = () => {
     if (!hit) return
-    const parts = splitClip(hit.clip, hit.localMs)
+    applySplit(hit.clip.id, hit.localMs)
+  }
+
+  const applySplit = (clipId: string, localMs: number) => {
+    const index = project.clips.findIndex((clip) => clip.id === clipId)
+    if (index < 0) return
+    const parts = splitClip(project.clips[index], localMs)
     if (!parts) return
     const clips = [...project.clips]
-    clips.splice(hit.index, 1, ...parts)
+    clips.splice(index, 1, ...parts)
     if (clips.length > MAX_TIMELINE_CLIPS) return
-    commit({ clips, selectedClipId: parts[1].id, selectedExtraId: null, timelineTool: 'blade' })
+    commit({ clips, selectedClipId: parts[1].id, selectedExtraId: null })
   }
 
   const deleteSelected = () => {
@@ -198,6 +214,9 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
       mediaUrl = window.desktop.toMediaUrl?.(picked) ?? sampleMusicUrl()
       label = picked.split(/[/\\]/).pop() ?? 'Background Music'
       durationMs = (await window.desktop.mediaInfo?.(picked))?.durationMs || 12000
+    } else {
+      musicInputRef.current?.click()
+      return
     }
     const extra = createExtra('audio', project.playheadMs, { label, absolutePath, mediaUrl, durationMs })
     commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null, libraryTab: 'audio' })
@@ -206,6 +225,22 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   const addText = () => {
     const extra = createExtra('text', project.playheadMs)
     commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null, libraryTab: 'text' })
+  }
+
+  const addOverlay = async () => {
+    if (window.desktop?.pickMedia) {
+      const picked = await window.desktop.pickMedia('video')
+      if (!picked) return
+      const extra = createExtra('overlay', project.playheadMs, {
+        label: picked.split(/[/\\]/).pop() ?? 'Overlay',
+        absolutePath: picked,
+        mediaUrl: window.desktop.toMediaUrl?.(picked),
+        durationMs: (await window.desktop.mediaInfo?.(picked))?.durationMs || 4000,
+      })
+      commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null })
+      return
+    }
+    overlayInputRef.current?.click()
   }
 
   useEffect(() => {
@@ -235,6 +270,9 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
         setPlaying((value) => !value)
       }
       if (event.key.toLowerCase() === 's' && !isModKey(event)) splitAtPlayhead()
+      if (event.key.toLowerCase() === 'b' && !isModKey(event)) setProject((current) => ({ ...current, timelineTool: current.timelineTool === 'blade' ? 'select' : 'blade' }))
+      if (event.key.toLowerCase() === 'v' && !isModKey(event)) setProject((current) => ({ ...current, timelineTool: 'select' }))
+      if (event.key.toLowerCase() === 'y' && !isModKey(event)) setProject((current) => ({ ...current, timelineTool: 'slip' }))
       if (event.key === 'Delete' || event.key === 'Backspace') deleteSelected()
       if (isModKey(event) && event.key.toLowerCase() === 'z') {
         event.preventDefault()
@@ -260,15 +298,38 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           <strong>Vision360</strong>
           <span>{project.diamondName}</span>
           <nav>
-            <button type="button" onClick={onClose}>
+            <button type="button" className={menu === 'file' ? 'is-on' : undefined} onClick={() => setMenu((value) => (value === 'file' ? null : 'file'))}>
               File
             </button>
             <button type="button" className="is-on">
               Edit
             </button>
-            <button type="button">View</button>
-            <button type="button">Timeline</button>
+            <button type="button" className={menu === 'view' ? 'is-on' : undefined} onClick={() => setMenu((value) => (value === 'view' ? null : 'view'))}>
+              View
+            </button>
+            <button type="button" className={menu === 'timeline' ? 'is-on' : undefined} onClick={() => setMenu((value) => (value === 'timeline' ? null : 'timeline'))}>
+              Timeline
+            </button>
           </nav>
+          {menu === 'file' ? (
+            <div className="v360-menu">
+              <button type="button" onClick={() => { onSave(project); setMenu(null) }}>Save project</button>
+              <button type="button" onClick={() => { onClose(project); setMenu(null) }}>Close editor</button>
+            </div>
+          ) : null}
+          {menu === 'view' ? (
+            <div className="v360-menu">
+              <button type="button" onClick={() => { setProject((current) => ({ ...current, pixelsPerSecond: 80 })); setMenu(null) }}>Fit timeline</button>
+              <button type="button" onClick={() => { setProject((current) => ({ ...current, playheadMs: 0 })); setMenu(null) }}>Go to start</button>
+            </div>
+          ) : null}
+          {menu === 'timeline' ? (
+            <div className="v360-menu">
+              <button type="button" onClick={() => { splitAtPlayhead(); setMenu(null) }}>Split at playhead</button>
+              <button type="button" onClick={() => { addText(); setMenu(null) }}>Add title</button>
+              <button type="button" onClick={() => { void addMusic(); setMenu(null) }}>Add music</button>
+            </div>
+          ) : null}
         </div>
         <div className="v360-top-right">
           <button type="button" disabled={past.length === 0} onClick={undo} title="Undo">
@@ -277,7 +338,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           <button type="button" disabled={future.length === 0} onClick={redo} title="Redo">
             ↻
           </button>
-          <button type="button" className="v360-ghost" onClick={onClose}>
+          <button type="button" className="v360-ghost" onClick={() => onSave(project)}>
             Save
           </button>
           <button type="button" className="v360-primary" onClick={() => setExportOpen(true)} disabled={Boolean(exporting || preparing)}>
@@ -309,6 +370,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
               onClick={() => {
                 if (project.libraryTab === 'text') addText()
                 else if (project.libraryTab === 'audio') void addMusic()
+                else if (project.libraryTab === 'effects') selected && updateClip(selected.id, { effect: 'pulse' })
                 else void addMedia()
               }}
             >
@@ -316,10 +378,23 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
             </button>
           </div>
           <div className="v360-search">
-            <input placeholder="Search assets..." />
+            <input placeholder="Search assets..." value={query} onChange={(event) => setQuery(event.target.value)} />
           </div>
           <div className="v360-bin-grid">
-            {libraryItems.map((item) => (
+            {project.libraryTab === 'effects'
+              ? EFFECT_OPTIONS.filter((item) => item.id !== 'none' && (!query || item.label.toLowerCase().includes(query.toLowerCase()))).map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={selected?.effect === item.id ? 'is-on' : undefined}
+                    onClick={() => selected && updateClip(selected.id, { effect: item.id })}
+                  >
+                    <span className="v360-bin-swatch" style={{ background: item.id === selected?.effect ? '#FF6B00' : '#3d5a73' }} />
+                    <strong>{item.label}</strong>
+                    <em>Effect</em>
+                  </button>
+                ))
+              : libraryItems.filter((item) => !query || item.label.toLowerCase().includes(query.toLowerCase())).map((item) => (
               <button
                 key={item.id}
                 type="button"
@@ -359,6 +434,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
             extras={activeExtras}
             ducking={project.ducking}
             transitionOpacity={transitionOpacity}
+            showCrop={!playing && Boolean(selected?.transform.cropEnabled)}
             onDuration={(id, durationMs) => {
               setProject((current) => ({
                 ...current,
@@ -374,7 +450,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
               })
             }}
             onClipBoundary={() => {
-              if (boundaryLock.current) return
+              if (preparing || boundaryLock.current) return
               boundaryLock.current = true
               window.setTimeout(() => {
                 boundaryLock.current = false
@@ -401,6 +477,10 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
             durationMs={duration}
             fps={project.exportSettings.fps}
             onPlay={() => setPlaying((value) => !value)}
+            onSeek={(playheadMs) => {
+              setPlaying(false)
+              setProject((current) => ({ ...current, playheadMs }))
+            }}
             onStep={(delta) => {
               setPlaying(false)
               setProject((current) => ({
@@ -412,7 +492,12 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
               setPlaying(false)
               setProject((current) => ({
                 ...current,
-                playheadMs: edge === 'start' ? 0 : projectDurationMs(current),
+                playheadMs:
+                  edge === 'start'
+                    ? 0
+                    : edge === 'end'
+                      ? projectDurationMs(current)
+                      : skipPlayhead(current.clips, current.playheadMs, edge === 'prev' ? -1 : 1),
               }))
             }}
           />
@@ -432,6 +517,10 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
             if (!selectedExtra || selectedExtra.kind !== 'audio') return
             const local = project.playheadMs - selectedExtra.startMs
             updateExtra(selectedExtra.id, addVolumeKeyframe(selectedExtra, local))
+          }}
+          onRemoveKeyframe={(id) => {
+            if (!selectedExtra || selectedExtra.kind !== 'audio') return
+            updateExtra(selectedExtra.id, removeVolumeKeyframe(selectedExtra, id))
           }}
         />
 
@@ -459,29 +548,35 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
             }))
           }
           onTrimClip={(id, edge, delta) => {
-            setProject((current) => ({
-              ...current,
-              clips: current.clips.map((clip) => (clip.id === id ? trimClip(clip, edge, delta) : clip)),
-            }))
+            commit({
+              clips: project.clips.map((clip) => (clip.id === id ? trimClip(clip, edge, delta) : clip)),
+            })
           }}
           onTrimExtra={(id, edge, delta) => {
-            setProject((current) => ({
-              ...current,
-              extraClips: current.extraClips.map((extra) => (extra.id === id ? trimExtra(extra, edge, delta) : extra)),
-            }))
+            commit({
+              extraClips: project.extraClips.map((extra) => (extra.id === id ? trimExtra(extra, edge, delta) : extra)),
+            })
           }}
           onMoveClip={(from, to) => commit({ clips: moveClip(project.clips, from, to) })}
           onMoveExtra={(id, delta) => {
-            setProject((current) => ({
-              ...current,
-              extraClips: current.extraClips.map((extra) => (extra.id === id ? moveExtra(extra, delta) : extra)),
-            }))
+            commit({
+              extraClips: project.extraClips.map((extra) => (extra.id === id ? moveExtra(extra, delta) : extra)),
+            })
           }}
           onAddText={addText}
           onAddAudio={() => void addMusic()}
+          onAddOverlay={() => void addOverlay()}
           onZoom={(pixelsPerSecond) => setProject((current) => ({ ...current, pixelsPerSecond }))}
           onTool={(timelineTool: TimelineTool) => setProject((current) => ({ ...current, timelineTool }))}
           onSplit={splitAtPlayhead}
+          onSplitAt={applySplit}
+          onSlip={(id, delta) => {
+            commit({ clips: project.clips.map((clip) => (clip.id === id ? slipClip(clip, delta) : clip)) })
+          }}
+          onMuteClip={(id) => {
+            const clip = project.clips.find((item) => item.id === id)
+            if (clip) updateClip(id, { muted: !clip.muted })
+          }}
         />
       </div>
 
@@ -520,8 +615,14 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
         />
       ) : null}
 
-      {preparing ? <RenderOverlay percent={Math.round((preparing.current / Math.max(preparing.total, 1)) * 100)} message={preparing.message} onCancel={onClose} /> : null}
-      {exporting ? <RenderOverlay percent={exporting.percent} message={exporting.message} onCancel={onClose} /> : null}
+      {preparing ? (
+        <RenderOverlay
+          percent={Math.round((preparing.current / Math.max(preparing.total, 1)) * 100)}
+          message={preparing.message}
+          onCancel={() => setPreparing(null)}
+        />
+      ) : null}
+      {exporting ? <RenderOverlay percent={exporting.percent} message={exporting.message} onCancel={onCancelExport} /> : null}
 
       <input
         ref={mediaInputRef}
@@ -533,6 +634,22 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           event.target.value = ''
           if (!file) return
           void addVideoClip(file.name, URL.createObjectURL(file))
+        }}
+      />
+      <input
+        ref={overlayInputRef}
+        className="sr-only"
+        type="file"
+        accept="video/mp4,video/*"
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          event.target.value = ''
+          if (!file) return
+          const extra = createExtra('overlay', project.playheadMs, {
+            label: file.name,
+            mediaUrl: URL.createObjectURL(file),
+          })
+          commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null })
         }}
       />
       <input
@@ -572,6 +689,16 @@ function withDefaults(project: EditorProject): EditorProject {
         cropEnabled: clip.transform.cropEnabled ?? false,
       },
     })),
+    extraClips: project.extraClips.map((extra) => ({
+      ...extra,
+      posX: extra.posX ?? 0.5,
+      posY: extra.posY ?? (extra.kind === 'text' ? 0.82 : 0.5),
+      textColor: extra.textColor ?? '#ffffff',
+      textAlign: extra.textAlign ?? 'center',
+      animIn: extra.animIn ?? (extra.kind === 'text' ? 'fade' : 'none'),
+      animOut: extra.animOut ?? (extra.kind === 'text' ? 'fade' : 'none'),
+      overlayScale: extra.overlayScale ?? 0.45,
+    })),
   }
 }
 
@@ -581,6 +708,8 @@ function snapshotOf(project: EditorProject): Snapshot {
     extraClips: project.extraClips,
     masterVolume: project.masterVolume,
     ducking: project.ducking,
+    selectedClipId: project.selectedClipId,
+    selectedExtraId: project.selectedExtraId,
   }
 }
 
@@ -597,7 +726,7 @@ function libraryItemsFor(project: EditorProject) {
         selected: extra.id === project.selectedExtraId,
       }))
   }
-  if (project.libraryTab === 'text' || project.libraryTab === 'effects') {
+  if (project.libraryTab === 'text') {
     return project.extraClips
       .filter((extra) => extra.kind === 'text')
       .map((extra) => ({

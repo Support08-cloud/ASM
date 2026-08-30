@@ -1,4 +1,5 @@
 import { EMPTY_FILTERS, type Diamond, type Filters, type ScanProgress } from '../../models/diamond'
+import type { EditorProject } from '../../models/editor'
 import {
   DEFAULT_SETTINGS,
   type AppPhase,
@@ -31,6 +32,7 @@ export interface AppState {
   lastProcessResult: ProcessResult | null
   exportProgress: { percent: number; message: string } | null
   editorDiamond: string | null
+  editorDrafts: Record<string, EditorProject>
   history: HistoryRecord[]
   toasts: ToastItem[]
   settings: AppSettings
@@ -56,6 +58,7 @@ export const initialState: AppState = {
   lastProcessResult: null,
   exportProgress: null,
   editorDiamond: null,
+  editorDrafts: {},
   history: [],
   toasts: [],
   settings: DEFAULT_SETTINGS,
@@ -91,8 +94,10 @@ export type AppAction =
   | { type: 'process-complete'; result: ProcessResult; record: HistoryRecord }
   | { type: 'open-editor'; diamondName?: string }
   | { type: 'close-editor' }
+  | { type: 'save-editor'; project: EditorProject }
   | { type: 'export-start' }
   | { type: 'export-progress'; percent: number; message: string }
+  | { type: 'export-cancel' }
   | { type: 'export-complete'; result: ProcessResult }
   | { type: 'dismiss-completion' }
   | { type: 'add-toast'; toast: ToastItem }
@@ -242,6 +247,11 @@ export function reducer(state: AppState, action: AppAction): AppState {
     }
     case 'close-editor':
       return { ...state, phase: state.lastProcessResult ? 'completed' : 'ready', exportProgress: null }
+    case 'save-editor':
+      return {
+        ...state,
+        editorDrafts: { ...state.editorDrafts, [action.project.diamondName]: action.project },
+      }
     case 'export-start':
       return {
         ...state,
@@ -251,14 +261,24 @@ export function reducer(state: AppState, action: AppAction): AppState {
       }
     case 'export-progress':
       return { ...state, exportProgress: { percent: action.percent, message: action.message } }
-    case 'export-complete':
+    case 'export-cancel':
+      return { ...state, phase: 'editing', exportProgress: null }
+    case 'export-complete': {
+      const prior = state.lastProcessResult
+      const kept = (prior?.files ?? []).filter((file) => file.status === 'copied' && !file.outputPath.endsWith('-edit.mp4'))
       return {
         ...state,
         phase: 'completed',
         exportProgress: null,
-        processResult: action.result,
-        lastProcessResult: state.lastProcessResult ?? action.result,
+        processResult: {
+          ...action.result,
+          files: [...kept, ...action.result.files],
+          copied: kept.length + action.result.copied,
+          total: kept.length + action.result.total,
+        },
+        lastProcessResult: prior ?? action.result,
       }
+    }
     case 'dismiss-completion':
       return { ...state, phase: 'ready', processResult: null, processProgress: null, route: 'dashboard' }
     case 'add-toast':
