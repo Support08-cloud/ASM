@@ -64,7 +64,28 @@ export function buildExportPlan(project: EditorProject, options: ExportPlanOptio
     })
   }
 
+  const last = steps[steps.length - 1]
+  if (last) last.args = applyExportSettings(last.args, project)
+
   return { outputPath, steps, clipCount: project.clips.length, durationMs: projectDurationMs(project) }
+}
+
+function applyExportSettings(args: string[], project: EditorProject): string[] {
+  const settings = project.exportSettings
+  if (!settings) return args
+  const next = [...args]
+  const out = next.pop()
+  if (settings.resolution && settings.resolution !== '1920x1080') {
+    next.push('-s', settings.resolution)
+  }
+  next.push('-r', String(settings.fps ?? 24))
+  if (settings.format === 'hevc') next.push('-c:v', 'libx265')
+  if (settings.format === 'prores') next.push('-c:v', 'prores_ks')
+  next.push('-b:v', `${settings.bitrateMbps}M`)
+  if (settings.audioFormat === 'wav') next.push('-c:a', 'pcm_s16le')
+  next.push('-ar', String(settings.sampleRate ?? 48000))
+  if (out) next.push(out)
+  return next
 }
 
 export function buildPrepareArgs(clip: EditorClip, output: string, masterVolume: number): string[] {
@@ -263,7 +284,10 @@ function buildFinishArgs(project: EditorProject, merged: string, outputPath: str
     const mixInputs = ['[0:a]']
     audioExtras.forEach((extra, index) => {
       const delay = Math.max(0, Math.round(extra.startMs))
-      const vol = clamp(extra.volume * project.masterVolume, 0, 4)
+      const duck = project.ducking?.enabled
+        ? Math.pow(10, (project.ducking.depthDb * Math.min(1, Math.max(0.1, project.ducking.sensitivity))) / 20)
+        : 1
+      const vol = clamp(extra.volume * project.masterVolume * duck, 0, 4)
       const dur = (extra.durationMs / 1000).toFixed(3)
       audioChain.push(`[${index + 1}:a]atrim=0:${dur},asetpts=PTS-STARTPTS,adelay=${delay}|${delay},volume=${vol.toFixed(3)}[mus${index}]`)
       mixInputs.push(`[mus${index}]`)
@@ -295,7 +319,8 @@ function drawTextFilter(extra: ExtraClip, fontFile?: string): string {
   const text = escapeDrawtext(extra.text || 'Title')
   const enable = enableBetween(extra)
   const font = fontFile ? `:fontfile=${escapePath(fontFile)}` : ''
-  return `drawtext=text='${text}'${font}:fontsize=54:fontcolor=white:borderw=2:bordercolor=black@0.6:x=(w-text_w)/2:y=h-140:${enable}`
+  const size = extra.fontSize ?? 54
+  return `drawtext=text='${text}'${font}:fontsize=${size}:fontcolor=white:borderw=2:bordercolor=black@0.6:x=(w-text_w)/2:y=h-140:${enable}`
 }
 
 function enableBetween(extra: ExtraClip): string {

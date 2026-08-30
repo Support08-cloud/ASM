@@ -1,57 +1,37 @@
-import { formatTimecode } from '../../utils/format'
+import { formatFrames } from '../../utils/format'
 
 interface TransportBarProps {
   playing: boolean
   playheadMs: number
   durationMs: number
-  canUndo: boolean
-  canRedo: boolean
+  fps?: number
   onPlay: () => void
-  onUndo: () => void
-  onRedo: () => void
-  onSplit: () => void
   onStep: (deltaMs: number) => void
+  onSkip: (edge: 'start' | 'end') => void
 }
 
-export function TransportBar({
-  playing,
-  playheadMs,
-  durationMs,
-  canUndo,
-  canRedo,
-  onPlay,
-  onUndo,
-  onRedo,
-  onSplit,
-  onStep,
-}: TransportBarProps) {
+export function TransportBar({ playing, playheadMs, durationMs, fps = 24, onPlay, onStep, onSkip }: TransportBarProps) {
   return (
-    <div className="nle-transport">
-      <div className="btn-row">
-        <button type="button" className="btn ghost" onClick={onSplit} title="Split at playhead">
-          Split
+    <div className="v360-transport">
+      <span className="v360-clock is-now">{formatFrames(playheadMs, fps)}</span>
+      <div className="v360-transport-btns">
+        <button type="button" title="Skip previous" onClick={() => onSkip('start')}>
+          ⏮
         </button>
-        <button type="button" className="btn ghost" onClick={onUndo} disabled={!canUndo}>
-          Undo
+        <button type="button" title="Back 1s" onClick={() => onStep(-1000)}>
+          ⏪
         </button>
-        <button type="button" className="btn ghost" onClick={onRedo} disabled={!canRedo}>
-          Redo
+        <button type="button" className="is-play" onClick={onPlay} title={playing ? 'Pause' : 'Play'}>
+          {playing ? '❚❚' : '▶'}
         </button>
-      </div>
-      <div className="btn-row">
-        <button type="button" className="btn ghost" onClick={() => onStep(-1000)} title="Back 1s">
-          −1s
+        <button type="button" title="Forward 1s" onClick={() => onStep(1000)}>
+          ⏩
         </button>
-        <button type="button" className="btn primary" onClick={onPlay}>
-          {playing ? 'Pause' : 'Play'}
-        </button>
-        <button type="button" className="btn ghost" onClick={() => onStep(1000)} title="Forward 1s">
-          +1s
+        <button type="button" title="Skip next" onClick={() => onSkip('end')}>
+          ⏭
         </button>
       </div>
-      <span className="mono nle-clock">
-        {formatTimecode(playheadMs)} / {formatTimecode(durationMs)}
-      </span>
+      <span className="v360-clock">{formatFrames(durationMs, fps)}</span>
     </div>
   )
 }

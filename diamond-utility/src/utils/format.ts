@@ -33,3 +33,17 @@ export function formatTimecode(ms: number): string {
   const tenths = Math.floor((Math.max(0, ms) % 1000) / 100)
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${tenths}`
 }
+
+export function formatFrames(ms: number, fps = 24): string {
+  const clamped = Math.max(0, ms)
+  const hours = Math.floor(clamped / 3_600_000)
+  const minutes = Math.floor((clamped % 3_600_000) / 60_000)
+  const seconds = Math.floor((clamped % 60_000) / 1000)
+  const frames = Math.floor(((clamped % 1000) / 1000) * fps)
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}:${pad(frames)}`
+}
+
+export function estimateExportBytes(durationMs: number, bitrateMbps: number): number {
+  return Math.max(0, (durationMs / 1000) * (bitrateMbps * 1_000_000) / 8)
+}

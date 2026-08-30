@@ -36,27 +36,55 @@ export function cssFilterForClip(clip: EditorClip): string {
 export function cssTransformForClip(clip: EditorClip): string {
   const t = clip.transform
   const flips = `${t.flipH ? ' scaleX(-1)' : ''}${t.flipV ? ' scaleY(-1)' : ''}`
-  return `translate(${t.x * 40}%, ${t.y * 40}%) scale(${Math.max(0.2, t.scale)})${flips}`
+  const rotate = t.rotation ? ` rotate(${t.rotation}deg)` : ''
+  return `translate(${t.x * 40}%, ${t.y * 40}%) scale(${Math.max(0.2, t.scale)})${flips}${rotate}`
+}
+
+export function cropInsets(clip: EditorClip): { top: number; right: number; bottom: number; left: number } {
+  const t = clip.transform
+  if (t.cropEnabled) {
+    return {
+      top: clamp01(t.cropTop),
+      right: clamp01(t.cropRight),
+      bottom: clamp01(t.cropBottom),
+      left: clamp01(t.cropLeft),
+    }
+  }
+  const crop = Math.min(0.4, Math.max(0, t.crop))
+  return { top: crop, right: crop, bottom: crop, left: crop }
 }
 
 export function cssClipPathForClip(clip: EditorClip): string | undefined {
-  const crop = Math.min(0.4, Math.max(0, clip.transform.crop))
-  if (crop < 0.005) return undefined
-  const p = (crop * 100).toFixed(1)
-  return `inset(${p}% ${p}% ${p}% ${p}%)`
+  const inset = cropInsets(clip)
+  if (inset.top + inset.right + inset.bottom + inset.left < 0.005) return undefined
+  return `inset(${pct(inset.top)} ${pct(inset.right)} ${pct(inset.bottom)} ${pct(inset.left)})`
+}
+
+function pct(value: number): string {
+  return `${(value * 100).toFixed(1)}%`
+}
+
+function clamp01(value: number): number {
+  return Math.min(0.4, Math.max(0, value || 0))
 }
 
 export function videoFiltersForClip(clip: EditorClip, playSec: number): string[] {
-  const crop = Math.min(0.4, Math.max(0, clip.transform.crop))
+  const inset = cropInsets(clip)
+  const cropW = 1 - inset.left - inset.right
+  const cropH = 1 - inset.top - inset.bottom
   const cropExpr =
-    crop > 0.005
-      ? `crop=iw*(${(1 - crop * 2).toFixed(3)}):ih*(${(1 - crop * 2).toFixed(3)}):iw*${crop.toFixed(3)}:ih*${crop.toFixed(3)}`
+    cropW < 0.995 || cropH < 0.995
+      ? `crop=iw*${cropW.toFixed(3)}:ih*${cropH.toFixed(3)}:iw*${inset.left.toFixed(3)}:ih*${inset.top.toFixed(3)}`
       : ''
   const scale = Math.max(0.2, clip.transform.scale)
   const ox = Math.round((clip.transform.x + 0.5) * 1920 - 960 * scale)
   const oy = Math.round((clip.transform.y + 0.5) * 1080 - 540 * scale)
   const sized = `scale=${Math.round(1920 * scale)}:${Math.round(1080 * scale)}:force_original_aspect_ratio=decrease`
   const pad = `pad=1920:1080:${ox}:${oy}:black`
+  const rotate =
+    Math.abs(clip.transform.rotation) > 0.05
+      ? `rotate=${((clip.transform.rotation * Math.PI) / 180).toFixed(4)}:ow=1920:oh=1080:c=black`
+      : ''
   const fadeIn = clip.fadeInMs > 40 ? `fade=t=in:st=0:d=${(clip.fadeInMs / 1000).toFixed(3)}` : ''
   const fadeOut =
     clip.fadeOutMs > 40
@@ -70,6 +98,7 @@ export function videoFiltersForClip(clip: EditorClip, playSec: number): string[]
     cropExpr,
     clip.transform.flipH ? 'hflip' : '',
     clip.transform.flipV ? 'vflip' : '',
+    rotate,
     sized,
     pad,
     namedEqFilter(clip.filter),

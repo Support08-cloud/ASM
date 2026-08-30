@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  DEFAULT_DUCKING,
+  DEFAULT_EXPORT,
+  LIBRARY_TABS,
   MAX_TIMELINE_CLIPS,
   TRANSITION_OPTIONS,
+  type DuckingSettings,
   type EditorClip,
   type EditorProject,
   type ExtraClip,
-  type InspectorTab,
+  type ExportSettings,
+  type TimelineTool,
   type TransitionId,
 } from '../../models/editor'
+import { addVolumeKeyframe } from '../../services/editor-audio'
 import { toVideoSrc } from '../../services/media-url'
 import { prepareEditorProject } from '../../services/prepare-media'
 import { sampleMusicUrl } from '../../services/sample-media'
@@ -29,9 +35,11 @@ import {
   trimClip,
   trimExtra,
 } from '../../services/timeline'
-import { formatTimecode, isModKey } from '../../utils/format'
+import { isModKey } from '../../utils/format'
+import { ExportDialog } from './ExportDialog'
 import { InspectorPanel } from './InspectorPanel'
 import { PreviewStage } from './PreviewStage'
+import { RenderOverlay } from './RenderOverlay'
 import { TimelineBoard } from './TimelineBoard'
 import { TransportBar } from './TransportBar'
 
@@ -46,14 +54,16 @@ interface Snapshot {
   clips: EditorClip[]
   extraClips: ExtraClip[]
   masterVolume: number
+  ducking: DuckingSettings
 }
 
 export function VideoEditor({ project: initial, exporting, onClose, onExport }: VideoEditorProps) {
-  const [project, setProject] = useState(initial)
+  const [project, setProject] = useState(() => withDefaults(initial))
   const [playing, setPlaying] = useState(false)
   const [past, setPast] = useState<Snapshot[]>([])
   const [future, setFuture] = useState<Snapshot[]>([])
   const [thumbs, setThumbs] = useState<Record<string, string[]>>({})
+  const [exportOpen, setExportOpen] = useState(false)
   const [preparing, setPreparing] = useState<{ current: number; total: number; message: string } | null>({
     current: 0,
     total: initial.clips.length,
@@ -61,7 +71,6 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   })
   const mediaInputRef = useRef<HTMLInputElement>(null)
   const musicInputRef = useRef<HTMLInputElement>(null)
-  const timelineRef = useRef<HTMLDivElement>(null)
   const boundaryLock = useRef(false)
   const projectRef = useRef(project)
   projectRef.current = project
@@ -74,11 +83,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
 
   const commit = useCallback((patch: Partial<EditorProject>) => {
     const current = projectRef.current
-    setPast((items) => [...items.slice(-40), {
-      clips: current.clips,
-      extraClips: current.extraClips,
-      masterVolume: current.masterVolume,
-    }])
+    setPast((items) => [...items.slice(-40), snapshotOf(current)])
     setFuture([])
     setProject((value) => ({ ...value, ...patch }))
   }, [])
@@ -90,7 +95,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
         if (!cancelled) setPreparing(progress)
       })
       if (cancelled) return
-      setProject(next)
+      setProject(withDefaults(next))
       setPreparing(null)
     })()
     return () => {
@@ -101,26 +106,16 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   const undo = () => {
     const previous = past[past.length - 1]
     if (!previous) return
-    const current = projectRef.current
     setPast((items) => items.slice(0, -1))
-    setFuture((items) => [{
-      clips: current.clips,
-      extraClips: current.extraClips,
-      masterVolume: current.masterVolume,
-    }, ...items])
+    setFuture((items) => [snapshotOf(projectRef.current), ...items])
     setProject((value) => ({ ...value, ...previous }))
   }
 
   const redo = () => {
     const next = future[0]
     if (!next) return
-    const current = projectRef.current
     setFuture((items) => items.slice(1))
-    setPast((items) => [...items, {
-      clips: current.clips,
-      extraClips: current.extraClips,
-      masterVolume: current.masterVolume,
-    }])
+    setPast((items) => [...items, snapshotOf(projectRef.current)])
     setProject((value) => ({ ...value, ...next }))
   }
 
@@ -131,7 +126,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
     const clips = [...project.clips]
     clips.splice(hit.index, 1, ...parts)
     if (clips.length > MAX_TIMELINE_CLIPS) return
-    commit({ clips, selectedClipId: parts[1].id, selectedExtraId: null })
+    commit({ clips, selectedClipId: parts[1].id, selectedExtraId: null, timelineTool: 'blade' })
   }
 
   const deleteSelected = () => {
@@ -177,7 +172,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
     if (mediaUrl) clip.mediaUrl = mediaUrl
     if (durationMs) Object.assign(clip, applyDuration(clip, durationMs))
     if (hasAudio != null) clip.hasAudio = hasAudio
-    commit({ clips: [...project.clips, clip], selectedClipId: clip.id, selectedExtraId: null })
+    commit({ clips: [...project.clips, clip], selectedClipId: clip.id, selectedExtraId: null, libraryTab: 'media' })
   }
 
   const addMedia = async () => {
@@ -194,23 +189,23 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   const addMusic = async () => {
     let absolutePath: string | undefined
     let mediaUrl = sampleMusicUrl()
-    let label = 'Music'
+    let label = 'Background Music'
     let durationMs = 12000
     if (window.desktop?.pickMedia) {
       const picked = await window.desktop.pickMedia('audio')
       if (!picked) return
       absolutePath = picked
       mediaUrl = window.desktop.toMediaUrl?.(picked) ?? sampleMusicUrl()
-      label = picked.split(/[/\\]/).pop() ?? 'Music'
+      label = picked.split(/[/\\]/).pop() ?? 'Background Music'
       durationMs = (await window.desktop.mediaInfo?.(picked))?.durationMs || 12000
     }
     const extra = createExtra('audio', project.playheadMs, { label, absolutePath, mediaUrl, durationMs })
-    commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null, inspectorTab: 'audio' })
+    commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null, libraryTab: 'audio' })
   }
 
   const addText = () => {
     const extra = createExtra('text', project.playheadMs)
-    commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null })
+    commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null, libraryTab: 'text' })
   }
 
   useEffect(() => {
@@ -256,61 +251,105 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   const transitionOpacity =
     overlap > 0 && hit?.clip.transition !== 'none' ? Math.max(0.35, 1 - overlap / transitionMs) : 1
 
+  const libraryItems = libraryItemsFor(project)
+
   return (
-    <div className="nle-shell">
-      <header className="nle-top">
-        <div>
-          <div className="eyebrow">Edit · Vision360</div>
-          <h2 style={{ margin: '4px 0 0' }}>{project.diamondName}</h2>
+    <div className="v360-editor">
+      <header className="v360-top">
+        <div className="v360-top-left">
+          <strong>Vision360</strong>
+          <span>{project.diamondName}</span>
+          <nav>
+            <button type="button" onClick={onClose}>
+              File
+            </button>
+            <button type="button" className="is-on">
+              Edit
+            </button>
+            <button type="button">View</button>
+            <button type="button">Timeline</button>
+          </nav>
         </div>
-        <div className="btn-row">
-          <button type="button" className="btn ghost" onClick={onClose}>
-            Back
+        <div className="v360-top-right">
+          <button type="button" disabled={past.length === 0} onClick={undo} title="Undo">
+            ↺
           </button>
-          <button type="button" className="btn primary" onClick={() => onExport(project)} disabled={Boolean(exporting || preparing)}>
+          <button type="button" disabled={future.length === 0} onClick={redo} title="Redo">
+            ↻
+          </button>
+          <button type="button" className="v360-ghost" onClick={onClose}>
+            Save
+          </button>
+          <button type="button" className="v360-primary" onClick={() => setExportOpen(true)} disabled={Boolean(exporting || preparing)}>
             Export
           </button>
         </div>
       </header>
 
-      <div className="nle-body">
-        <nav className="nle-rail" aria-label="Library">
-          <button type="button" className="is-on">Media</button>
-          <button type="button" onClick={addText}>Text</button>
-          <button type="button" onClick={() => commit({ selectedTransitionIndex: Math.max(0, (hit?.index ?? 1) - 1), inspectorTab: 'fade' })}>
-            Fade
-          </button>
+      <div className="v360-workspace">
+        <nav className="v360-rail" aria-label="Library">
+          {LIBRARY_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={project.libraryTab === tab.id ? 'is-on' : undefined}
+              onClick={() => setProject((current) => ({ ...current, libraryTab: tab.id }))}
+            >
+              <span>{tab.label}</span>
+            </button>
+          ))}
         </nav>
 
-        <aside className="nle-bin">
-          <button type="button" className="btn primary" onClick={() => void addMedia()}>
-            Import media
-          </button>
-          <div className="nle-bin-grid">
-            {project.clips.map((clip, index) => (
+        <aside className="v360-media">
+          <div className="v360-panel-head">
+            <span>{project.libraryTab === 'media' ? 'Project Media' : project.libraryTab}</span>
+            <button
+              type="button"
+              className="v360-ghost"
+              onClick={() => {
+                if (project.libraryTab === 'text') addText()
+                else if (project.libraryTab === 'audio') void addMusic()
+                else void addMedia()
+              }}
+            >
+              {project.libraryTab === 'media' ? 'Import' : 'Add'}
+            </button>
+          </div>
+          <div className="v360-search">
+            <input placeholder="Search assets..." />
+          </div>
+          <div className="v360-bin-grid">
+            {libraryItems.map((item) => (
               <button
-                key={clip.id}
+                key={item.id}
                 type="button"
-                className={`nle-bin-card${clip.id === project.selectedClipId ? ' is-on' : ''}`}
-                onClick={() =>
-                  setProject((current) => ({
-                    ...current,
-                    selectedClipId: clip.id,
-                    selectedExtraId: null,
-                    selectedTransitionIndex: null,
-                    playheadMs: clipStartMs(current.clips, index),
-                  }))
-                }
+                className={item.selected ? 'is-on' : undefined}
+                onClick={() => {
+                  if (item.kind === 'clip') {
+                    setProject((current) => ({
+                      ...current,
+                      selectedClipId: item.id,
+                      selectedExtraId: null,
+                      playheadMs: clipStartMs(current.clips, current.clips.findIndex((clip) => clip.id === item.id)),
+                    }))
+                    return
+                  }
+                  setProject((current) => ({ ...current, selectedExtraId: item.id, selectedClipId: null }))
+                }}
               >
-                {thumbs[clip.id]?.[0] ? <img src={thumbs[clip.id][0]} alt="" /> : <span className="nle-bin-swatch" style={{ background: clip.color }} />}
-                <strong>{clip.label.replace('.mp4', '')}</strong>
-                <span>{formatTimecode(clipPlayDurationMs(clip))}</span>
+                {thumbs[item.id]?.[0] ? <img src={thumbs[item.id][0]} alt="" /> : <span className="v360-bin-swatch" style={{ background: item.color }} />}
+                <strong>{item.label}</strong>
+                <em>{item.meta}</em>
               </button>
             ))}
           </div>
         </aside>
 
-        <section className="nle-center">
+        <section className="v360-center">
+          <div className="v360-panel-head">
+            <span>Program</span>
+            <em>Fit · 1920x1080</em>
+          </div>
           <PreviewStage
             clip={hit?.clip}
             localMs={hit?.localMs ?? 0}
@@ -318,6 +357,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
             playing={playing}
             masterVolume={project.masterVolume}
             extras={activeExtras}
+            ducking={project.ducking}
             transitionOpacity={transitionOpacity}
             onDuration={(id, durationMs) => {
               setProject((current) => ({
@@ -359,12 +399,8 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
             playing={playing}
             playheadMs={project.playheadMs}
             durationMs={duration}
-            canUndo={past.length > 0}
-            canRedo={future.length > 0}
+            fps={project.exportSettings.fps}
             onPlay={() => setPlaying((value) => !value)}
-            onUndo={undo}
-            onRedo={redo}
-            onSplit={splitAtPlayhead}
             onStep={(delta) => {
               setPlaying(false)
               setProject((current) => ({
@@ -372,22 +408,33 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
                 playheadMs: Math.max(0, Math.min(projectDurationMs(current), current.playheadMs + delta)),
               }))
             }}
+            onSkip={(edge) => {
+              setPlaying(false)
+              setProject((current) => ({
+                ...current,
+                playheadMs: edge === 'start' ? 0 : projectDurationMs(current),
+              }))
+            }}
           />
         </section>
 
         <InspectorPanel
-          tab={project.inspectorTab}
-          onTab={(inspectorTab: InspectorTab) => setProject((current) => ({ ...current, inspectorTab }))}
           masterVolume={project.masterVolume}
           onMasterVolume={(masterVolume) => commit({ masterVolume })}
           selected={selected}
           selectedExtra={selectedExtra}
+          ducking={project.ducking}
+          onDucking={(patch) => commit({ ducking: { ...project.ducking, ...patch } })}
+          playheadMs={project.playheadMs}
           onClip={(patch) => selected && updateClip(selected.id, patch)}
           onExtra={(patch) => selectedExtra && updateExtra(selectedExtra.id, patch)}
+          onAddKeyframe={() => {
+            if (!selectedExtra || selectedExtra.kind !== 'audio') return
+            const local = project.playheadMs - selectedExtra.startMs
+            updateExtra(selectedExtra.id, addVolumeKeyframe(selectedExtra, local))
+          }}
         />
-      </div>
 
-      <div ref={timelineRef}>
         <TimelineBoard
           project={project}
           duration={duration}
@@ -433,19 +480,13 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           onAddText={addText}
           onAddAudio={() => void addMusic()}
           onZoom={(pixelsPerSecond) => setProject((current) => ({ ...current, pixelsPerSecond }))}
-          onFit={() => {
-            const el = timelineRef.current?.querySelector('.timeline-track')
-            const w = el instanceof HTMLElement ? el.clientWidth - 8 : 720
-            setProject((current) => ({
-              ...current,
-              pixelsPerSecond: Math.max(40, Math.min(220, w / Math.max(projectDurationMs(current) / 1000, 1))),
-            }))
-          }}
+          onTool={(timelineTool: TimelineTool) => setProject((current) => ({ ...current, timelineTool }))}
+          onSplit={splitAtPlayhead}
         />
       </div>
 
       {project.selectedTransitionIndex != null && project.clips[project.selectedTransitionIndex] ? (
-        <div className="nle-transition-bar">
+        <div className="v360-transition">
           <span>Transition</span>
           <select
             value={project.clips[project.selectedTransitionIndex].transition}
@@ -467,29 +508,20 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
         </div>
       ) : null}
 
-      {preparing ? (
-        <div className="editor-export">
-          <div>
-            <div className="eyebrow">Preparing clips</div>
-            <p>{preparing.message}</p>
-            <div className="progress-track">
-              <div className="progress-fill" style={{ width: `${Math.round((preparing.current / Math.max(preparing.total, 1)) * 100)}%` }} />
-            </div>
-          </div>
-        </div>
+      {exportOpen && !exporting ? (
+        <ExportDialog
+          project={project}
+          onChange={(exportSettings: ExportSettings) => setProject((current) => ({ ...current, exportSettings }))}
+          onCancel={() => setExportOpen(false)}
+          onStart={() => {
+            setExportOpen(false)
+            onExport(project)
+          }}
+        />
       ) : null}
 
-      {exporting ? (
-        <div className="editor-export">
-          <div>
-            <div className="eyebrow">Export</div>
-            <p>{exporting.message}</p>
-            <div className="progress-track">
-              <div className="progress-fill" style={{ width: `${exporting.percent}%` }} />
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {preparing ? <RenderOverlay percent={Math.round((preparing.current / Math.max(preparing.total, 1)) * 100)} message={preparing.message} onCancel={onClose} /> : null}
+      {exporting ? <RenderOverlay percent={exporting.percent} message={exporting.message} onCancel={onClose} /> : null}
 
       <input
         ref={mediaInputRef}
@@ -518,4 +550,71 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
       />
     </div>
   )
+}
+
+function withDefaults(project: EditorProject): EditorProject {
+  return {
+    ...project,
+    libraryTab: project.libraryTab ?? 'media',
+    timelineTool: project.timelineTool ?? 'select',
+    ducking: project.ducking ?? { ...DEFAULT_DUCKING },
+    exportSettings: project.exportSettings ?? { ...DEFAULT_EXPORT },
+    clips: project.clips.map((clip) => ({
+      ...clip,
+      transform: {
+        ...clip.transform,
+        rotation: clip.transform.rotation ?? 0,
+        cropTop: clip.transform.cropTop ?? 0,
+        cropBottom: clip.transform.cropBottom ?? 0,
+        cropLeft: clip.transform.cropLeft ?? 0,
+        cropRight: clip.transform.cropRight ?? 0,
+        cropAspect: clip.transform.cropAspect ?? '16:9',
+        cropEnabled: clip.transform.cropEnabled ?? false,
+      },
+    })),
+  }
+}
+
+function snapshotOf(project: EditorProject): Snapshot {
+  return {
+    clips: project.clips,
+    extraClips: project.extraClips,
+    masterVolume: project.masterVolume,
+    ducking: project.ducking,
+  }
+}
+
+function libraryItemsFor(project: EditorProject) {
+  if (project.libraryTab === 'audio') {
+    return project.extraClips
+      .filter((extra) => extra.kind === 'audio')
+      .map((extra) => ({
+        id: extra.id,
+        kind: 'extra' as const,
+        label: extra.label,
+        meta: 'Audio',
+        color: extra.color,
+        selected: extra.id === project.selectedExtraId,
+      }))
+  }
+  if (project.libraryTab === 'text' || project.libraryTab === 'effects') {
+    return project.extraClips
+      .filter((extra) => extra.kind === 'text')
+      .map((extra) => ({
+        id: extra.id,
+        kind: 'extra' as const,
+        label: extra.label,
+        meta: 'Title',
+        color: extra.color,
+        selected: extra.id === project.selectedExtraId,
+      }))
+  }
+  return project.clips.map((clip) => ({
+    id: clip.id,
+    kind: 'clip' as const,
+    label: clip.label.replace('.mp4', ''),
+    meta: `${Math.round(clipPlayDurationMs(clip) / 1000)}s`,
+    color: clip.color,
+    selected: clip.id === project.selectedClipId,
+  }))
 }

@@ -44,19 +44,69 @@ export const INSPECTOR_TABS = [
   { id: 'speed', label: 'Speed' },
 ] as const
 
+export const LIBRARY_TABS = [
+  { id: 'media', label: 'Media', icon: 'video_library' },
+  { id: 'text', label: 'Text', icon: 'title' },
+  { id: 'audio', label: 'Audio', icon: 'audiotrack' },
+  { id: 'effects', label: 'Effects', icon: 'auto_fix_high' },
+] as const
+
+export const CROP_ASPECTS = ['free', '1:1', '4:5', '16:9', '9:16'] as const
+export const TEXT_FONTS = ['Geist', 'Inter', 'Roboto'] as const
+export const KEYFRAME_INTERPOLATIONS = [
+  { id: 'linear', label: 'Linear' },
+  { id: 'bezier', label: 'Bezier (Smooth)' },
+  { id: 'hold', label: 'Hold' },
+] as const
+
 export type TransitionId = (typeof TRANSITION_OPTIONS)[number]['id']
 export type FilterId = (typeof FILTER_OPTIONS)[number]['id']
 export type EffectId = (typeof EFFECT_OPTIONS)[number]['id']
 export type InspectorTab = (typeof INSPECTOR_TABS)[number]['id']
+export type LibraryTab = (typeof LIBRARY_TABS)[number]['id']
 export type ExtraKind = 'audio' | 'text'
+export type CropAspect = (typeof CROP_ASPECTS)[number]
+export type KeyframeInterpolation = (typeof KEYFRAME_INTERPOLATIONS)[number]['id']
+export type ExportFormat = 'h264' | 'prores' | 'hevc'
+export type ExportResolution = '3840x2160' | '1920x1080' | '1280x720'
+export type TimelineTool = 'select' | 'blade' | 'slip'
 
 export interface ClipTransform {
   x: number
   y: number
   scale: number
+  rotation: number
   crop: number
+  cropTop: number
+  cropBottom: number
+  cropLeft: number
+  cropRight: number
+  cropAspect: CropAspect
+  cropEnabled: boolean
   flipH: boolean
   flipV: boolean
+}
+
+export interface AudioKeyframe {
+  id: string
+  timeMs: number
+  value: number
+}
+
+export interface DuckingSettings {
+  enabled: boolean
+  depthDb: number
+  fadeMs: number
+  sensitivity: number
+}
+
+export interface ExportSettings {
+  format: ExportFormat
+  resolution: ExportResolution
+  fps: 24 | 30 | 60
+  bitrateMbps: number
+  audioFormat: 'aac' | 'wav'
+  sampleRate: 48000 | 44100
 }
 
 export interface ClipGrade {
@@ -105,6 +155,12 @@ export interface ExtraClip {
   absolutePath?: string
   volume: number
   text?: string
+  fontFamily?: string
+  fontSize?: number
+  fadeInMs?: number
+  fadeOutMs?: number
+  interpolation?: KeyframeInterpolation
+  keyframes?: AudioKeyframe[]
   color: string
 }
 
@@ -117,9 +173,13 @@ export interface EditorProject {
   selectedExtraId: string | null
   selectedTransitionIndex: number | null
   inspectorTab: InspectorTab
+  libraryTab: LibraryTab
+  timelineTool: TimelineTool
   playheadMs: number
   pixelsPerSecond: number
   masterVolume: number
+  ducking: DuckingSettings
+  exportSettings: ExportSettings
 }
 
 export const DEFAULT_GRADE: ClipGrade = {
@@ -134,14 +194,37 @@ export const DEFAULT_TRANSFORM: ClipTransform = {
   x: 0,
   y: 0,
   scale: 1,
+  rotation: 0,
   crop: 0,
+  cropTop: 0,
+  cropBottom: 0,
+  cropLeft: 0,
+  cropRight: 0,
+  cropAspect: '16:9',
+  cropEnabled: false,
   flipH: false,
   flipV: false,
 }
 
-export const CLIP_COLORS = ['#c6691d', '#072c50', '#34434d', '#0c2939', '#a85616', '#011843'] as const
-export const AUDIO_COLOR = '#c6691d'
-export const TEXT_COLOR = '#0c2939'
+export const DEFAULT_DUCKING: DuckingSettings = {
+  enabled: false,
+  depthDb: -12,
+  fadeMs: 200,
+  sensitivity: 0.7,
+}
+
+export const DEFAULT_EXPORT: ExportSettings = {
+  format: 'h264',
+  resolution: '1920x1080',
+  fps: 24,
+  bitrateMbps: 16,
+  audioFormat: 'aac',
+  sampleRate: 48000,
+}
+
+export const CLIP_COLORS = ['#4A6478', '#4A5568', '#3d5a73', '#2C4A5E', '#5A7184', '#3A5064'] as const
+export const AUDIO_COLOR = '#2C7A7B'
+export const TEXT_COLOR = '#FF6B00'
 
 /** @deprecated kept so older snippets type-check during the editor rewrite */
 export const ANIMATION_OPTIONS = [

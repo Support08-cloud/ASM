@@ -56,11 +56,12 @@ export function AppShell() {
   }, [state.phase, state.detailsId, state.search, state.route, visibleDiamonds, dispatch, confirmGetMp4, rescan])
 
   const overlayProcessing = state.phase === 'processing' && state.route === 'dashboard' && state.processProgress
-  const flush = Boolean(overlayProcessing || state.phase === 'editing' || state.phase === 'exporting')
+  const editorOpen = state.phase === 'editing' || state.phase === 'exporting'
+  const flush = Boolean(overlayProcessing || editorOpen)
 
   return (
-    <div className={`app-shell${state.settings.sidebarCollapsed ? ' is-collapsed' : ''}`}>
-      <Sidebar />
+    <div className={`app-shell${state.settings.sidebarCollapsed ? ' is-collapsed' : ''}${editorOpen ? ' is-editor' : ''}`}>
+      {editorOpen ? null : <Sidebar />}
       <main className="workspace">
         <div className={`workspace-scroll${flush ? ' is-flush' : ''}`}>
           {overlayProcessing ? (
@@ -75,7 +76,7 @@ export function AppShell() {
           )}
         </div>
       </main>
-      <StatusBar />
+      {editorOpen ? null : <StatusBar />}
       <ToastViewport />
     </div>
   )

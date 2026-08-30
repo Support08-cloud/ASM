@@ -2,6 +2,8 @@ import {
   AUDIO_COLOR,
   CLIP_COLORS,
   DEFAULT_CLIP_DURATION_MS,
+  DEFAULT_DUCKING,
+  DEFAULT_EXPORT,
   DEFAULT_GRADE,
   DEFAULT_TRANSFORM,
   DEFAULT_TRANSITION_MS,
@@ -164,7 +166,13 @@ export function createExtra(kind: ExtraKind, startMs: number, patch?: Partial<Ex
     startMs: Math.max(0, startMs),
     durationMs: kind === 'audio' ? 12000 : 4000,
     volume: kind === 'audio' ? 0.8 : 1,
-    text: kind === 'text' ? 'Vision360' : undefined,
+    text: kind === 'text' ? 'Title Overlay' : undefined,
+    fontFamily: kind === 'text' ? 'Geist' : undefined,
+    fontSize: kind === 'text' ? 48 : undefined,
+    fadeInMs: kind === 'audio' ? 500 : 0,
+    fadeOutMs: kind === 'audio' ? 500 : 0,
+    interpolation: 'bezier',
+    keyframes: [],
     mediaUrl: kind === 'audio' ? sampleMusicUrl() : undefined,
     color: kind === 'audio' ? AUDIO_COLOR : TEXT_COLOR,
   }
@@ -187,9 +195,13 @@ export function projectFromCopiedFiles(
     selectedExtraId: null,
     selectedTransitionIndex: null,
     inspectorTab: 'speed',
+    libraryTab: 'media',
+    timelineTool: 'select',
     playheadMs: 0,
     pixelsPerSecond: 80,
     masterVolume: 1,
+    ducking: { ...DEFAULT_DUCKING },
+    exportSettings: { ...DEFAULT_EXPORT },
   }
 }
 

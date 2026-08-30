@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import watermark from '../../assets/brand/v360-wordmark-white.png'
-import type { EditorClip, ExtraClip } from '../../models/editor'
-import { cssClipPathForClip, cssFilterForClip, cssTransformForClip } from '../../services/edit-graph'
+import type { DuckingSettings, EditorClip, ExtraClip } from '../../models/editor'
+import { DEFAULT_DUCKING } from '../../models/editor'
+import { cropInsets, cssClipPathForClip, cssFilterForClip, cssTransformForClip } from '../../services/edit-graph'
+import { extraPlaybackVolume } from '../../services/editor-audio'
 import { toVideoSrc } from '../../services/media-url'
 import { clipPlayDurationMs, sourceTimeMs } from '../../services/timeline'
 
@@ -12,6 +14,7 @@ interface PreviewStageProps {
   playing: boolean
   masterVolume: number
   extras: ExtraClip[]
+  ducking?: DuckingSettings
   transitionOpacity: number
   onDuration: (clipId: string, durationMs: number) => void
   onSourceTime: (sourceMs: number) => void
@@ -25,6 +28,7 @@ export function PreviewStage({
   playing,
   masterVolume,
   extras,
+  ducking,
   transitionOpacity,
   onDuration,
   onSourceTime,
@@ -40,6 +44,8 @@ export function PreviewStage({
   const music = extras.find((extra) => extra.kind === 'audio')
   const play = clip ? clipPlayDurationMs(clip) : 0
   const fadeOpacity = fadeOpacityFor(clip, localMs, play)
+  const insets = clip ? cropInsets(clip) : null
+  const cropOn = Boolean(clip?.transform.cropEnabled)
 
   useEffect(() => {
     const video = videoRef.current
@@ -98,8 +104,12 @@ export function PreviewStage({
       audio.dataset.src = nextSrc
       audio.src = nextSrc
     }
-    audio.volume = Math.min(1, Math.max(0, music.volume * masterVolume))
-  }, [music?.id, music?.mediaUrl, music?.absolutePath, music?.volume, masterVolume])
+    audio.volume = extraPlaybackVolume(
+      { ducking: ducking ?? DEFAULT_DUCKING, masterVolume, clips: clip ? [clip] : [] },
+      music,
+      playheadMs,
+    )
+  }, [music?.id, music?.mediaUrl, music?.absolutePath, music?.volume, music?.keyframes, masterVolume, playheadMs, ducking])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -116,11 +126,11 @@ export function PreviewStage({
   const effectClass = clip && clip.effect !== 'none' ? ` is-fx-${clip.effect}` : ''
 
   return (
-    <div className={`nle-stage${effectClass}`}>
+    <div className={`v360-stage${effectClass}`}>
       {src && clip ? (
         <video
           ref={videoRef}
-          className="nle-video"
+          className="v360-video"
           style={{
             filter: cssFilterForClip(clip),
             transform: cssTransformForClip(clip),
@@ -144,26 +154,36 @@ export function PreviewStage({
           onEnded={onClipBoundary}
         />
       ) : (
-        <div className="stage-label">{clip?.error ?? clip?.label ?? 'Add a clip'}</div>
+        <div className="v360-stage-label">{clip?.error ?? clip?.label ?? 'Add a clip'}</div>
       )}
-      {status === 'loading' && src ? <div className="stage-status">Loading video…</div> : null}
+      {status === 'loading' && src ? <div className="v360-stage-status">Loading video…</div> : null}
       {status === 'error' || clip?.error ? (
-        <div className="stage-status is-error">{clip?.error || 'This MP4 could not be played. Preparing a playback copy may still be running.'}</div>
+        <div className="v360-stage-status is-error">{clip?.error || 'This MP4 could not be played.'}</div>
       ) : null}
       {titles.map((title) => (
-        <div key={title.id} className="stage-title">
-          {title.text || 'Title'}
+        <div
+          key={title.id}
+          className="v360-title"
+          style={{ fontFamily: title.fontFamily ?? 'Geist, sans-serif', fontSize: title.fontSize ?? 48 }}
+        >
+          {title.text || 'Title Overlay'}
         </div>
       ))}
-      {clip?.effect === 'vignette' ? <div className="stage-vignette" /> : null}
-      {clip?.effect === 'grain' ? <div className="stage-grain" /> : null}
-      <div className="nle-handles" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-        <span />
-      </div>
-      <img className="stage-mark" src={watermark} alt="Vision360" />
+      {clip?.effect === 'vignette' ? <div className="v360-vignette" /> : null}
+      {clip?.effect === 'grain' ? <div className="v360-grain" /> : null}
+      {cropOn && insets ? (
+        <div
+          className="v360-crop-box"
+          style={{
+            inset: `${insets.top * 100}% ${insets.right * 100}% ${insets.bottom * 100}% ${insets.left * 100}%`,
+          }}
+        >
+          <span>CROP MODE</span>
+        </div>
+      ) : (
+        <div className="v360-safe" />
+      )}
+      <img className="v360-mark" src={watermark} alt="Vision360" />
       <audio ref={audioRef} preload="auto" />
     </div>
   )
