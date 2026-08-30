@@ -95,8 +95,8 @@ export function ExportDialog({ project, onChange, onCancel, onStart }: ExportDia
               </label>
             </div>
             <h3>Destination</h3>
-            <div className="v360-dest">
-              <input readOnly value={dest} />
+            <div className="v360-dest" title={dest}>
+              {dest}
             </div>
           </div>
           <div className="v360-export-preview">

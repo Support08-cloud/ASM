@@ -2036,7 +2036,6 @@
 .v360-field input,
 .v360-field select,
 .v360-field textarea,
-.v360-dest input,
 .v360-export select,
 .v360-selected input {
   width: 100%;
@@ -2046,6 +2045,19 @@
   height: 24px;
   border-radius: 2px;
   padding: 0 6px;
+}
+
+.v360-dest {
+  width: 100%;
+  background: #0a0a0a;
+  border: 1px solid var(--v360-line);
+  color: var(--v360-text);
+  border-radius: 2px;
+  padding: 6px;
+  font-size: 11px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  word-break: break-all;
+  line-height: 1.4;
 }
 
 .v360-field textarea {
@@ -2323,8 +2335,13 @@
 }
 
 .v360-lane-label em {
-  color: var(--v360-orange);
+  color: #0a0a0a;
+  background: var(--v360-orange);
   font-size: 8px;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  padding: 1px 4px;
+  border-radius: 2px;
 }
 
 .v360-ruler,
