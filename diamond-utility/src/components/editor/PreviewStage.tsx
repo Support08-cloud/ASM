@@ -20,8 +20,6 @@ interface PreviewStageProps {
   showCrop: boolean
   selectedExtraId?: string | null
   onDuration: (clipId: string, durationMs: number) => void
-  onSourceTime: (sourceMs: number) => void
-  onClipBoundary: () => void
 }
 
 export function PreviewStage({
@@ -36,14 +34,10 @@ export function PreviewStage({
   showCrop,
   selectedExtraId,
   onDuration,
-  onSourceTime,
-  onClipBoundary,
 }: PreviewStageProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioRefs = useRef<Record<string, HTMLAudioElement | null>>({})
   const overlayRefs = useRef<Record<string, HTMLVideoElement | null>>({})
-  const playingRef = useRef(playing)
-  playingRef.current = playing
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const src = clip ? toVideoSrc(clip) : undefined
   const titles = extras.filter((extra) => extra.kind === 'text')
@@ -64,42 +58,53 @@ export function PreviewStage({
       video.src = src
       setStatus('loading')
     }
-    const start = Math.max(0, sourceTimeMs(clip, playingRef.current ? localMs : localMs) / 1000)
-    const apply = () => {
-      video.playbackRate = Math.max(0.25, clip.speed)
-      video.volume = clip.muted ? 0 : Math.min(1, Math.max(0, clip.volume * masterVolume))
-      video.muted = video.volume === 0
-      if (Math.abs(video.currentTime - start) > 0.08) video.currentTime = start
-      if (playingRef.current) void video.play().catch(() => undefined)
-      setStatus('ready')
-    }
-    if (video.readyState >= 1) apply()
-    else video.addEventListener('loadedmetadata', apply, { once: true })
-  }, [clip?.id, src, clip?.inMs, clip?.speed])
+  }, [clip?.id, src])
 
   useEffect(() => {
     const video = videoRef.current
     if (!video || !clip) return
     video.playbackRate = Math.max(0.25, clip.speed)
-    video.volume = clip.muted ? 0 : Math.min(1, Math.max(0, clip.volume * masterVolume))
-    video.muted = video.volume === 0
+    const volume = clip.muted ? 0 : Math.min(1, Math.max(0, clip.volume * masterVolume))
+    video.volume = volume
   }, [clip?.speed, clip?.volume, clip?.muted, masterVolume])
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video || !clip || !src) return
+    const target = sourceTimeMs(clip, localMs) / 1000
+    const apply = () => {
+      if (Number.isFinite(target) && Math.abs(video.currentTime - target) > 0.12) {
+        video.currentTime = Math.max(0, target)
+      }
+      video.playbackRate = Math.max(0.25, clip.speed)
+      if (playing) {
+        const volume = clip.muted ? 0 : Math.min(1, Math.max(0, clip.volume * masterVolume))
+        video.muted = true
+        void video
+          .play()
+          .then(() => {
+            video.muted = volume === 0
+            video.volume = volume
+            setStatus('ready')
+          })
+          .catch(() => setStatus('ready'))
+      } else {
+        video.pause()
+        setStatus((value) => (value === 'loading' ? 'ready' : value))
+      }
+    }
+    if (video.readyState >= 1) apply()
+    else video.addEventListener('loadedmetadata', apply, { once: true })
+  }, [playing, clip?.id, src, clip?.inMs, clip?.speed])
 
   useEffect(() => {
     const video = videoRef.current
     if (!video || !clip || playing) return
     const target = sourceTimeMs(clip, localMs) / 1000
-    if (Number.isFinite(target) && Math.abs(video.currentTime - target) > 0.08) {
+    if (Number.isFinite(target) && video.readyState >= 1 && Math.abs(video.currentTime - target) > 0.04) {
       video.currentTime = Math.max(0, target)
     }
-  }, [clip?.id, clip?.inMs, localMs, playing])
-
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video) return
-    if (playing && src) void video.play().catch(() => setStatus('error'))
-    else video.pause()
-  }, [playing, src])
+  }, [playing, localMs, clip?.id, clip?.inMs])
 
   useEffect(() => {
     musicTracks.forEach((music) => {
@@ -167,13 +172,6 @@ export function PreviewStage({
             }}
             onCanPlay={() => setStatus('ready')}
             onError={() => setStatus('error')}
-            onTimeUpdate={(event) => {
-              if (!playing) return
-              const sourceMs = event.currentTarget.currentTime * 1000
-              onSourceTime(sourceMs)
-              if (sourceMs >= clip.outMs - 30) onClipBoundary()
-            }}
-            onEnded={onClipBoundary}
           />
         </div>
       ) : (

@@ -14,6 +14,7 @@ import {
   splitClip,
   timelineDurationMs,
   trimClip,
+  advancePlayhead,
 } from '../src/services/timeline'
 import type { ProcessFileResult } from '../src/models/processing'
 
@@ -94,5 +95,10 @@ describe('timeline', () => {
     expect(extrasAtTime([title], 100)).toEqual([])
     expect(extrasForPreview([title], 100, title.id)).toEqual([title])
     expect(extrasForPreview([title], 4500, title.id)).toEqual([title])
+  })
+
+  it('advances the playhead on a clock so Play does not depend on video timeupdate', () => {
+    expect(advancePlayhead(1000, 4000, 16).playheadMs).toBe(1016)
+    expect(advancePlayhead(3990, 4000, 16)).toEqual({ playheadMs: 4000, ended: true })
   })
 })

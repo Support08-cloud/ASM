@@ -1,8 +1,8 @@
-const { app, BrowserWindow, dialog, ipcMain, shell, protocol, net } = require('electron')
+const { app, BrowserWindow, dialog, ipcMain, shell, protocol } = require('electron')
 const { spawn } = require('child_process')
 const fs = require('fs')
 const path = require('path')
-const { pathToFileURL } = require('url')
+const { Readable } = require('stream')
 
 const MEDIA = /\.(mp4|m4v|mov|json|jpe?g|png|webp|tiff?|bmp)$/i
 
@@ -165,17 +165,7 @@ function mediaInfo(filePath) {
 }
 
 app.whenReady().then(() => {
-  protocol.handle('du-media', (request) => {
-    try {
-      const parsed = new URL(request.url)
-      const encoded = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
-      const filePath = Buffer.from(encoded, 'base64url').toString('utf8')
-      if (!filePath || !fs.existsSync(filePath)) return new Response('Not found', { status: 404 })
-      return net.fetch(pathToFileURL(filePath).href)
-    } catch {
-      return new Response('Bad request', { status: 400 })
-    }
-  })
+  protocol.handle('du-media', (request) => serveMedia(request))
 
   ipcMain.handle('desktop:pick-directory', async () => {
     const result = await dialog.showOpenDialog({
@@ -255,6 +245,54 @@ function ffmpegBinary() {
   const local = path.join(__dirname, '..', 'extra-bin', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg')
   if (fs.existsSync(local)) return local
   return process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'
+}
+
+function mimeFor(filePath) {
+  const ext = path.extname(filePath).toLowerCase()
+  if (ext === '.mp4' || ext === '.m4v') return 'video/mp4'
+  if (ext === '.mov') return 'video/quicktime'
+  if (ext === '.webm') return 'video/webm'
+  if (ext === '.m4a' || ext === '.aac') return 'audio/mp4'
+  if (ext === '.mp3') return 'audio/mpeg'
+  if (ext === '.wav') return 'audio/wav'
+  return 'application/octet-stream'
+}
+
+function serveMedia(request) {
+  try {
+    const parsed = new URL(request.url)
+    const encoded = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
+    const filePath = Buffer.from(encoded, 'base64url').toString('utf8')
+    if (!filePath || !fs.existsSync(filePath)) return new Response('Not found', { status: 404 })
+    const stat = fs.statSync(filePath)
+    const type = mimeFor(filePath)
+    const range = request.headers.get('Range') || request.headers.get('range')
+    const match = range ? /bytes=(\d*)-(\d*)/.exec(range) : null
+    if (match) {
+      const start = match[1] ? Number(match[1]) : 0
+      const end = match[2] ? Number(match[2]) : Math.min(start + 1024 * 1024 - 1, stat.size - 1)
+      const stream = fs.createReadStream(filePath, { start, end })
+      return new Response(Readable.toWeb(stream), {
+        status: 206,
+        headers: {
+          'Content-Type': type,
+          'Content-Length': String(end - start + 1),
+          'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+          'Accept-Ranges': 'bytes',
+        },
+      })
+    }
+    return new Response(Readable.toWeb(fs.createReadStream(filePath)), {
+      status: 200,
+      headers: {
+        'Content-Type': type,
+        'Content-Length': String(stat.size),
+        'Accept-Ranges': 'bytes',
+      },
+    })
+  } catch {
+    return new Response('Bad request', { status: 400 })
+  }
 }
 
 function runFfmpeg(args) {

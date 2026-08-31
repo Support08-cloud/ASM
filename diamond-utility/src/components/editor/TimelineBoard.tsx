@@ -1,4 +1,4 @@
-import { useMemo, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from 'react'
 import { IconBlade, IconSelect, IconSlip } from '../common/Icon'
 import type { EditorProject, ExtraClip, TimelineTool } from '../../models/editor'
 import { clipPlayDurationMs, clipStartMs } from '../../services/timeline'
@@ -63,6 +63,17 @@ export function TimelineBoard({
   const texts = project.extraClips.filter((extra) => extra.kind === 'text')
   const music = project.extraClips.filter((extra) => extra.kind === 'audio')
   const overlays = project.extraClips.filter((extra) => extra.kind === 'overlay')
+  const trackRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const node = trackRef.current
+    if (!node) return
+    const viewLeft = node.scrollLeft
+    const viewRight = viewLeft + node.clientWidth
+    if (playX < viewLeft + 48 || playX > viewRight - 96) {
+      node.scrollLeft = Math.max(0, playX - node.clientWidth * 0.35)
+    }
+  }, [playX])
 
   const seekFromClientX = (clientX: number, innerLeft: number) => {
     onSeek(Math.max(0, Math.min(duration, ((clientX - innerLeft) / width) * duration)))
@@ -116,7 +127,7 @@ export function TimelineBoard({
             </div>
           ))}
         </div>
-        <div className="v360-track">
+        <div className="v360-track" ref={trackRef}>
           <div
             className="v360-ruler"
             onClick={(event) => {
@@ -195,8 +206,8 @@ export function TimelineBoard({
                         event.stopPropagation()
                         const rect = event.currentTarget.getBoundingClientRect()
                         const localMs = ((event.clientX - rect.left) / Math.max(rect.width, 1)) * clipPlayDurationMs(clip)
+                        onSeek(start + localMs)
                         if (project.timelineTool === 'blade') {
-                          onSeek(start + localMs)
                           onSplitAt(clip.id, localMs)
                           return
                         }

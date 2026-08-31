@@ -23,6 +23,7 @@ import { captureFilmstrip } from '../../services/thumbnails'
 import {
   applyDuration,
   applyTransition,
+  advancePlayhead,
   clipAtTime,
   clipPlayDurationMs,
   clipStartMs,
@@ -92,7 +93,6 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
   const mediaInputRef = useRef<HTMLInputElement>(null)
   const musicInputRef = useRef<HTMLInputElement>(null)
   const overlayInputRef = useRef<HTMLInputElement>(null)
-  const boundaryLock = useRef(false)
   const projectRef = useRef(project)
   projectRef.current = project
 
@@ -116,7 +116,12 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
         if (!cancelled) setPreparing(progress)
       })
       if (cancelled) return
-      setProject((current) => withDefaults({ ...next, playheadMs: current.playheadMs, extraClips: current.extraClips.length ? current.extraClips : next.extraClips }))
+      setProject((current) =>
+        withDefaults({
+          ...current,
+          clips: mergePreparedClips(current.clips, next.clips),
+        }),
+      )
       setPreparing(null)
     })()
     return () => {
@@ -307,6 +312,29 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
     return () => window.removeEventListener('keydown', onKey)
   })
 
+  useEffect(() => {
+    if (!playing) return
+    let frame = 0
+    let last = performance.now()
+    const tick = (now: number) => {
+      const dt = Math.min(80, now - last)
+      last = now
+      const current = projectRef.current
+      const total = projectDurationMs(current)
+      const next = advancePlayhead(current.playheadMs, total, dt)
+      if (next.playheadMs !== current.playheadMs) {
+        setProject((value) => ({ ...value, playheadMs: next.playheadMs }))
+      }
+      if (next.ended) {
+        setPlaying(false)
+        return
+      }
+      frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [playing])
+
   const overlap = hit?.overlapMs ?? 0
   const transitionMs = hit?.clip.transitionMs || 1
   const transitionOpacity =
@@ -364,7 +392,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
           <button type="button" className="v360-ghost" onClick={() => onSave(project)}>
             Save
           </button>
-          <button type="button" className="v360-primary" onClick={() => setExportOpen(true)} disabled={Boolean(exporting || preparing)}>
+          <button type="button" className="v360-primary" onClick={() => setExportOpen(true)} disabled={Boolean(exporting)}>
             <IconExport size={15} />
             Export
           </button>
@@ -476,35 +504,6 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
                 ...current,
                 clips: current.clips.map((clip) => (clip.id === id && !clip.durationProbed ? applyDuration(clip, durationMs) : clip)),
               }))
-            }}
-            onSourceTime={(sourceMs) => {
-              setProject((current) => {
-                const now = clipAtTime(current.clips, current.playheadMs)
-                if (!now) return current
-                const local = (sourceMs - now.clip.inMs) / Math.max(now.clip.speed, 0.01)
-                return { ...current, playheadMs: now.startMs + local }
-              })
-            }}
-            onClipBoundary={() => {
-              if (preparing || boundaryLock.current) return
-              boundaryLock.current = true
-              window.setTimeout(() => {
-                boundaryLock.current = false
-              }, 80)
-              setProject((current) => {
-                const now = clipAtTime(current.clips, current.playheadMs)
-                if (!now) return current
-                const nextIndex = now.index + 1
-                if (nextIndex >= current.clips.length) {
-                  setPlaying(false)
-                  return { ...current, playheadMs: projectDurationMs(current) }
-                }
-                return {
-                  ...current,
-                  playheadMs: clipStartMs(current.clips, nextIndex),
-                  selectedClipId: current.clips[nextIndex].id,
-                }
-              })
             }}
           />
           <TransportBar
@@ -747,6 +746,26 @@ function snapshotOf(project: EditorProject): Snapshot {
     selectedClipId: project.selectedClipId,
     selectedExtraId: project.selectedExtraId,
   }
+}
+
+function mergePreparedClips(current: EditorClip[], prepared: EditorClip[]): EditorClip[] {
+  const byId = new Map(prepared.map((clip) => [clip.id, clip]))
+  return current.map((clip) => {
+    const next = byId.get(clip.id)
+    if (!next) return clip
+    return {
+      ...clip,
+      proxyPath: next.proxyPath ?? clip.proxyPath,
+      mediaUrl: next.mediaUrl ?? clip.mediaUrl,
+      absolutePath: next.absolutePath ?? clip.absolutePath,
+      ready: next.ready ?? clip.ready,
+      error: next.error,
+      hasAudio: next.hasAudio ?? clip.hasAudio,
+      sourceDurationMs: clip.durationProbed ? clip.sourceDurationMs : next.sourceDurationMs,
+      durationProbed: clip.durationProbed || next.durationProbed,
+      outMs: clip.durationProbed ? clip.outMs : next.outMs,
+    }
+  })
 }
 
 const RAIL_ICONS = {

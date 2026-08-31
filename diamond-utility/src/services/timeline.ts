@@ -120,6 +120,12 @@ export function skipPlayhead(clips: EditorClip[], playheadMs: number, direction:
   return clipStartMs(clips, hit.index + 1)
 }
 
+export function advancePlayhead(playheadMs: number, durationMs: number, deltaMs: number): { playheadMs: number; ended: boolean } {
+  const next = playheadMs + Math.max(0, deltaMs)
+  if (next >= durationMs) return { playheadMs: durationMs, ended: true }
+  return { playheadMs: next, ended: false }
+}
+
 export function setSpeed(clip: EditorClip, speed: number): EditorClip {
   return { ...clip, speed: clampSpeed(speed) }
 }
@@ -259,7 +265,7 @@ export function createClipFromFile(file: ProcessFileResult, index: number): Edit
     effect: 'none',
     grade: { ...DEFAULT_GRADE },
     transform: { ...DEFAULT_TRANSFORM },
-    fadeInMs: index === 0 ? 350 : 0,
+    fadeInMs: 0,
     fadeOutMs: 0,
     transition: 'fade',
     transitionMs: DEFAULT_TRANSITION_MS,
