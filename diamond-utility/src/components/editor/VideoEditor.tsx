@@ -314,17 +314,13 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
 
   useEffect(() => {
     if (!playing) return
+    const startedAt = performance.now()
+    const startMs = projectRef.current.playheadMs
     let frame = 0
-    let last = performance.now()
     const tick = (now: number) => {
-      const dt = Math.min(80, now - last)
-      last = now
-      const current = projectRef.current
-      const total = projectDurationMs(current)
-      const next = advancePlayhead(current.playheadMs, total, dt)
-      if (next.playheadMs !== current.playheadMs) {
-        setProject((value) => ({ ...value, playheadMs: next.playheadMs }))
-      }
+      const total = projectDurationMs(projectRef.current)
+      const next = advancePlayhead(startMs, total, now - startedAt)
+      setProject((value) => (Math.abs(value.playheadMs - next.playheadMs) < 1 ? value : { ...value, playheadMs: next.playheadMs }))
       if (next.ended) {
         setPlaying(false)
         return
