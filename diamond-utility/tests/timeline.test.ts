@@ -3,6 +3,8 @@ import {
   applyTransition,
   clipPlayDurationMs,
   createExtra,
+  extrasAtTime,
+  extrasForPreview,
   moveClip,
   projectDurationMs,
   projectFromCopiedFiles,
@@ -85,5 +87,12 @@ describe('timeline', () => {
     expect(slipped.inMs).toBe(500)
     expect(skipPlayhead(project.clips, 100, 1)).toBeGreaterThan(0)
     expect(skipPlayhead(project.clips, 100, -1)).toBe(0)
+  })
+
+  it('keeps a selected extra on Program even when the playhead is outside it', () => {
+    const title = createExtra('text', 4000, { durationMs: 2000 })
+    expect(extrasAtTime([title], 100)).toEqual([])
+    expect(extrasForPreview([title], 100, title.id)).toEqual([title])
+    expect(extrasForPreview([title], 4500, title.id)).toEqual([title])
   })
 })

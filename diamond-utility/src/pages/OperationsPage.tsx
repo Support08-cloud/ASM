@@ -56,9 +56,9 @@ export function OperationsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Workspace"
+        eyebrow="Studio"
         title="Operations"
-        description="Watch Get MP4 jobs, then open the Vision360 professional editor."
+        description="Watch Get MP4 jobs, then open the Vision360 editor — preview, timeline, and export share one graph."
       />
       {state.phase === 'processing' && state.processProgress ? (
         <ProcessingPanel progress={state.processProgress} onCancel={cancelProcessing} />

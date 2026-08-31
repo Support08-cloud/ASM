@@ -5,7 +5,7 @@ import { DEFAULT_DUCKING } from '../../models/editor'
 import { cropInsets, cssClipPathForClip, cssFilterForClip, cssTransformForClip } from '../../services/edit-graph'
 import { extraPlaybackVolume } from '../../services/editor-audio'
 import { toVideoSrc } from '../../services/media-url'
-import { clipPlayDurationMs, extrasAtTime, sourceTimeMs } from '../../services/timeline'
+import { clipPlayDurationMs, extrasForPreview, sourceTimeMs } from '../../services/timeline'
 import { titleBoxStyle } from '../../services/title-style'
 
 interface PreviewStageProps {
@@ -209,7 +209,7 @@ export function PreviewStage({
         const style = titleBoxStyle(title, playheadMs)
         if (title.id === selectedExtraId) style.opacity = Math.max(Number(style.opacity ?? 0), 0.9)
         return (
-          <div key={title.id} className={`v360-title is-anim-${title.animIn ?? 'none'}`} style={style}>
+          <div key={title.id} className={`v360-title is-anim-${title.animIn ?? 'none'}${title.id === selectedExtraId ? ' is-selected' : ''}`} style={style}>
             {title.text || 'Title Overlay'}
           </div>
         )
@@ -250,6 +250,6 @@ function fadeOpacityFor(clip: EditorClip | undefined, localMs: number, play: num
   return opacity
 }
 
-export function extrasOnPreview(extras: ExtraClip[], playheadMs: number) {
-  return extrasAtTime(extras, playheadMs)
+export function extrasOnPreview(extras: ExtraClip[], playheadMs: number, selectedId?: string | null) {
+  return extrasForPreview(extras, playheadMs, selectedId)
 }

@@ -48,6 +48,7 @@ export const LIBRARY_TABS = [
   { id: 'media', label: 'Media', icon: 'video_library' },
   { id: 'text', label: 'Text', icon: 'title' },
   { id: 'audio', label: 'Audio', icon: 'audiotrack' },
+  { id: 'filters', label: 'Filters', icon: 'filter' },
   { id: 'effects', label: 'Effects', icon: 'auto_fix_high' },
 ] as const
 

@@ -43,8 +43,8 @@ export function Sidebar() {
           alt="Vision360"
         />
         <div className="brand-copy">
-          <div className="brand-name">Diamond Utility</div>
-          <div className="brand-sub">Vision360</div>
+          <div className="brand-name">Vision360</div>
+          <div className="brand-sub">Diamond Studio</div>
         </div>
       </div>
       {SECTIONS.map((section) => (
@@ -82,7 +82,7 @@ export function Sidebar() {
           <span className={`dot${dotClass(state.phase)}`} />
           <span>{statusLabel(state.phase)}</span>
         </div>
-        <span>v1.0.0</span>
+        <span>v1.1.0</span>
       </div>
     </aside>
   )

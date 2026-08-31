@@ -47,9 +47,9 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Workspace"
+        eyebrow="Studio"
         title="Diamond Data"
-        description="Search a diamond, select the variant folders you need, then Get MP4."
+        description="Search a diamond, pick the variant folders you need, then Get MP4 — source files stay untouched."
         meta={
           total > 0 ? (
             <>

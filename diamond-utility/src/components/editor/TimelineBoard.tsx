@@ -1,4 +1,5 @@
 import { useMemo, type MouseEvent as ReactMouseEvent } from 'react'
+import { IconBlade, IconSelect, IconSlip } from '../common/Icon'
 import type { EditorProject, ExtraClip, TimelineTool } from '../../models/editor'
 import { clipPlayDurationMs, clipStartMs } from '../../services/timeline'
 import { formatFrames } from '../../utils/format'
@@ -72,7 +73,7 @@ export function TimelineBoard({
       <div className="v360-timeline-tools">
         <div className="v360-tool-group">
           <button type="button" className={project.timelineTool === 'select' ? 'is-on' : undefined} title="Select (V)" onClick={() => onTool('select')}>
-            ▸
+            <IconSelect size={14} />
           </button>
           <button
             type="button"
@@ -80,13 +81,13 @@ export function TimelineBoard({
             title="Blade — click a clip to split (B)"
             onClick={() => onTool(project.timelineTool === 'blade' ? 'select' : 'blade')}
           >
-            ✂
+            <IconBlade size={14} />
           </button>
           <button type="button" title="Split at playhead (S)" onClick={onSplit}>
             Split
           </button>
           <button type="button" className={project.timelineTool === 'slip' ? 'is-on' : undefined} title="Slip (Y)" onClick={() => onTool('slip')}>
-            ↔
+            <IconSlip size={14} />
           </button>
         </div>
         <div className="v360-zoom">

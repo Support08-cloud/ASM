@@ -1,4 +1,5 @@
 import type { ProcessResult } from '../../models/processing'
+import { IconCheck, IconClose, IconWarning } from '../common/Icon'
 
 export function copiedDiamondNames(result: ProcessResult): string[] {
   return [...new Set(
@@ -33,7 +34,7 @@ export function CompletionDialog({
         : result.outcome === 'partial'
           ? 'Completed with warnings'
           : 'Processing Failed'
-  const mark = result.outcome === 'success' ? '✓' : result.outcome === 'partial' ? '⚠' : '✕'
+  const mark = result.outcome === 'success' ? <IconCheck size={22} /> : result.outcome === 'partial' ? <IconWarning size={22} /> : <IconClose size={22} />
   const diamonds = copiedDiamondNames(result)
 
   return (

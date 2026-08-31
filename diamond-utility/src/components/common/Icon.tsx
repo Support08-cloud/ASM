@@ -118,3 +118,95 @@ export function IconWarning(props: IconProps) {
     </Svg>
   )
 }
+
+export function IconMedia(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m9 9 6 3-6 3V9z" />
+    </Svg>
+  )
+}
+
+export function IconTitle(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M5 6h14M12 6v12M8 18h8" />
+    </Svg>
+  )
+}
+
+export function IconAudio(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M8 10v4M12 7v10M16 9v6" />
+    </Svg>
+  )
+}
+
+export function IconFx(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 3l1.5 5.2L19 10l-5.5 1.8L12 17l-1.5-5.2L5 10l5.5-1.8L12 3z" />
+    </Svg>
+  )
+}
+
+export function IconFilter(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 6h16l-6 7v5l-4 2v-7L4 6z" />
+    </Svg>
+  )
+}
+
+export function IconUndo(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M8 7H4v4" />
+      <path d="M4 11a8 8 0 1 0 2.2-5.6" />
+    </Svg>
+  )
+}
+
+export function IconRedo(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M16 7h4v4" />
+      <path d="M20 11a8 8 0 1 1-2.2-5.6" />
+    </Svg>
+  )
+}
+
+export function IconSelect(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M5 4 19 12l-7 1.5L9 20 5 4z" />
+    </Svg>
+  )
+}
+
+export function IconBlade(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M7 4h3l7 16h-3L7 4z" />
+      <path d="M14 4h3L10 20H7l7-16z" />
+    </Svg>
+  )
+}
+
+export function IconSlip(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 12h16M8 8 4 12l4 4M16 8l4 4-4 4" />
+    </Svg>
+  )
+}
+
+export function IconExport(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 4v10M8 8l4-4 4 4M5 16v4h14v-4" />
+    </Svg>
+  )
+}

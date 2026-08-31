@@ -3,6 +3,7 @@ import {
   DEFAULT_DUCKING,
   DEFAULT_EXPORT,
   EFFECT_OPTIONS,
+  FILTER_OPTIONS,
   LIBRARY_TABS,
   MAX_TIMELINE_CLIPS,
   TRANSITION_OPTIONS,
@@ -27,7 +28,7 @@ import {
   clipStartMs,
   createClipFromFile,
   createExtra,
-  extrasAtTime,
+  extrasForPreview,
   moveClip,
   moveExtra,
   projectDurationMs,
@@ -38,6 +39,16 @@ import {
   trimClip,
   trimExtra,
 } from '../../services/timeline'
+import {
+  IconAudio,
+  IconExport,
+  IconFilter,
+  IconFx,
+  IconMedia,
+  IconRedo,
+  IconTitle,
+  IconUndo,
+} from '../common/Icon'
 import { isModKey } from '../../utils/format'
 import { ExportDialog } from './ExportDialog'
 import { InspectorPanel } from './InspectorPanel'
@@ -89,7 +100,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
   const selected = project.clips.find((clip) => clip.id === project.selectedClipId) ?? null
   const selectedExtra = project.extraClips.find((extra) => extra.id === project.selectedExtraId) ?? null
   const hit = clipAtTime(project.clips, project.playheadMs)
-  const activeExtras = extrasAtTime(project.extraClips, project.playheadMs)
+  const activeExtras = extrasForPreview(project.extraClips, project.playheadMs, project.selectedExtraId)
 
   const commit = useCallback((patch: Partial<EditorProject>) => {
     const current = projectRef.current
@@ -224,7 +235,19 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
 
   const addText = () => {
     const extra = createExtra('text', project.playheadMs)
-    commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null, libraryTab: 'text' })
+    commit({
+      extraClips: [...project.extraClips, extra],
+      selectedExtraId: extra.id,
+      selectedClipId: null,
+      libraryTab: 'text',
+      playheadMs: extra.startMs + Math.min(240, Math.round(extra.durationMs * 0.12)),
+    })
+  }
+
+  const applyToClip = (patch: Partial<EditorClip>) => {
+    const target = selected ?? project.clips[0]
+    if (!target) return
+    updateClip(target.id, patch)
   }
 
   const addOverlay = async () => {
@@ -295,7 +318,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
     <div className="v360-editor">
       <header className="v360-top">
         <div className="v360-top-left">
-          <strong>Vision360</strong>
+          <strong>Vision360 Studio</strong>
           <span>{project.diamondName}</span>
           <nav>
             <button type="button" className={menu === 'file' ? 'is-on' : undefined} onClick={() => setMenu((value) => (value === 'file' ? null : 'file'))}>
@@ -333,15 +356,16 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
         </div>
         <div className="v360-top-right">
           <button type="button" disabled={past.length === 0} onClick={undo} title="Undo">
-            ↺
+            <IconUndo size={16} />
           </button>
           <button type="button" disabled={future.length === 0} onClick={redo} title="Redo">
-            ↻
+            <IconRedo size={16} />
           </button>
           <button type="button" className="v360-ghost" onClick={() => onSave(project)}>
             Save
           </button>
           <button type="button" className="v360-primary" onClick={() => setExportOpen(true)} disabled={Boolean(exporting || preparing)}>
+            <IconExport size={15} />
             Export
           </button>
         </div>
@@ -349,49 +373,54 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
 
       <div className="v360-workspace">
         <nav className="v360-rail" aria-label="Library">
-          {LIBRARY_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              className={project.libraryTab === tab.id ? 'is-on' : undefined}
-              onClick={() => setProject((current) => ({ ...current, libraryTab: tab.id }))}
-            >
-              <span>{tab.label}</span>
-            </button>
-          ))}
+          {LIBRARY_TABS.map((tab) => {
+            const Icon = RAIL_ICONS[tab.id]
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                className={project.libraryTab === tab.id ? 'is-on' : undefined}
+                onClick={() => setProject((current) => ({ ...current, libraryTab: tab.id }))}
+              >
+                <Icon size={18} />
+                <span>{tab.label}</span>
+              </button>
+            )
+          })}
         </nav>
 
         <aside className="v360-media">
           <div className="v360-panel-head">
-            <span>{project.libraryTab === 'media' ? 'Project Media' : project.libraryTab}</span>
+            <span>{libraryTitle(project.libraryTab)}</span>
             <button
               type="button"
               className="v360-ghost"
               onClick={() => {
                 if (project.libraryTab === 'text') addText()
                 else if (project.libraryTab === 'audio') void addMusic()
-                else if (project.libraryTab === 'effects') selected && updateClip(selected.id, { effect: 'pulse' })
+                else if (project.libraryTab === 'effects') applyToClip({ effect: 'pulse' })
+                else if (project.libraryTab === 'filters') applyToClip({ filter: 'warm' })
                 else void addMedia()
               }}
             >
-              {project.libraryTab === 'media' ? 'Import' : 'Add'}
+              {project.libraryTab === 'media' ? 'Import' : project.libraryTab === 'effects' || project.libraryTab === 'filters' ? 'Apply' : 'Add'}
             </button>
           </div>
           <div className="v360-search">
             <input placeholder="Search assets..." value={query} onChange={(event) => setQuery(event.target.value)} />
           </div>
           <div className="v360-bin-grid">
-            {project.libraryTab === 'effects'
-              ? EFFECT_OPTIONS.filter((item) => item.id !== 'none' && (!query || item.label.toLowerCase().includes(query.toLowerCase()))).map((item) => (
+            {project.libraryTab === 'effects' || project.libraryTab === 'filters'
+              ? lookItems(project.libraryTab, query, selected).map((item) => (
                   <button
                     key={item.id}
                     type="button"
-                    className={selected?.effect === item.id ? 'is-on' : undefined}
-                    onClick={() => selected && updateClip(selected.id, { effect: item.id })}
+                    className={item.on ? 'is-on' : undefined}
+                    onClick={() => applyToClip(item.patch)}
                   >
-                    <span className="v360-bin-swatch" style={{ background: item.id === selected?.effect ? '#FF6B00' : '#3d5a73' }} />
+                    <span className={`v360-bin-swatch is-${item.look}`} />
                     <strong>{item.label}</strong>
-                    <em>Effect</em>
+                    <em>{item.meta}</em>
                   </button>
                 ))
               : libraryItems.filter((item) => !query || item.label.toLowerCase().includes(query.toLowerCase())).map((item) => (
@@ -409,7 +438,13 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
                     }))
                     return
                   }
-                  setProject((current) => ({ ...current, selectedExtraId: item.id, selectedClipId: null }))
+                  const extra = project.extraClips.find((entry) => entry.id === item.id)
+                  setProject((current) => ({
+                    ...current,
+                    selectedExtraId: item.id,
+                    selectedClipId: null,
+                    playheadMs: extra ? extra.startMs + Math.min(240, Math.round(extra.durationMs * 0.12)) : current.playheadMs,
+                  }))
                 }}
               >
                 {thumbs[item.id]?.[0] ? <img src={thumbs[item.id][0]} alt="" /> : <span className="v360-bin-swatch" style={{ background: item.color }} />}
@@ -714,6 +749,45 @@ function snapshotOf(project: EditorProject): Snapshot {
   }
 }
 
+const RAIL_ICONS = {
+  media: IconMedia,
+  text: IconTitle,
+  audio: IconAudio,
+  filters: IconFilter,
+  effects: IconFx,
+} as const
+
+function libraryTitle(tab: EditorProject['libraryTab']) {
+  if (tab === 'media') return 'Project Media'
+  if (tab === 'text') return 'Titles'
+  if (tab === 'audio') return 'Music'
+  if (tab === 'filters') return 'Looks'
+  if (tab === 'effects') return 'Motion & FX'
+  return tab
+}
+
+function lookItems(tab: 'effects' | 'filters', query: string, selected: EditorClip | null) {
+  const q = query.toLowerCase()
+  if (tab === 'filters') {
+    return FILTER_OPTIONS.filter((item) => !q || item.label.toLowerCase().includes(q)).map((item) => ({
+      id: item.id,
+      label: item.label,
+      meta: 'Filter',
+      look: item.id,
+      on: (selected?.filter ?? 'none') === item.id,
+      patch: { filter: item.id } as Partial<EditorClip>,
+    }))
+  }
+  return EFFECT_OPTIONS.filter((item) => !q || item.label.toLowerCase().includes(q)).map((item) => ({
+    id: item.id,
+    label: item.label,
+    meta: 'Effect',
+    look: item.id,
+    on: (selected?.effect ?? 'none') === item.id,
+    patch: { effect: item.id } as Partial<EditorClip>,
+  }))
+}
+
 function libraryItemsFor(project: EditorProject) {
   if (project.libraryTab === 'audio') {
     return project.extraClips
@@ -739,7 +813,7 @@ function libraryItemsFor(project: EditorProject) {
         selected: extra.id === project.selectedExtraId,
       }))
   }
-  return project.clips.map((clip) => ({
+  const clips = project.clips.map((clip) => ({
     id: clip.id,
     kind: 'clip' as const,
     label: clip.label.replace('.mp4', ''),
@@ -747,4 +821,15 @@ function libraryItemsFor(project: EditorProject) {
     color: clip.color,
     selected: clip.id === project.selectedClipId,
   }))
+  const overlays = project.extraClips
+    .filter((extra) => extra.kind === 'overlay')
+    .map((extra) => ({
+      id: extra.id,
+      kind: 'extra' as const,
+      label: extra.label,
+      meta: 'Overlay',
+      color: extra.color,
+      selected: extra.id === project.selectedExtraId,
+    }))
+  return [...clips, ...overlays]
 }

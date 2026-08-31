@@ -442,6 +442,7 @@ export function InspectorPanel({
             <Slider label="Saturation" value={selected.grade.saturation} min={-1} max={1} step={0.05} suffix="" onChange={(value) => onClip({ grade: { ...selected.grade, saturation: value } })} />
             <Slider label="Temperature" value={selected.grade.temperature} min={-1} max={1} step={0.05} suffix="" onChange={(value) => onClip({ grade: { ...selected.grade, temperature: value } })} />
             <Slider label="Opacity" value={selected.grade.transparency} min={0.2} max={1} step={0.05} suffix="" onChange={(value) => onClip({ grade: { ...selected.grade, transparency: value } })} />
+            <div className="v360-look-label">Filters</div>
             <div className="v360-tile-grid">
               {FILTER_OPTIONS.map((item) => (
                 <button key={item.id} type="button" className={selected.filter === item.id ? 'is-on' : undefined} onClick={() => onClip({ filter: item.id })}>
@@ -449,6 +450,7 @@ export function InspectorPanel({
                 </button>
               ))}
             </div>
+            <div className="v360-look-label">Motion & FX</div>
             <div className="v360-tile-grid">
               {EFFECT_OPTIONS.map((item) => (
                 <button key={item.id} type="button" className={selected.effect === item.id ? 'is-on' : undefined} onClick={() => onClip({ effect: item.id })}>

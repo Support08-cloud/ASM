@@ -162,6 +162,14 @@ export function extrasAtTime(extras: ExtraClip[], timeMs: number): ExtraClip[] {
   return extras.filter((extra) => timeMs >= extra.startMs && timeMs < extraEndMs(extra))
 }
 
+export function extrasForPreview(extras: ExtraClip[], timeMs: number, selectedId?: string | null): ExtraClip[] {
+  const visible = extrasAtTime(extras, timeMs)
+  if (!selectedId) return visible
+  const selected = extras.find((extra) => extra.id === selectedId)
+  if (!selected || visible.some((extra) => extra.id === selected.id)) return visible
+  return [...visible, selected]
+}
+
 export function moveExtra(extra: ExtraClip, deltaMs: number): ExtraClip {
   return { ...extra, startMs: Math.max(0, extra.startMs + deltaMs) }
 }

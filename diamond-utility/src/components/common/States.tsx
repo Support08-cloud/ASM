@@ -1,4 +1,5 @@
 import type { ScanProgress } from '../../models/diamond'
+import { IconClose, IconFolder } from './Icon'
 
 export function ScanPanel({ progress }: { progress: ScanProgress }) {
   return (
@@ -34,7 +35,9 @@ export function EmptyState({
 }) {
   return (
     <div className="empty-state">
-      <div className="empty-icon">📁</div>
+      <div className="empty-icon">
+        <IconFolder size={22} />
+      </div>
       <h2>{title}</h2>
       <p>{body}</p>
       {actionLabel && onAction ? (
@@ -66,7 +69,9 @@ export function ErrorState({
 }) {
   return (
     <div className="error-state">
-      <div className="hero-mark bad">✕</div>
+      <div className="hero-mark bad">
+        <IconClose size={22} />
+      </div>
       <h2>{title}</h2>
       {path ? <p className="mono">{path}</p> : null}
       <p>{detail}</p>
