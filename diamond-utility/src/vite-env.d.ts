@@ -27,6 +27,7 @@ interface FileSystemHandle {
 }
 
 interface Window {
+  __v360PlayGen?: number
   showDirectoryPicker?: (options?: {
     id?: string
     mode?: 'read' | 'readwrite'

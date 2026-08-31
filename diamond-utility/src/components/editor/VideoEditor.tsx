@@ -314,10 +314,12 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
 
   useEffect(() => {
     if (!playing) return
+    const gen = (window.__v360PlayGen = (window.__v360PlayGen ?? 0) + 1)
     const startedAt = performance.now()
     const startMs = projectRef.current.playheadMs
     let frame = 0
     const tick = (now: number) => {
+      if (window.__v360PlayGen !== gen) return
       const total = projectDurationMs(projectRef.current)
       const next = advancePlayhead(startMs, total, now - startedAt)
       setProject((value) => (Math.abs(value.playheadMs - next.playheadMs) < 1 ? value : { ...value, playheadMs: next.playheadMs }))
@@ -328,7 +330,10 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
       frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(frame)
+    return () => {
+      if (window.__v360PlayGen === gen) window.__v360PlayGen += 1
+      cancelAnimationFrame(frame)
+    }
   }, [playing])
 
   const overlap = hit?.overlapMs ?? 0
