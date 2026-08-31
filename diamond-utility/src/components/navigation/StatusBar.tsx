@@ -27,7 +27,7 @@ export function StatusBar() {
         <span>{state.diamonds.length.toLocaleString()} diamonds</span>
       )}
       <span>Last scan: {formatRelativeTime(state.lastScanAt)}</span>
-      <span className="push">v1.0.0</span>
+      <span className="push">v1.1.0</span>
     </footer>
   )
 }
