@@ -1,4 +1,5 @@
 import { EMPTY_FILTERS, type Diamond, type Filters, type ScanProgress } from '../../models/diamond'
+import type { EditorProject } from '../../models/editor'
 import {
   DEFAULT_SETTINGS,
   type AppPhase,
@@ -28,6 +29,10 @@ export interface AppState {
   detailsId: string | null
   processProgress: ProcessProgress | null
   processResult: ProcessResult | null
+  lastProcessResult: ProcessResult | null
+  exportProgress: { percent: number; message: string } | null
+  editorDiamond: string | null
+  editorDrafts: Record<string, EditorProject>
   history: HistoryRecord[]
   toasts: ToastItem[]
   settings: AppSettings
@@ -50,6 +55,10 @@ export const initialState: AppState = {
   detailsId: null,
   processProgress: null,
   processResult: null,
+  lastProcessResult: null,
+  exportProgress: null,
+  editorDiamond: null,
+  editorDrafts: {},
   history: [],
   toasts: [],
   settings: DEFAULT_SETTINGS,
@@ -63,6 +72,8 @@ export type AppAction =
   | { type: 'set-duplicate-policy'; policy: AppSettings['duplicatePolicy'] }
   | { type: 'set-source'; path: string; kind: 'demo' | 'directory' }
   | { type: 'set-output'; path: string }
+  | { type: 'clear-source' }
+  | { type: 'clear-output' }
   | { type: 'scan-start' }
   | { type: 'scan-progress'; progress: ScanProgress }
   | { type: 'scan-success'; diamonds: Diamond[]; foldersScanned: number; scannedAt: string }
@@ -70,6 +81,7 @@ export type AppAction =
   | { type: 'set-search'; search: string }
   | { type: 'set-filters'; filters: Filters }
   | { type: 'toggle-select'; id: string }
+  | { type: 'toggle-group'; ids: string[] }
   | { type: 'select-visible'; ids: string[] }
   | { type: 'clear-selection' }
   | { type: 'set-view-mode'; viewMode: ViewMode }
@@ -80,6 +92,13 @@ export type AppAction =
   | { type: 'process-start'; progress: ProcessProgress }
   | { type: 'process-progress'; progress: ProcessProgress }
   | { type: 'process-complete'; result: ProcessResult; record: HistoryRecord }
+  | { type: 'open-editor'; diamondName?: string }
+  | { type: 'close-editor' }
+  | { type: 'save-editor'; project: EditorProject }
+  | { type: 'export-start' }
+  | { type: 'export-progress'; percent: number; message: string }
+  | { type: 'export-cancel' }
+  | { type: 'export-complete'; result: ProcessResult }
   | { type: 'dismiss-completion' }
   | { type: 'add-toast'; toast: ToastItem }
   | { type: 'dismiss-toast'; id: string }
@@ -116,6 +135,23 @@ export function reducer(state: AppState, action: AppAction): AppState {
       }
     case 'set-output':
       return { ...state, outputPath: action.path }
+    case 'clear-source':
+      return {
+        ...state,
+        sourcePath: null,
+        sourceKind: 'none',
+        diamonds: [],
+        foldersScanned: 0,
+        lastScanAt: null,
+        selectedIds: [],
+        detailsId: null,
+        scanError: null,
+        scanProgress: null,
+        search: '',
+        phase: 'idle',
+      }
+    case 'clear-output':
+      return { ...state, outputPath: null }
     case 'scan-start':
       return {
         ...state,
@@ -156,6 +192,15 @@ export function reducer(state: AppState, action: AppAction): AppState {
         : [...state.selectedIds, action.id]
       return { ...state, selectedIds: selected }
     }
+    case 'toggle-group': {
+      const allOn = action.ids.length > 0 && action.ids.every((id) => state.selectedIds.includes(id))
+      return {
+        ...state,
+        selectedIds: allOn
+          ? state.selectedIds.filter((id) => !action.ids.includes(id))
+          : unique([...state.selectedIds, ...action.ids]),
+      }
+    }
     case 'select-visible':
       return { ...state, selectedIds: unique(action.ids) }
     case 'clear-selection':
@@ -187,9 +232,53 @@ export function reducer(state: AppState, action: AppAction): AppState {
         phase: 'completed',
         processProgress: null,
         processResult: action.result,
+        lastProcessResult: action.result,
         history: [action.record, ...state.history].slice(0, 80),
         selectedIds: [],
       }
+    case 'open-editor': {
+      const result = state.lastProcessResult ?? state.processResult
+      const copied = (result?.files ?? []).filter((file) => file.status === 'copied' && !file.outputPath.endsWith('-edit.mp4'))
+      if (copied.length === 0) return state
+      const names = [...new Set(copied.map((file) => file.diamondName).filter(Boolean))]
+      const diamondName = action.diamondName ?? (names.length === 1 ? names[0] : null)
+      if (!diamondName) return { ...state, phase: 'completed', route: 'operations' }
+      return { ...state, phase: 'editing', route: 'operations', editorDiamond: diamondName }
+    }
+    case 'close-editor':
+      return { ...state, phase: state.lastProcessResult ? 'completed' : 'ready', exportProgress: null }
+    case 'save-editor':
+      return {
+        ...state,
+        editorDrafts: { ...state.editorDrafts, [action.project.diamondName]: action.project },
+      }
+    case 'export-start':
+      return {
+        ...state,
+        phase: 'exporting',
+        route: 'operations',
+        exportProgress: { percent: 0, message: 'Preparing export' },
+      }
+    case 'export-progress':
+      return { ...state, exportProgress: { percent: action.percent, message: action.message } }
+    case 'export-cancel':
+      return { ...state, phase: 'editing', exportProgress: null }
+    case 'export-complete': {
+      const prior = state.lastProcessResult
+      const kept = (prior?.files ?? []).filter((file) => file.status === 'copied' && !file.outputPath.endsWith('-edit.mp4'))
+      return {
+        ...state,
+        phase: 'completed',
+        exportProgress: null,
+        processResult: {
+          ...action.result,
+          files: [...kept, ...action.result.files],
+          copied: kept.length + action.result.copied,
+          total: kept.length + action.result.total,
+        },
+        lastProcessResult: prior ?? action.result,
+      }
+    }
     case 'dismiss-completion':
       return { ...state, phase: 'ready', processResult: null, processProgress: null, route: 'dashboard' }
     case 'add-toast':

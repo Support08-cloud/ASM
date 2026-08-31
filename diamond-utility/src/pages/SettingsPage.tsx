@@ -10,7 +10,7 @@ export function SettingsPage() {
       <PageHeader
         eyebrow="System"
         title="Settings"
-        description="Appearance, processing defaults, and keyboard shortcuts."
+        description="Appearance, processing defaults, and keyboard shortcuts for the studio."
       />
       <div className="settings-list">
         <div className="settings-row">

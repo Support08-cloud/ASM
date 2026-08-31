@@ -27,9 +27,34 @@ interface FileSystemHandle {
 }
 
 interface Window {
+  __v360PlayGen?: number
   showDirectoryPicker?: (options?: {
     id?: string
     mode?: 'read' | 'readwrite'
     startIn?: FileSystemDirectoryHandle | 'desktop' | 'documents' | 'downloads'
   }) => Promise<FileSystemDirectoryHandle>
+  desktop?: {
+    isElectron: true
+    pickDirectory: () => Promise<string | null>
+    pickMedia?: (kind: 'video' | 'audio') => Promise<string | null>
+    scanDirectory: (root: string) => Promise<{
+      folders: Array<{
+        folderName: string
+        relativePath: string
+        accessible?: boolean
+        errorMessage?: string
+        files: Array<{ name: string; relativePath?: string; size?: number; absolutePath?: string }>
+      }>
+      foldersScanned: number
+      filesSeen: number
+    }>
+    copyFile: (sourcePath: string, destinationPath: string) => Promise<void>
+    openPath: (target: string) => Promise<void>
+    writeTextFile?: (filePath: string, contents: string) => Promise<void>
+    runFfmpeg?: (args: string[]) => Promise<void>
+    resolveSample?: (rel: string) => Promise<string>
+    fontFile?: () => Promise<string | null>
+    mediaInfo?: (filePath: string) => Promise<{ durationMs: number; hasAudio: boolean }>
+    toMediaUrl?: (filePath: string) => string
+  }
 }

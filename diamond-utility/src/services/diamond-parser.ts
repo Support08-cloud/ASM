@@ -1,28 +1,13 @@
-import {
-  VIEW_TYPES,
-  buildDiamond,
-  type Diamond,
-  type DiamondView,
-  type MediaFile,
-  type ViewKey,
-  type ViewType,
-} from '../models/diamond'
+import { buildDiamond, countKind, type Diamond, type DiamondFolder, type MediaFile } from '../models/diamond'
 
-const VIEW_LOOKUP: Record<string, ViewType> = {
-  front: 'Front',
-  '3d': '3D',
-  threed: '3D',
-  top: 'Top',
-  '360': '360',
-  er: 'ER',
-}
+const VARIANT_SUFFIX = /^(?:\d{1,2}|RG)$/i
 
 export interface ScannedFolderInput {
   folderName: string
   relativePath: string
   accessible?: boolean
   errorMessage?: string
-  files: Array<{ name: string; relativePath?: string; size?: number }>
+  files: Array<{ name: string; relativePath?: string; size?: number; absolutePath?: string }>
 }
 
 export function classifyFile(name: string): MediaFile['kind'] {
@@ -33,35 +18,41 @@ export function classifyFile(name: string): MediaFile['kind'] {
   return 'other'
 }
 
-export function parseFolderName(folderName: string): { baseName: string; view: ViewKey } {
+export function parseFolderName(folderName: string): { baseName: string; variant: string; isBase: boolean } {
   const trimmed = folderName.trim()
-  const splitIndex = Math.max(trimmed.lastIndexOf('_'), trimmed.lastIndexOf('-'), trimmed.lastIndexOf(' '))
+  const splitIndex = Math.max(trimmed.lastIndexOf('-'), trimmed.lastIndexOf('_'))
   if (splitIndex > 0) {
-    const suffix = trimmed.slice(splitIndex + 1).toLowerCase()
-    const view = VIEW_LOOKUP[suffix]
-    if (view) {
+    const suffix = trimmed.slice(splitIndex + 1)
+    if (VARIANT_SUFFIX.test(suffix)) {
       const baseName = trimmed.slice(0, splitIndex).trim()
-      if (baseName) return { baseName, view }
+      if (baseName) {
+        return {
+          baseName,
+          variant: normalizeVariant(suffix),
+          isBase: false,
+        }
+      }
     }
   }
-  return { baseName: trimmed, view: 'Unknown' }
+  return { baseName: trimmed, variant: '', isBase: true }
 }
 
-export function isKnownView(value: string): value is ViewType {
-  return (VIEW_TYPES as readonly string[]).includes(value)
+export function normalizeVariant(suffix: string): string {
+  return suffix.toUpperCase() === 'RG' ? 'RG' : suffix
 }
 
 export function groupDiamonds(folders: ScannedFolderInput[]): Diamond[] {
-  const grouped = new Map<string, { baseName: string; views: DiamondView[] }>()
+  const grouped = new Map<string, { baseName: string; folders: DiamondFolder[] }>()
 
   folders.forEach((folder, index) => {
     const parsed = parseFolderName(folder.folderName)
     const key = parsed.baseName.toLowerCase()
-    const view: DiamondView = {
-      id: `${key}:${parsed.view}:${folder.relativePath || folder.folderName}:${index}`,
+    const item: DiamondFolder = {
+      id: `${key}:${folder.relativePath || folder.folderName}:${index}`,
       folderName: folder.folderName,
       relativePath: folder.relativePath || folder.folderName,
-      view: parsed.view,
+      variant: parsed.variant,
+      isBase: parsed.isBase,
       accessible: folder.accessible !== false,
       errorMessage: folder.errorMessage,
       files: folder.files.map((file) => ({
@@ -69,28 +60,33 @@ export function groupDiamonds(folders: ScannedFolderInput[]): Diamond[] {
         relativePath: file.relativePath ?? `${folder.folderName}/${file.name}`,
         size: file.size ?? 0,
         kind: classifyFile(file.name),
+        absolutePath: file.absolutePath,
       })),
     }
 
     const existing = grouped.get(key)
     if (existing) {
-      existing.views.push(view)
+      existing.folders.push(item)
       return
     }
-    grouped.set(key, { baseName: parsed.baseName, views: [view] })
+    grouped.set(key, { baseName: parsed.baseName, folders: [item] })
   })
 
   return [...grouped.values()]
-    .map((entry) =>
-      buildDiamond(
-        entry.baseName,
-        [...entry.views].sort((a, b) => viewOrder(a.view) - viewOrder(b.view)),
-      ),
-    )
-    .sort((a, b) => a.baseName.localeCompare(b.baseName, undefined, { sensitivity: 'base' }))
+    .map((entry) => buildDiamond(entry.baseName, [...entry.folders].sort(compareFolders)))
+    .sort((a, b) => a.baseName.localeCompare(b.baseName, undefined, { numeric: true, sensitivity: 'base' }))
 }
 
-function viewOrder(view: ViewKey): number {
-  const index = VIEW_TYPES.indexOf(view as ViewType)
-  return index === -1 ? VIEW_TYPES.length : index
+function compareFolders(a: DiamondFolder, b: DiamondFolder): number {
+  if (a.isBase !== b.isBase) return a.isBase ? -1 : 1
+  const aNum = Number(a.variant)
+  const bNum = Number(b.variant)
+  if (Number.isFinite(aNum) && Number.isFinite(bNum)) return aNum - bNum
+  if (Number.isFinite(aNum)) return -1
+  if (Number.isFinite(bNum)) return 1
+  return a.folderName.localeCompare(b.folderName, undefined, { numeric: true, sensitivity: 'base' })
+}
+
+export function folderHasMp4(folder: DiamondFolder): boolean {
+  return countKind(folder, 'mp4') > 0
 }

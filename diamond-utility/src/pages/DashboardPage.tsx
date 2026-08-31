@@ -19,24 +19,37 @@ export function DashboardPage() {
     visibleDiamonds,
     chooseSource,
     chooseOutput,
+    clearSource,
+    clearOutput,
     loadSample,
     rescan,
     startGetMp4,
     confirmGetMp4,
     detailsDiamond,
+    confirmSummary,
   } = useAppStore()
 
   const showing = visibleDiamonds.length
   const total = state.diamonds.length
   const filterCount = activeFilterCount(state.filters)
   const searching = Boolean(state.search.trim()) || filterCount > 0
+  const getMp4Reason =
+    state.phase === 'scanning'
+      ? 'Scan in progress'
+      : !state.sourcePath
+        ? 'Select a source folder first'
+        : !state.outputPath
+          ? 'Choose an output folder first'
+          : state.selectedIds.length === 0
+            ? 'Select one or more variant folders'
+            : undefined
 
   return (
     <>
       <PageHeader
-        eyebrow="Workspace"
+        eyebrow="Studio"
         title="Diamond Data"
-        description="Select and process diamond folders from your local source."
+        description="Search a diamond, pick the variant folders you need, then Get MP4 — source files stay untouched."
         meta={
           total > 0 ? (
             <>
@@ -60,12 +73,14 @@ export function DashboardPage() {
           path={state.sourcePath}
           hint={state.lastScanAt ? `Last scanned: ${formatRelativeTime(state.lastScanAt)}` : 'Select an input folder to begin.'}
           onChange={chooseSource}
+          onClear={clearSource}
         />
         <PathCard
           label="Output"
           path={state.outputPath}
-          hint="New diamond folders will be created here"
+          hint="One folder per diamond base name is created here"
           onChange={chooseOutput}
+          onClear={clearOutput}
         />
       </div>
 
@@ -99,7 +114,7 @@ export function DashboardPage() {
               <div className="section-label">Diamond data</div>
               <div className="results-count">{total.toLocaleString()} diamonds</div>
               <div className="results-sub">
-                {state.selectedIds.length} selected
+                {state.selectedIds.length} folder{state.selectedIds.length === 1 ? '' : 's'} selected
                 {searching ? ` · Showing ${showing} of ${total} diamonds` : null}
               </div>
             </div>
@@ -131,6 +146,9 @@ export function DashboardPage() {
             <button type="button" className="btn ghost" onClick={rescan} title="Rescan source (Ctrl+R)">
               Refresh
             </button>
+            <button type="button" className="btn ghost" onClick={() => void loadSample()}>
+              Load sample
+            </button>
           </div>
 
           <div className="toolbar-row">
@@ -138,7 +156,12 @@ export function DashboardPage() {
               <button
                 type="button"
                 className="btn ghost"
-                onClick={() => dispatch({ type: 'select-visible', ids: visibleDiamonds.map((item) => item.id) })}
+                onClick={() =>
+                  dispatch({
+                    type: 'select-visible',
+                    ids: visibleDiamonds.flatMap((item) => item.folders.map((folder) => folder.id)),
+                  })
+                }
               >
                 Select All
               </button>
@@ -154,7 +177,10 @@ export function DashboardPage() {
             <DiamondTable
               diamonds={visibleDiamonds}
               selectedIds={state.selectedIds}
-              onToggle={(id) => dispatch({ type: 'toggle-select', id })}
+              onToggleDiamond={(diamond) =>
+                dispatch({ type: 'toggle-group', ids: diamond.folders.map((folder) => folder.id) })
+              }
+              onToggleFolder={(id) => dispatch({ type: 'toggle-select', id })}
               onDetails={(id) => dispatch({ type: 'open-details', id })}
             />
           ) : (
@@ -163,22 +189,26 @@ export function DashboardPage() {
                 <DiamondCard
                   key={diamond.id}
                   diamond={diamond}
-                  selected={state.selectedIds.includes(diamond.id)}
-                  onToggle={() => dispatch({ type: 'toggle-select', id: diamond.id })}
+                  selectedIds={state.selectedIds}
+                  onToggleDiamond={() =>
+                    dispatch({ type: 'toggle-group', ids: diamond.folders.map((folder) => folder.id) })
+                  }
+                  onToggleFolder={(id) => dispatch({ type: 'toggle-select', id })}
                   onDetails={() => dispatch({ type: 'open-details', id: diamond.id })}
                 />
               ))}
             </div>
           )}
-
-          <SelectionToolbar
-            count={state.selectedIds.length}
-            disabled={!state.outputPath}
-            onClear={() => dispatch({ type: 'clear-selection' })}
-            onProcess={startGetMp4}
-          />
         </>
       ) : null}
+
+      <SelectionToolbar
+        count={state.selectedIds.length}
+        disabled={Boolean(getMp4Reason)}
+        reason={getMp4Reason}
+        onClear={() => dispatch({ type: 'clear-selection' })}
+        onProcess={startGetMp4}
+      />
 
       {detailsDiamond ? (
         <DiamondDetailsDrawer
@@ -188,23 +218,13 @@ export function DashboardPage() {
         />
       ) : null}
 
-      {state.phase === 'confirming' && (
+      {state.phase === 'confirming' && confirmSummary ? (
         <ConfirmationDialog
-          summary={{
-            diamondCount: state.selectedIds.length,
-            folderCount: state.diamonds
-              .filter((diamond) => state.selectedIds.includes(diamond.id))
-              .reduce((sum, diamond) => sum + diamond.sourceFolderCount, 0),
-            mp4Count: state.diamonds
-              .filter((diamond) => state.selectedIds.includes(diamond.id))
-              .reduce((sum, diamond) => sum + diamond.mp4.found, 0),
-            diamonds: [],
-            outputPath: state.outputPath ?? '',
-          }}
+          summary={confirmSummary}
           onCancel={() => dispatch({ type: 'cancel-confirm' })}
           onConfirm={confirmGetMp4}
         />
-      )}
+      ) : null}
     </>
   )
 }

@@ -20,6 +20,8 @@ export function AppShell() {
 
       if (event.key === 'Escape') {
         if (state.phase === 'confirming') dispatch({ type: 'cancel-confirm' })
+        else if (state.phase === 'exporting') dispatch({ type: 'export-cancel' })
+        else if (state.phase === 'editing') dispatch({ type: 'close-editor' })
         else if (state.detailsId) dispatch({ type: 'close-details' })
         return
       }
@@ -34,12 +36,16 @@ export function AppShell() {
         return
       }
       if (event.key === 'Delete' && !typing && state.search) {
+        if (state.phase === 'editing' || state.phase === 'exporting') return
         dispatch({ type: 'set-search', search: '' })
       }
 
       if (isModKey(event) && event.key.toLowerCase() === 'a' && !typing && state.route === 'dashboard') {
         event.preventDefault()
-        dispatch({ type: 'select-visible', ids: visibleDiamonds.map((item) => item.id) })
+        dispatch({
+          type: 'select-visible',
+          ids: visibleDiamonds.flatMap((item) => item.folders.map((folder) => folder.id)),
+        })
       }
       if (isModKey(event) && event.key.toLowerCase() === 'r') {
         event.preventDefault()
@@ -51,12 +57,14 @@ export function AppShell() {
   }, [state.phase, state.detailsId, state.search, state.route, visibleDiamonds, dispatch, confirmGetMp4, rescan])
 
   const overlayProcessing = state.phase === 'processing' && state.route === 'dashboard' && state.processProgress
+  const editorOpen = state.phase === 'editing' || state.phase === 'exporting'
+  const flush = Boolean(overlayProcessing || editorOpen)
 
   return (
-    <div className={`app-shell${state.settings.sidebarCollapsed ? ' is-collapsed' : ''}`}>
-      <Sidebar />
+    <div className={`app-shell${state.settings.sidebarCollapsed ? ' is-collapsed' : ''}${editorOpen ? ' is-editor' : ''}`}>
+      {editorOpen ? null : <Sidebar />}
       <main className="workspace">
-        <div className={`workspace-scroll${overlayProcessing ? ' is-flush' : ''}`}>
+        <div className={`workspace-scroll${flush ? ' is-flush' : ''}`}>
           {overlayProcessing ? (
             <ProcessingPanel progress={state.processProgress!} onCancel={cancelProcessing} />
           ) : (
@@ -69,7 +77,7 @@ export function AppShell() {
           )}
         </div>
       </main>
-      <StatusBar />
+      {editorOpen ? null : <StatusBar />}
       <ToastViewport />
     </div>
   )

@@ -1,6 +1,4 @@
-export const VIEW_TYPES = ['Front', '3D', 'Top', '360', 'ER'] as const
-export type ViewType = (typeof VIEW_TYPES)[number]
-export type ViewKey = ViewType | 'Unknown'
+export const COMMON_VARIANTS = ['1', '2', '3', 'RG'] as const
 
 export type DiamondStatus = 'ready' | 'warning' | 'error'
 export type Mp4Availability = 'available' | 'missing' | 'multiple'
@@ -10,13 +8,15 @@ export interface MediaFile {
   relativePath: string
   size: number
   kind: 'mp4' | 'json' | 'image' | 'other'
+  absolutePath?: string
 }
 
-export interface DiamondView {
+export interface DiamondFolder {
   id: string
   folderName: string
   relativePath: string
-  view: ViewKey
+  variant: string
+  isBase: boolean
   accessible: boolean
   errorMessage?: string
   files: MediaFile[]
@@ -25,7 +25,7 @@ export interface DiamondView {
 export interface Diamond {
   id: string
   baseName: string
-  views: DiamondView[]
+  folders: DiamondFolder[]
   status: DiamondStatus
   mp4: { found: number; expected: number; availability: Mp4Availability }
   json: { found: number; expected: number }
@@ -40,41 +40,36 @@ export interface ScanProgress {
   message: string
 }
 
-export interface AppError {
-  title: string
-  detail: string
-  path?: string
-  cause?: string
-}
-
 export interface Filters {
-  views: ViewType[]
+  variants: string[]
   mp4: Mp4Availability[]
   status: DiamondStatus[]
 }
 
 export const EMPTY_FILTERS: Filters = {
-  views: [],
+  variants: [],
   mp4: [],
   status: [],
 }
 
-export function countKind(view: DiamondView, kind: MediaFile['kind']): number {
-  return view.files.filter((file) => file.kind === kind).length
+export function countKind(folder: DiamondFolder, kind: MediaFile['kind']): number {
+  return folder.files.filter((file) => file.kind === kind).length
 }
 
-export function summarizeDiamond(views: DiamondView[]): Pick<
+export function summarizeDiamond(folders: DiamondFolder[]): Pick<
   Diamond,
   'status' | 'mp4' | 'json' | 'images' | 'sourceFolderCount'
 > {
-  const expected = Math.max(views.length, 1)
-  const mp4Found = views.filter((view) => countKind(view, 'mp4') > 0).length
-  const jsonFound = views.filter((view) => countKind(view, 'json') > 0).length
-  const imageFound = views.filter((view) => countKind(view, 'image') > 0).length
+  const variants = folders.filter((folder) => !folder.isBase)
+  const tracked = variants.length > 0 ? variants : folders
+  const expected = Math.max(tracked.length, 1)
+  const mp4Found = tracked.filter((folder) => countKind(folder, 'mp4') > 0).length
+  const jsonFound = folders.filter((folder) => countKind(folder, 'json') > 0).length
+  const imageFound = folders.filter((folder) => countKind(folder, 'image') > 0).length
 
-  const inaccessible = views.some((view) => !view.accessible)
-  const hasMultiple = views.some((view) => countKind(view, 'mp4') > 1)
-  const hasMissing = views.some((view) => view.accessible && countKind(view, 'mp4') === 0)
+  const inaccessible = folders.some((folder) => !folder.accessible)
+  const hasMultiple = folders.some((folder) => countKind(folder, 'mp4') > 1)
+  const hasMissing = tracked.some((folder) => folder.accessible && countKind(folder, 'mp4') === 0)
 
   let availability: Mp4Availability = 'available'
   if (hasMultiple) availability = 'multiple'
@@ -82,23 +77,38 @@ export function summarizeDiamond(views: DiamondView[]): Pick<
 
   let status: DiamondStatus = 'ready'
   if (inaccessible) status = 'error'
-  else if (hasMultiple || hasMissing || views.length === 0) status = 'warning'
+  else if (hasMultiple || hasMissing || folders.length === 0) status = 'warning'
 
   return {
     status,
     mp4: { found: mp4Found, expected, availability },
-    json: { found: jsonFound, expected },
-    images: { found: imageFound, expected },
-    sourceFolderCount: views.length,
+    json: { found: jsonFound, expected: Math.max(folders.length, 1) },
+    images: { found: imageFound, expected: Math.max(folders.length, 1) },
+    sourceFolderCount: folders.length,
   }
 }
 
-export function buildDiamond(baseName: string, views: DiamondView[]): Diamond {
-  const summary = summarizeDiamond(views)
+export function buildDiamond(baseName: string, folders: DiamondFolder[]): Diamond {
+  const summary = summarizeDiamond(folders)
   return {
     id: baseName.trim().toLowerCase(),
     baseName,
-    views,
+    folders,
     ...summary,
   }
+}
+
+export function folderIds(diamond: Diamond): string[] {
+  return diamond.folders.map((folder) => folder.id)
+}
+
+export function withSelectedFolders(diamonds: Diamond[], selectedIds: string[]): Diamond[] {
+  return diamonds
+    .map((diamond) =>
+      buildDiamond(
+        diamond.baseName,
+        diamond.folders.filter((folder) => selectedIds.includes(folder.id)),
+      ),
+    )
+    .filter((diamond) => diamond.folders.length > 0)
 }
