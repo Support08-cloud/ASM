@@ -1,7 +1,5 @@
 import { buildDiamond, countKind, type Diamond, type DiamondFolder, type MediaFile } from '../models/diamond'
 
-const VARIANT_SUFFIX = /^(?:\d{1,2}|RG)$/i
-
 export interface ScannedFolderInput {
   folderName: string
   relativePath: string
@@ -18,12 +16,18 @@ export function classifyFile(name: string): MediaFile['kind'] {
   return 'other'
 }
 
+/** Last -/_ piece is a view if it is 1–2 digits, RG, or contains a letter (front, PV, top, …). */
+export function isViewSuffix(suffix: string): boolean {
+  if (/^(?:\d{1,2}|RG)$/i.test(suffix)) return true
+  return /[A-Za-z]/.test(suffix)
+}
+
 export function parseFolderName(folderName: string): { baseName: string; variant: string; isBase: boolean } {
   const trimmed = folderName.trim()
   const splitIndex = Math.max(trimmed.lastIndexOf('-'), trimmed.lastIndexOf('_'))
   if (splitIndex > 0) {
     const suffix = trimmed.slice(splitIndex + 1)
-    if (VARIANT_SUFFIX.test(suffix)) {
+    if (isViewSuffix(suffix)) {
       const baseName = trimmed.slice(0, splitIndex).trim()
       if (baseName) {
         return {

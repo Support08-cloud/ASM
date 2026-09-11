@@ -11,6 +11,15 @@ describe('parseFolderName', () => {
     expect(parseFolderName('Krish-1')).toEqual({ baseName: 'Krish', variant: '1', isBase: false })
     expect(parseFolderName('Krish')).toEqual({ baseName: 'Krish', variant: '', isBase: true })
   })
+
+  it('groups any letter view suffix under the prefix, without splitting 3-digit stone ids', () => {
+    expect(parseFolderName('ring-front')).toEqual({ baseName: 'ring', variant: 'front', isBase: false })
+    expect(parseFolderName('ring-PV')).toEqual({ baseName: 'ring', variant: 'PV', isBase: false })
+    expect(parseFolderName('ring-top')).toEqual({ baseName: 'ring', variant: 'top', isBase: false })
+    expect(parseFolderName('Ring-front')).toEqual({ baseName: 'Ring', variant: 'front', isBase: false })
+    expect(parseFolderName('necklace_side')).toEqual({ baseName: 'necklace', variant: 'side', isBase: false })
+    expect(parseFolderName('260602-362')).toEqual({ baseName: '260602-362', variant: '', isBase: true })
+  })
 })
 
 describe('groupDiamonds', () => {
@@ -72,6 +81,17 @@ describe('groupDiamonds', () => {
       { folderName: '250801-125-1', relativePath: 'b', files: [{ name: 'video.mp4' }] },
     ])
     expect(diamonds.map((item) => item.baseName)).toEqual(['250801-125', '260602-362'])
+  })
+
+  it('groups ring-front / ring-PV / ring-top under one prefix', () => {
+    const diamonds = groupDiamonds([
+      { folderName: 'ring-front', relativePath: 'ring-front', files: [{ name: 'a.mp4' }] },
+      { folderName: 'ring-PV', relativePath: 'ring-PV', files: [{ name: 'b.mp4' }] },
+      { folderName: 'ring-top', relativePath: 'ring-top', files: [{ name: 'c.mp4' }] },
+    ])
+    expect(diamonds).toHaveLength(1)
+    expect(diamonds[0].baseName).toBe('ring')
+    expect(diamonds[0].folders.map((folder) => folder.folderName)).toEqual(['ring-front', 'ring-PV', 'ring-top'])
   })
 })
 

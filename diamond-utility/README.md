@@ -8,7 +8,7 @@ Core workflow:
 SELECT INPUT → SCAN → IDENTIFY DIAMOND GROUPS → SEARCH → SELECT VARIANTS → GET MP4 → RESULT
 ```
 
-Related folders are grouped by their common diamond / base name. Variant suffixes are short numbers (`-1`, `-2`, `-3`) or `-RG`.
+Related folders are grouped by their common prefix / diamond name. Views are `-1`, `-2`, `-RG`, or any letter name such as `-front`, `-PV`, `-top`. Numeric stone IDs like `260602-362` stay one diamond.
 
 Example:
 

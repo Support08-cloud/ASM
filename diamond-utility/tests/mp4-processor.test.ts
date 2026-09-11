@@ -63,6 +63,32 @@ describe('extractMp4s', () => {
     vi.useRealTimers()
   })
 
+  it('copies named views into one prefix folder', async () => {
+    vi.useFakeTimers()
+    const diamonds = groupDiamonds([
+      { folderName: 'ring-front', relativePath: 'ring-front', files: [{ name: 'video.mp4' }] },
+      { folderName: 'ring-PV', relativePath: 'ring-PV', files: [{ name: 'video.mp4' }] },
+      { folderName: 'ring-top', relativePath: 'ring-top', files: [{ name: 'video.mp4' }] },
+    ])
+    const pending = extractMp4s({
+      diamonds: withSelectedFolders(
+        diamonds,
+        diamonds[0].folders.map((folder) => folder.id),
+      ),
+      outputPath: 'D:/Output_Testing',
+      duplicatePolicy: 'rename',
+      onProgress: () => undefined,
+    })
+    await vi.runAllTimersAsync()
+    const result = await pending
+    expect(result.files.map((file) => file.outputPath)).toEqual([
+      'D:/Output_Testing/ring/ring-front.mp4',
+      'D:/Output_Testing/ring/ring-PV.mp4',
+      'D:/Output_Testing/ring/ring-top.mp4',
+    ])
+    vi.useRealTimers()
+  })
+
   it('skips missing MP4s and reports inaccessible folders as failures', async () => {
     vi.useFakeTimers()
     const diamonds = groupDiamonds([
