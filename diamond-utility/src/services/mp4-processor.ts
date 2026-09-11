@@ -1,5 +1,5 @@
 import { countKind } from '../models/diamond'
-import type { Diamond, DiamondView } from '../models/diamond'
+import type { Diamond, DiamondFolder } from '../models/diamond'
 import type { DiamondProcessJob, DuplicatePolicy, ProcessFileResult, ProcessProgress, ProcessResult } from '../models/processing'
 
 export interface ExtractOptions {
@@ -8,6 +8,7 @@ export interface ExtractOptions {
   duplicatePolicy: DuplicatePolicy
   signal?: AbortSignal
   onProgress: (progress: ProcessProgress) => void
+  copyFile?: (sourcePath: string, destinationPath: string) => Promise<void>
 }
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
@@ -28,22 +29,21 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   })
 }
 
-function outputName(view: DiamondView, fileName: string, index: number): string {
+function outputName(folder: DiamondFolder, fileName: string, index: number): string {
   const ext = fileName.includes('.') ? fileName.slice(fileName.lastIndexOf('.')) : '.mp4'
-  const viewLabel = view.view === 'Unknown' ? 'View' : view.view
-  if (index === 0) return `${viewLabel}${ext}`
-  return `${viewLabel}_${index + 1}${ext}`
+  if (index === 0) return `${folder.folderName}${ext}`
+  return `${folder.folderName}_${index + 1}${ext}`
 }
 
 export async function extractMp4s(options: ExtractOptions): Promise<ProcessResult> {
-  const { diamonds, outputPath, duplicatePolicy, signal, onProgress } = options
+  const { diamonds, outputPath, duplicatePolicy, signal, onProgress, copyFile } = options
   const jobs: DiamondProcessJob[] = diamonds.map((diamond) => ({
     diamondId: diamond.id,
     diamondName: diamond.baseName,
-    steps: diamond.views.map((view) => ({
-      viewId: view.id,
-      viewLabel: view.view,
-      folderName: view.folderName,
+    steps: diamond.folders.map((folder) => ({
+      viewId: folder.id,
+      viewLabel: folder.folderName,
+      folderName: folder.folderName,
       status: 'pending',
     })),
   }))
@@ -77,22 +77,22 @@ export async function extractMp4s(options: ExtractOptions): Promise<ProcessResul
     const job = jobs[diamondIndex]
     emit(diamondIndex, diamond.baseName)
 
-    for (let stepIndex = 0; stepIndex < diamond.views.length; stepIndex += 1) {
+    for (let stepIndex = 0; stepIndex < diamond.folders.length; stepIndex += 1) {
       if (signal?.aborted) {
         return finalize('error', copied, skipped, failed, files, outputPath, 'Processing cancelled.')
       }
-      const view = diamond.views[stepIndex]
+      const folder = diamond.folders[stepIndex]
       const step = job.steps[stepIndex]
       step.status = 'running'
 
-      if (!view.accessible) {
+      if (!folder.accessible) {
         step.status = 'error'
-        step.message = view.errorMessage ?? 'Folder inaccessible'
+        step.message = folder.errorMessage ?? 'Folder inaccessible'
         failed += 1
         files.push({
           diamondName: diamond.baseName,
-          viewLabel: view.view,
-          sourcePath: view.relativePath,
+          viewLabel: folder.folderName,
+          sourcePath: folder.relativePath,
           outputPath: '',
           status: 'failed',
           message: step.message,
@@ -102,15 +102,15 @@ export async function extractMp4s(options: ExtractOptions): Promise<ProcessResul
         continue
       }
 
-      const mp4s = view.files.filter((file) => file.kind === 'mp4')
+      const mp4s = folder.files.filter((file) => file.kind === 'mp4')
       if (mp4s.length === 0) {
         step.status = 'skipped'
         step.message = 'No MP4 found'
         skipped += 1
         files.push({
           diamondName: diamond.baseName,
-          viewLabel: view.view,
-          sourcePath: view.relativePath,
+          viewLabel: folder.folderName,
+          sourcePath: folder.relativePath,
           outputPath: '',
           status: 'skipped',
           message: 'No MP4 found',
@@ -122,7 +122,7 @@ export async function extractMp4s(options: ExtractOptions): Promise<ProcessResul
       }
 
       for (const [fileIndex, file] of mp4s.entries()) {
-        const destName = outputName(view, file.name, fileIndex)
+        const destName = outputName(folder, file.name, fileIndex)
         const destPath = joinPath(outputPath, diamond.baseName, destName)
         const key = destPath.toLowerCase()
         step.currentFile = file.relativePath
@@ -132,7 +132,7 @@ export async function extractMp4s(options: ExtractOptions): Promise<ProcessResul
           skipped += 1
           files.push({
             diamondName: diamond.baseName,
-            viewLabel: view.view,
+            viewLabel: folder.folderName,
             sourcePath: file.relativePath,
             outputPath: destPath,
             status: 'skipped',
@@ -144,18 +144,37 @@ export async function extractMp4s(options: ExtractOptions): Promise<ProcessResul
         const finalPath =
           usedNames.has(key) && duplicatePolicy === 'rename' ? uniquify(destPath, usedNames) : destPath
         usedNames.set(finalPath.toLowerCase(), 1)
+
+        if (copyFile && file.absolutePath) {
+          try {
+            await copyFile(file.absolutePath, finalPath)
+          } catch (error) {
+            failed += 1
+            files.push({
+              diamondName: diamond.baseName,
+              viewLabel: folder.folderName,
+              sourcePath: file.relativePath,
+              outputPath: finalPath,
+              status: 'failed',
+              message: error instanceof Error ? error.message : 'Copy failed',
+            })
+            continue
+          }
+        } else {
+          await sleep(140, signal)
+        }
+
         copied += 1
         files.push({
           diamondName: diamond.baseName,
-          viewLabel: view.view,
+          viewLabel: folder.folderName,
           sourcePath: file.relativePath,
           outputPath: finalPath,
           status: 'copied',
         })
-        await sleep(140, signal)
       }
 
-      step.status = countKind(view, 'mp4') > 1 ? 'done' : 'done'
+      step.status = countKind(folder, 'mp4') > 1 ? 'done' : 'done'
       completedSteps += 1
       emit(diamondIndex, diamond.baseName)
     }
@@ -179,9 +198,13 @@ function uniquify(path: string, used: Map<string, number>): string {
 }
 
 function joinPath(...parts: string[]): string {
+  const root = parts[0] ?? ''
+  const sep = root.includes('\\') ? '\\' : '/'
   return parts
-    .map((part, index) => (index === 0 ? part.replace(/[\\/]+$/, '') : part.replace(/^[\\/]+/, '')))
-    .join('/')
+    .map((part, index) =>
+      index === 0 ? part.replace(/[\\/]+$/, '') : part.replace(/^[\\/]+/, ''),
+    )
+    .join(sep)
 }
 
 function finalize(
@@ -211,5 +234,8 @@ export function countSelectedFolders(diamonds: Diamond[]): number {
 }
 
 export function countSelectedMp4s(diamonds: Diamond[]): number {
-  return diamonds.reduce((sum, diamond) => sum + diamond.mp4.found, 0)
+  return diamonds.reduce(
+    (sum, diamond) => sum + diamond.folders.reduce((inner, folder) => inner + countKind(folder, 'mp4'), 0),
+    0,
+  )
 }

@@ -1,10 +1,11 @@
 import {
   IconDashboard,
-  IconDiamond,
   IconHistory,
   IconOperations,
   IconSettings,
 } from '../common/Icon'
+import brandBlack from '../../assets/brand/v360-tech-black.svg'
+import brandWhite from '../../assets/brand/v360-tech-white.svg'
 import { useAppStore } from '../../app/state/AppStateContext'
 import type { ComponentType, SVGProps } from 'react'
 import type { RouteId } from '../../models/processing'
@@ -36,10 +37,14 @@ export function Sidebar() {
   return (
     <aside className="sidebar" aria-label="Primary">
       <div className="brand">
-        <IconDiamond className="brand-mark" size={28} />
+        <img
+          className="brand-logo"
+          src={state.settings.theme === 'light' ? brandBlack : brandWhite}
+          alt="Vision360"
+        />
         <div className="brand-copy">
           <div className="brand-name">Diamond Utility</div>
-          <div className="brand-sub">Local data processor</div>
+          <div className="brand-sub">Vision360</div>
         </div>
       </div>
       {SECTIONS.map((section) => (
@@ -85,14 +90,15 @@ export function Sidebar() {
 
 function statusLabel(phase: string): string {
   if (phase === 'scanning') return 'Scanning'
-  if (phase === 'processing') return 'Processing'
+  if (phase === 'processing' || phase === 'exporting') return 'Processing'
+  if (phase === 'editing') return 'Editing'
   if (phase === 'scan_error') return 'Scan error'
   if (phase === 'completed') return 'Complete'
   return 'Ready'
 }
 
 function dotClass(phase: string): string {
-  if (phase === 'scanning' || phase === 'processing') return ' busy'
+  if (phase === 'scanning' || phase === 'processing' || phase === 'exporting' || phase === 'editing') return ' busy'
   if (phase === 'scan_error') return ' err'
   if (phase === 'completed') return ' warn'
   return ''

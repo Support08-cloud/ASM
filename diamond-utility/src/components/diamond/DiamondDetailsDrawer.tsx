@@ -28,32 +28,32 @@ export function DiamondDetailsDrawer({ diamond, sourcePath, onClose }: DiamondDe
           <p className="mono" style={{ marginTop: 8 }}>
             {sourcePath ?? '—'}
           </p>
+          <p>
+            Output folder: <span className="mono">{diamond.baseName}</span>
+          </p>
           <div className="eyebrow" style={{ marginTop: 24 }}>
-            Views
+            Related folders
           </div>
-          {diamond.views.map((view) => {
-            const mp4 = countKind(view, 'mp4')
-            const json = countKind(view, 'json')
-            const images = countKind(view, 'image')
-            const icon = !view.accessible ? '✕' : mp4 === 0 ? '⚠' : '✓'
+          {diamond.folders.map((folder) => {
+            const mp4 = countKind(folder, 'mp4')
+            const icon = !folder.accessible ? '✕' : mp4 === 0 ? (folder.isBase ? '○' : '⚠') : '✓'
             return (
-              <div key={view.id} className="view-block">
+              <div key={folder.id} className="view-block">
                 <h4>
-                  {icon} {view.view} · {view.folderName}
+                  {icon} {folder.folderName}
+                  {folder.isBase ? ' · Base' : ` · ${folder.variant}`}
                 </h4>
-                {view.accessible ? (
+                {folder.accessible ? (
                   <div className="file-meta">
-                    <span>{mp4 ? 'MP4 ✓' : 'MP4 Missing'}</span>
-                    <span>{json ? 'JSON ✓' : 'JSON Missing'}</span>
-                    <span>{images ? `Images ${images}` : 'Images Missing'}</span>
+                    <span>{mp4 ? `MP4 ✓ → ${folder.folderName}.mp4` : folder.isBase ? 'No MP4 (not required)' : 'MP4 Missing'}</span>
                   </div>
                 ) : (
                   <p>
                     Unable to read this folder.
                     <br />
-                    {view.relativePath}
+                    {folder.relativePath}
                     <br />
-                    {view.errorMessage}
+                    {folder.errorMessage}
                   </p>
                 )}
               </div>
