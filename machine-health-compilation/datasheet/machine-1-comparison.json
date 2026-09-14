@@ -1,0 +1,2127 @@
+{
+  "title": "Machine-1 vs ideal vs B2B mini 5.0 EDF \u2014 verified extraction",
+  "generated_at": "2026-09-14T04:48:53Z",
+  "data_class": "synthetic_sample_fixtures",
+  "live_customer_files_available": false,
+  "live_paths_not_found": [
+    "D:\\demo\\INPUT\\MACHINE-1",
+    "D:\\demo\\IDEAL_JSON\\INPUT",
+    "D:\\demo\\IDEAL_JSON\\INPUT\\MACHINE-1"
+  ],
+  "provenance": {
+    "git_repo": "https://github.com/Support08-cloud/v360-machine-health",
+    "git_commit": "1af6f9d",
+    "sample_root": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat",
+    "mapping": {
+      "MACHINE-1": "Customer_Captures D-<stone>-01 (JSON MachineName = Machine 01)",
+      "Ideal_Reference / REC-*": "Ideal_Reference/D-1..D-6",
+      "V50_EDF_Reference": "B2B mini 5.0 EDF (JSON MachineName = V360 5.0 EDF)"
+    }
+  },
+  "assumptions": [
+    "Live D:\\demo Machine-1 / IDEAL_JSON files were not on this VM. Compilation uses the v360-machine-health sample_capture_data fixtures at commit 1af6f9d.",
+    "Machine 01 (flat suffix -01) is treated as the MACHINE-1 analog because that is the only complete customer machine labeled Machine 01 in the fixtures.",
+    "Stone folders are named D-1..D-6 because those are the actual source folder names. REC-1..REC-6 and M-1..M-6 are documented aliases only.",
+    "RGB Euclidean distance uses visionProfile.currentProfile R/G/B integers (or parsed equivalents).",
+    "OldRGB strings such as RGB(247, 244, 249) are parsed to three integers before distance is computed.",
+    "Wrapped JSON (array envelope, payload wrapper, Pascal-case Payload) is unwrapped using the same capture/payload walk as the V360 generator.",
+    "1.json\u20137.json and HTML were not present in these sample stone folders and are labeled absent. They were not invented.",
+    "video.mp4 files are 29-byte ASCII placeholders, not playable video.",
+    "still.jpg pixel size is 520x360 on disk. JSON width/height declare 1920x1080. Both values are reported; neither is altered.",
+    "No composite health score was computed. Upstream validation report scores are cited only as a separate-document note."
+  ],
+  "counts": {
+    "stones_compiled": 6,
+    "tiers": 3,
+    "json_files_read": 18,
+    "json_files_parsed_ok": 18,
+    "json_files_failed": 0,
+    "stone_folders_with_0_json": 18,
+    "stone_folders_with_still": 18,
+    "stone_folders_with_mp4": 18,
+    "stone_folders_with_html": 0,
+    "json_slots_1_through_7_found": 0,
+    "live_machine_1_folders_found": 0,
+    "rec_or_m_folders_found": 0
+  },
+  "stones": [
+    {
+      "stone": "D-1",
+      "aliases": [
+        "REC-1",
+        "M-1",
+        "D-1"
+      ],
+      "machine": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-1-01/0.json",
+        "wrap_style": "direct-object",
+        "fields": {
+          "R": 205,
+          "G": 209,
+          "B": 221,
+          "OldRGB": [
+            245,
+            244,
+            247
+          ],
+          "OldRGB_raw": [
+            245,
+            244,
+            247
+          ],
+          "NewRGB": [
+            249,
+            248,
+            251
+          ],
+          "NewRGB_raw": [
+            249,
+            248,
+            251
+          ],
+          "sharpness": 4.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:45",
+          "TotalTime_seconds": 45.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "Machine 01",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Round",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          205,
+          209,
+          221
+        ],
+        "old_rgb": [
+          245,
+          244,
+          247
+        ],
+        "new_rgb": [
+          249,
+          248,
+          251
+        ],
+        "correction_distance": 6.928203230275509,
+        "missing_requested_fields": []
+      },
+      "ideal": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-1/0.json",
+        "wrap_style": "direct-object",
+        "fields": {
+          "R": 204,
+          "G": 210,
+          "B": 220,
+          "OldRGB": [
+            244,
+            244,
+            246
+          ],
+          "OldRGB_raw": [
+            244,
+            244,
+            246
+          ],
+          "NewRGB": [
+            247,
+            247,
+            249
+          ],
+          "NewRGB_raw": [
+            247,
+            247,
+            249
+          ],
+          "sharpness": 4.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:41",
+          "TotalTime_seconds": 41.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "Ideal Reference",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Round",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          204,
+          210,
+          220
+        ],
+        "old_rgb": [
+          244,
+          244,
+          246
+        ],
+        "new_rgb": [
+          247,
+          247,
+          249
+        ],
+        "correction_distance": 5.196152422706632,
+        "missing_requested_fields": []
+      },
+      "edf": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-1/0.json",
+        "wrap_style": "direct-object",
+        "fields": {
+          "R": 205,
+          "G": 211,
+          "B": 221,
+          "OldRGB": [
+            244,
+            245,
+            246
+          ],
+          "OldRGB_raw": [
+            244,
+            245,
+            246
+          ],
+          "NewRGB": [
+            247,
+            248,
+            249
+          ],
+          "NewRGB_raw": [
+            247,
+            248,
+            249
+          ],
+          "sharpness": 7.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:49",
+          "TotalTime_seconds": 49.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "V360 5.0 EDF",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Round",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          205,
+          211,
+          221
+        ],
+        "old_rgb": [
+          244,
+          245,
+          246
+        ],
+        "new_rgb": [
+          247,
+          248,
+          249
+        ],
+        "correction_distance": 5.196152422706632,
+        "missing_requested_fields": []
+      },
+      "inventory": {
+        "machine": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 935
+            },
+            "still.jpg": {
+              "bytes": 16291,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        },
+        "ideal": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 945
+            },
+            "still.jpg": {
+              "bytes": 16410,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        },
+        "edf": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 939
+            },
+            "still.jpg": {
+              "bytes": 17595,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        }
+      },
+      "comparisons": {
+        "rgb_euclidean_machine_vs_ideal": 1.7320508075688772,
+        "rgb_euclidean_machine_vs_edf": 2.0,
+        "rgb_euclidean_ideal_vs_edf": 1.7320508075688772,
+        "oldrgb_newrgb_correction_distance": {
+          "machine": 6.928203230275509,
+          "ideal": 5.196152422706632,
+          "edf": 5.196152422706632
+        },
+        "sharpness_abs_diff": {
+          "machine_vs_ideal": 0.0,
+          "machine_vs_edf": 3.0
+        },
+        "contrast_abs_diff": {
+          "machine_vs_ideal": 0.0,
+          "machine_vs_edf": 0.0
+        },
+        "total_time_ratio": {
+          "machine_over_ideal": 1.0975609756097562,
+          "machine_over_edf": 0.9183673469387755
+        }
+      }
+    },
+    {
+      "stone": "D-2",
+      "aliases": [
+        "REC-2",
+        "M-2",
+        "D-2"
+      ],
+      "machine": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-2-01/0.json",
+        "wrap_style": "direct-object",
+        "fields": {
+          "R": 210,
+          "G": 212,
+          "B": 220,
+          "OldRGB": [
+            247,
+            244,
+            249
+          ],
+          "OldRGB_raw": "RGB(247, 244, 249)",
+          "NewRGB": [
+            251,
+            248,
+            253
+          ],
+          "NewRGB_raw": [
+            251,
+            248,
+            253
+          ],
+          "sharpness": 4.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:46",
+          "TotalTime_seconds": 46.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "Machine 01",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Oval",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          210,
+          212,
+          220
+        ],
+        "old_rgb": [
+          247,
+          244,
+          249
+        ],
+        "new_rgb": [
+          251,
+          248,
+          253
+        ],
+        "correction_distance": 6.928203230275509,
+        "missing_requested_fields": []
+      },
+      "ideal": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-2/0.json",
+        "wrap_style": "direct-object",
+        "fields": {
+          "R": 208,
+          "G": 212,
+          "B": 218,
+          "OldRGB": [
+            245,
+            245,
+            247
+          ],
+          "OldRGB_raw": "RGB(245, 245, 247)",
+          "NewRGB": [
+            248,
+            248,
+            250
+          ],
+          "NewRGB_raw": [
+            248,
+            248,
+            250
+          ],
+          "sharpness": 4.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:42",
+          "TotalTime_seconds": 42.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "Ideal Reference",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Oval",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          208,
+          212,
+          218
+        ],
+        "old_rgb": [
+          245,
+          245,
+          247
+        ],
+        "new_rgb": [
+          248,
+          248,
+          250
+        ],
+        "correction_distance": 5.196152422706632,
+        "missing_requested_fields": []
+      },
+      "edf": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-2/0.json",
+        "wrap_style": "direct-object",
+        "fields": {
+          "R": 209,
+          "G": 213,
+          "B": 219,
+          "OldRGB": [
+            245,
+            246,
+            247
+          ],
+          "OldRGB_raw": "RGB(245, 246, 247)",
+          "NewRGB": [
+            248,
+            249,
+            250
+          ],
+          "NewRGB_raw": [
+            248,
+            249,
+            250
+          ],
+          "sharpness": 7.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:50",
+          "TotalTime_seconds": 50.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "V360 5.0 EDF",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Oval",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          209,
+          213,
+          219
+        ],
+        "old_rgb": [
+          245,
+          246,
+          247
+        ],
+        "new_rgb": [
+          248,
+          249,
+          250
+        ],
+        "correction_distance": 5.196152422706632,
+        "missing_requested_fields": []
+      },
+      "inventory": {
+        "machine": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 907
+            },
+            "still.jpg": {
+              "bytes": 16177,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        },
+        "ideal": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 917
+            },
+            "still.jpg": {
+              "bytes": 16279,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        },
+        "edf": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 911
+            },
+            "still.jpg": {
+              "bytes": 17405,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        }
+      },
+      "comparisons": {
+        "rgb_euclidean_machine_vs_ideal": 2.8284271247461903,
+        "rgb_euclidean_machine_vs_edf": 1.7320508075688772,
+        "rgb_euclidean_ideal_vs_edf": 1.7320508075688772,
+        "oldrgb_newrgb_correction_distance": {
+          "machine": 6.928203230275509,
+          "ideal": 5.196152422706632,
+          "edf": 5.196152422706632
+        },
+        "sharpness_abs_diff": {
+          "machine_vs_ideal": 0.0,
+          "machine_vs_edf": 3.0
+        },
+        "contrast_abs_diff": {
+          "machine_vs_ideal": 0.0,
+          "machine_vs_edf": 0.0
+        },
+        "total_time_ratio": {
+          "machine_over_ideal": 1.0952380952380953,
+          "machine_over_edf": 0.92
+        }
+      }
+    },
+    {
+      "stone": "D-3",
+      "aliases": [
+        "REC-3",
+        "M-3",
+        "D-3"
+      ],
+      "machine": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-3-01/0.json",
+        "wrap_style": "direct-object",
+        "fields": {
+          "R": 200,
+          "G": 204,
+          "B": 216,
+          "OldRGB": [
+            243,
+            245,
+            246
+          ],
+          "OldRGB_raw": [
+            243,
+            245,
+            246
+          ],
+          "NewRGB": [
+            247,
+            249,
+            250
+          ],
+          "NewRGB_raw": [
+            247,
+            249,
+            250
+          ],
+          "sharpness": 4.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:47",
+          "TotalTime_seconds": 47.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "Machine 01",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Cushion",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          200,
+          204,
+          216
+        ],
+        "old_rgb": [
+          243,
+          245,
+          246
+        ],
+        "new_rgb": [
+          247,
+          249,
+          250
+        ],
+        "correction_distance": 6.928203230275509,
+        "missing_requested_fields": []
+      },
+      "ideal": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-3/0.json",
+        "wrap_style": "direct-object",
+        "fields": {
+          "R": 200,
+          "G": 206,
+          "B": 216,
+          "OldRGB": [
+            243,
+            244,
+            246
+          ],
+          "OldRGB_raw": [
+            243,
+            244,
+            246
+          ],
+          "NewRGB": [
+            246,
+            247,
+            249
+          ],
+          "NewRGB_raw": [
+            246,
+            247,
+            249
+          ],
+          "sharpness": 4.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:43",
+          "TotalTime_seconds": 43.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "Ideal Reference",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Cushion",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          200,
+          206,
+          216
+        ],
+        "old_rgb": [
+          243,
+          244,
+          246
+        ],
+        "new_rgb": [
+          246,
+          247,
+          249
+        ],
+        "correction_distance": 5.196152422706632,
+        "missing_requested_fields": []
+      },
+      "edf": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-3/0.json",
+        "wrap_style": "payload-pascal-case",
+        "fields": {
+          "R": 201,
+          "G": 207,
+          "B": 217,
+          "OldRGB": [
+            243,
+            245,
+            246
+          ],
+          "OldRGB_raw": [
+            243,
+            245,
+            246
+          ],
+          "NewRGB": [
+            246,
+            248,
+            249
+          ],
+          "NewRGB_raw": [
+            246,
+            248,
+            249
+          ],
+          "sharpness": 7.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:51",
+          "TotalTime_seconds": 51.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "V360 5.0 EDF",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Cushion",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          201,
+          207,
+          217
+        ],
+        "old_rgb": [
+          243,
+          245,
+          246
+        ],
+        "new_rgb": [
+          246,
+          248,
+          249
+        ],
+        "correction_distance": 5.196152422706632,
+        "missing_requested_fields": []
+      },
+      "inventory": {
+        "machine": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 937
+            },
+            "still.jpg": {
+              "bytes": 16361,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        },
+        "ideal": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 947
+            },
+            "still.jpg": {
+              "bytes": 16543,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        },
+        "edf": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 1050
+            },
+            "still.jpg": {
+              "bytes": 17733,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        }
+      },
+      "comparisons": {
+        "rgb_euclidean_machine_vs_ideal": 2.0,
+        "rgb_euclidean_machine_vs_edf": 3.3166247903554,
+        "rgb_euclidean_ideal_vs_edf": 1.7320508075688772,
+        "oldrgb_newrgb_correction_distance": {
+          "machine": 6.928203230275509,
+          "ideal": 5.196152422706632,
+          "edf": 5.196152422706632
+        },
+        "sharpness_abs_diff": {
+          "machine_vs_ideal": 0.0,
+          "machine_vs_edf": 3.0
+        },
+        "contrast_abs_diff": {
+          "machine_vs_ideal": 0.0,
+          "machine_vs_edf": 0.0
+        },
+        "total_time_ratio": {
+          "machine_over_ideal": 1.0930232558139534,
+          "machine_over_edf": 0.9215686274509803
+        }
+      }
+    },
+    {
+      "stone": "D-4",
+      "aliases": [
+        "REC-4",
+        "M-4",
+        "D-4"
+      ],
+      "machine": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-4-01/0.json",
+        "wrap_style": "direct-object",
+        "fields": {
+          "R": 213,
+          "G": 215,
+          "B": 225,
+          "OldRGB": [
+            247,
+            246,
+            248
+          ],
+          "OldRGB_raw": "RGB(247, 246, 248)",
+          "NewRGB": [
+            251,
+            250,
+            252
+          ],
+          "NewRGB_raw": [
+            251,
+            250,
+            252
+          ],
+          "sharpness": 4.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:48",
+          "TotalTime_seconds": 48.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "Machine 01",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Princess",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          213,
+          215,
+          225
+        ],
+        "old_rgb": [
+          247,
+          246,
+          248
+        ],
+        "new_rgb": [
+          251,
+          250,
+          252
+        ],
+        "correction_distance": 6.928203230275509,
+        "missing_requested_fields": []
+      },
+      "ideal": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-4/0.json",
+        "wrap_style": "direct-object",
+        "fields": {
+          "R": 212,
+          "G": 216,
+          "B": 224,
+          "OldRGB": [
+            246,
+            246,
+            247
+          ],
+          "OldRGB_raw": "RGB(246, 246, 247)",
+          "NewRGB": [
+            249,
+            249,
+            250
+          ],
+          "NewRGB_raw": [
+            249,
+            249,
+            250
+          ],
+          "sharpness": 4.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:44",
+          "TotalTime_seconds": 44.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "Ideal Reference",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Princess",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          212,
+          216,
+          224
+        ],
+        "old_rgb": [
+          246,
+          246,
+          247
+        ],
+        "new_rgb": [
+          249,
+          249,
+          250
+        ],
+        "correction_distance": 5.196152422706632,
+        "missing_requested_fields": []
+      },
+      "edf": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-4/0.json",
+        "wrap_style": "direct-object",
+        "fields": {
+          "R": 213,
+          "G": 217,
+          "B": 225,
+          "OldRGB": [
+            246,
+            247,
+            247
+          ],
+          "OldRGB_raw": [
+            246,
+            247,
+            247
+          ],
+          "NewRGB": [
+            249,
+            250,
+            250
+          ],
+          "NewRGB_raw": [
+            249,
+            250,
+            250
+          ],
+          "sharpness": 7.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:52",
+          "TotalTime_seconds": 52.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "V360 5.0 EDF",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Princess",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          213,
+          217,
+          225
+        ],
+        "old_rgb": [
+          246,
+          247,
+          247
+        ],
+        "new_rgb": [
+          249,
+          250,
+          250
+        ],
+        "correction_distance": 5.196152422706632,
+        "missing_requested_fields": []
+      },
+      "inventory": {
+        "machine": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 911
+            },
+            "still.jpg": {
+              "bytes": 16348,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        },
+        "ideal": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 921
+            },
+            "still.jpg": {
+              "bytes": 16538,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        },
+        "edf": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 942
+            },
+            "still.jpg": {
+              "bytes": 17751,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        }
+      },
+      "comparisons": {
+        "rgb_euclidean_machine_vs_ideal": 1.7320508075688772,
+        "rgb_euclidean_machine_vs_edf": 2.0,
+        "rgb_euclidean_ideal_vs_edf": 1.7320508075688772,
+        "oldrgb_newrgb_correction_distance": {
+          "machine": 6.928203230275509,
+          "ideal": 5.196152422706632,
+          "edf": 5.196152422706632
+        },
+        "sharpness_abs_diff": {
+          "machine_vs_ideal": 0.0,
+          "machine_vs_edf": 3.0
+        },
+        "contrast_abs_diff": {
+          "machine_vs_ideal": 0.0,
+          "machine_vs_edf": 0.0
+        },
+        "total_time_ratio": {
+          "machine_over_ideal": 1.0909090909090908,
+          "machine_over_edf": 0.9230769230769231
+        }
+      }
+    },
+    {
+      "stone": "D-5",
+      "aliases": [
+        "REC-5",
+        "M-5",
+        "D-5"
+      ],
+      "machine": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-5-01/0.json",
+        "wrap_style": "direct-object",
+        "fields": {
+          "R": 204,
+          "G": 209,
+          "B": 221,
+          "OldRGB": [
+            246,
+            244,
+            248
+          ],
+          "OldRGB_raw": [
+            246,
+            244,
+            248
+          ],
+          "NewRGB": [
+            250,
+            248,
+            252
+          ],
+          "NewRGB_raw": [
+            250,
+            248,
+            252
+          ],
+          "sharpness": 4.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:49",
+          "TotalTime_seconds": 49.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "Machine 01",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Emerald",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          204,
+          209,
+          221
+        ],
+        "old_rgb": [
+          246,
+          244,
+          248
+        ],
+        "new_rgb": [
+          250,
+          248,
+          252
+        ],
+        "correction_distance": 6.928203230275509,
+        "missing_requested_fields": []
+      },
+      "ideal": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-5/0.json",
+        "wrap_style": "array-envelope",
+        "fields": {
+          "R": 202,
+          "G": 209,
+          "B": 219,
+          "OldRGB": [
+            244,
+            245,
+            246
+          ],
+          "OldRGB_raw": [
+            244,
+            245,
+            246
+          ],
+          "NewRGB": [
+            247,
+            248,
+            249
+          ],
+          "NewRGB_raw": [
+            247,
+            248,
+            249
+          ],
+          "sharpness": 4.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:45",
+          "TotalTime_seconds": 45.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "Ideal Reference",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Emerald",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          202,
+          209,
+          219
+        ],
+        "old_rgb": [
+          244,
+          245,
+          246
+        ],
+        "new_rgb": [
+          247,
+          248,
+          249
+        ],
+        "correction_distance": 5.196152422706632,
+        "missing_requested_fields": []
+      },
+      "edf": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-5/0.json",
+        "wrap_style": "direct-object",
+        "fields": {
+          "R": 203,
+          "G": 210,
+          "B": 220,
+          "OldRGB": [
+            244,
+            246,
+            246
+          ],
+          "OldRGB_raw": [
+            244,
+            246,
+            246
+          ],
+          "NewRGB": [
+            247,
+            249,
+            249
+          ],
+          "NewRGB_raw": [
+            247,
+            249,
+            249
+          ],
+          "sharpness": 7.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:53",
+          "TotalTime_seconds": 53.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "V360 5.0 EDF",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Emerald",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          203,
+          210,
+          220
+        ],
+        "old_rgb": [
+          244,
+          246,
+          246
+        ],
+        "new_rgb": [
+          247,
+          249,
+          249
+        ],
+        "correction_distance": 5.196152422706632,
+        "missing_requested_fields": []
+      },
+      "inventory": {
+        "machine": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 937
+            },
+            "still.jpg": {
+              "bytes": 16525,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        },
+        "ideal": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 1187
+            },
+            "still.jpg": {
+              "bytes": 16539,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        },
+        "edf": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 941
+            },
+            "still.jpg": {
+              "bytes": 17823,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        }
+      },
+      "comparisons": {
+        "rgb_euclidean_machine_vs_ideal": 2.8284271247461903,
+        "rgb_euclidean_machine_vs_edf": 1.7320508075688772,
+        "rgb_euclidean_ideal_vs_edf": 1.7320508075688772,
+        "oldrgb_newrgb_correction_distance": {
+          "machine": 6.928203230275509,
+          "ideal": 5.196152422706632,
+          "edf": 5.196152422706632
+        },
+        "sharpness_abs_diff": {
+          "machine_vs_ideal": 0.0,
+          "machine_vs_edf": 3.0
+        },
+        "contrast_abs_diff": {
+          "machine_vs_ideal": 0.0,
+          "machine_vs_edf": 0.0
+        },
+        "total_time_ratio": {
+          "machine_over_ideal": 1.0888888888888888,
+          "machine_over_edf": 0.9245283018867925
+        }
+      }
+    },
+    {
+      "stone": "D-6",
+      "aliases": [
+        "REC-6",
+        "M-6",
+        "D-6"
+      ],
+      "machine": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-6-01/0.json",
+        "wrap_style": "array-envelope",
+        "fields": {
+          "R": 206,
+          "G": 209,
+          "B": 221,
+          "OldRGB": [
+            245,
+            245,
+            247
+          ],
+          "OldRGB_raw": [
+            245,
+            245,
+            247
+          ],
+          "NewRGB": [
+            249,
+            249,
+            251
+          ],
+          "NewRGB_raw": [
+            249,
+            249,
+            251
+          ],
+          "sharpness": 4.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:50",
+          "TotalTime_seconds": 50.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "Machine 01",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Pear",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          206,
+          209,
+          221
+        ],
+        "old_rgb": [
+          245,
+          245,
+          247
+        ],
+        "new_rgb": [
+          249,
+          249,
+          251
+        ],
+        "correction_distance": 6.928203230275509,
+        "missing_requested_fields": []
+      },
+      "ideal": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-6/0.json",
+        "wrap_style": "payload-wrapper",
+        "fields": {
+          "R": 206,
+          "G": 211,
+          "B": 221,
+          "OldRGB": [
+            245,
+            244,
+            247
+          ],
+          "OldRGB_raw": "RGB(245, 244, 247)",
+          "NewRGB": [
+            248,
+            247,
+            250
+          ],
+          "NewRGB_raw": [
+            248,
+            247,
+            250
+          ],
+          "sharpness": 4.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:46",
+          "TotalTime_seconds": 46.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "Ideal Reference",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Pear",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          206,
+          211,
+          221
+        ],
+        "old_rgb": [
+          245,
+          244,
+          247
+        ],
+        "new_rgb": [
+          248,
+          247,
+          250
+        ],
+        "correction_distance": 5.196152422706632,
+        "missing_requested_fields": []
+      },
+      "edf": {
+        "ok": true,
+        "source_path": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-6/0.json",
+        "wrap_style": "direct-object",
+        "fields": {
+          "R": 207,
+          "G": 212,
+          "B": 222,
+          "OldRGB": [
+            245,
+            245,
+            247
+          ],
+          "OldRGB_raw": [
+            245,
+            245,
+            247
+          ],
+          "NewRGB": [
+            248,
+            248,
+            250
+          ],
+          "NewRGB_raw": [
+            248,
+            248,
+            250
+          ],
+          "sharpness": 7.0,
+          "contrast": 0.0,
+          "TotalTime": "00:00:54",
+          "TotalTime_seconds": 54.0,
+          "Camera": "Canon EOS R8",
+          "MachineName": "V360 5.0 EDF",
+          "AV": "8.0",
+          "TV": "1/80",
+          "ISO": 100,
+          "WB": "Color Temperature",
+          "K": 5600,
+          "width": 1920.0,
+          "height": 1080.0,
+          "ImageQuality": "Fine",
+          "stoneType": "Pear",
+          "pictureStyle": "Neutral",
+          "quality": "L",
+          "lightName": "V360 Master Light",
+          "cameraAppVersion": "4.2.0",
+          "saturation": 0.0,
+          "colorTone": 0.0
+        },
+        "rgb": [
+          207,
+          212,
+          222
+        ],
+        "old_rgb": [
+          245,
+          245,
+          247
+        ],
+        "new_rgb": [
+          248,
+          248,
+          250
+        ],
+        "correction_distance": 5.196152422706632,
+        "missing_requested_fields": []
+      },
+      "inventory": {
+        "machine": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 1174
+            },
+            "still.jpg": {
+              "bytes": 16087,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        },
+        "ideal": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 1018
+            },
+            "still.jpg": {
+              "bytes": 16241,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        },
+        "edf": {
+          "source_dir_exists": true,
+          "present": [
+            "0.json",
+            "still.jpg",
+            "video.mp4"
+          ],
+          "absent": [
+            "1.json",
+            "2.json",
+            "3.json",
+            "4.json",
+            "5.json",
+            "6.json",
+            "7.json",
+            "html"
+          ],
+          "extra_files": [],
+          "details": {
+            "0.json": {
+              "bytes": 938
+            },
+            "still.jpg": {
+              "bytes": 17477,
+              "pixel_size": {
+                "width": 520,
+                "height": 360
+              }
+            },
+            "video.mp4": {
+              "bytes": 29,
+              "is_playable_mp4": false,
+              "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+              "note": "ASCII placeholder, not a playable MP4 bitstream"
+            }
+          }
+        }
+      },
+      "comparisons": {
+        "rgb_euclidean_machine_vs_ideal": 2.0,
+        "rgb_euclidean_machine_vs_edf": 3.3166247903554,
+        "rgb_euclidean_ideal_vs_edf": 1.7320508075688772,
+        "oldrgb_newrgb_correction_distance": {
+          "machine": 6.928203230275509,
+          "ideal": 5.196152422706632,
+          "edf": 5.196152422706632
+        },
+        "sharpness_abs_diff": {
+          "machine_vs_ideal": 0.0,
+          "machine_vs_edf": 3.0
+        },
+        "contrast_abs_diff": {
+          "machine_vs_ideal": 0.0,
+          "machine_vs_edf": 0.0
+        },
+        "total_time_ratio": {
+          "machine_over_ideal": 1.0869565217391304,
+          "machine_over_edf": 0.9259259259259259
+        }
+      }
+    }
+  ],
+  "files_read": [
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-1-01/0.json",
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-2-01/0.json",
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-3-01/0.json",
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-4-01/0.json",
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-5-01/0.json",
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-6-01/0.json",
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-1/0.json",
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-2/0.json",
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-3/0.json",
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-4/0.json",
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-5/0.json",
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-6/0.json",
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-1/0.json",
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-2/0.json",
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-3/0.json",
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-4/0.json",
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-5/0.json",
+    "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-6/0.json"
+  ]
+}
