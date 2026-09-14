@@ -11,7 +11,7 @@ The fixtures are synthetic demonstration content, not calibrated production meas
 ```
 machine-health-compilation/
   README.md                              This file: structure, purpose, assumptions
-  SOURCES.md                             Every path searched or read
+  SOURCES.md                             Every path searched or read (maintained separately)
   datasheet/
     machine-1-datasheet.md               Human-readable key fields and inventories
     machine-1-comparison.json            Machine vs ideal vs EDF, stone-wise

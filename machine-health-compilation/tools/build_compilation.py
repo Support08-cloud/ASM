@@ -373,8 +373,15 @@ def copy_existing(src: Path, dest: Path):
 def fmt(n, digits=3):
     if n is None:
         return "unavailable"
-    if isinstance(n, float):
-        return f"{n:.{digits}f}".rstrip("0").rstrip(".")
+    if isinstance(n, bool):
+        return str(n)
+    if isinstance(n, (int, float)):
+        if float(n).is_integer() and digits == 0:
+            return str(int(n))
+        text = f"{float(n):.{digits}f}"
+        if "." in text:
+            text = text.rstrip("0").rstrip(".")
+        return text if text not in {"", "-"} else "0"
     return str(n)
 
 
