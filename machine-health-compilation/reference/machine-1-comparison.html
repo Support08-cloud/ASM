@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Machine-1 vs ideal vs B2B mini 5.0 EDF — verified comparison</title>
+  <style>
+    :root {
+      --bg: #f6f5f3;
+      --card: #ffffff;
+      --ink: #2b2a29;
+      --muted: #5c5b59;
+      --line: #d4d2cc;
+      --accent: #8e4a12;
+      --warn: #7a4b00;
+      --warn-bg: #fff4e0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Calibri, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.45;
+    }
+    header {
+      background: #2b2a29;
+      color: #fefefe;
+      padding: 28px 32px 24px;
+    }
+    header h1 { margin: 0 0 8px; font-size: 1.55rem; font-weight: 650; }
+    header p { margin: 0; color: #d8d6d2; max-width: 70rem; }
+    .banner {
+      background: var(--warn-bg);
+      color: var(--warn);
+      border-bottom: 1px solid #e6d2a8;
+      padding: 12px 32px;
+      font-weight: 600;
+    }
+    main { padding: 24px 32px 48px; max-width: 76rem; }
+    h2 { margin: 0 0 8px; font-size: 1.2rem; }
+    h3 { margin: 20px 0 8px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+      margin: 12px 0 16px;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 7px 9px;
+      text-align: left;
+      vertical-align: top;
+      font-size: 0.92rem;
+    }
+    th { background: #ebecea; }
+    .stone {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px 18px 10px;
+      margin: 20px 0;
+    }
+    .aliases { color: var(--muted); font-size: 0.85rem; font-weight: 500; }
+    .media-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin: 12px 0 16px;
+    }
+    figure { margin: 0; }
+    figure img {
+      display: block;
+      border: 1px solid var(--line);
+      background: #ddd;
+      object-fit: cover;
+    }
+    figcaption { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 8px;
+      margin: 8px 0 12px;
+    }
+    .metric {
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      background: #fafaf8;
+    }
+    .metric span { display: block; color: var(--muted); font-size: 0.78rem; }
+    .metric strong { font-size: 1.05rem; }
+    .inventory, .muted { color: var(--muted); font-size: 0.9rem; }
+    code { font-size: 0.86em; }
+    nav a { color: var(--accent); margin-right: 12px; }
+    footer { padding: 0 32px 32px; color: var(--muted); font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Machine-1 vs ideal vs B2B mini 5.0 EDF</h1>
+    <p>Verified field extraction only. No invented measurements, scores, or media. Generated 2026-09-14T04:48:53Z.</p>
+  </header>
+  <div class="banner">
+    Live customer files at D:\demo\INPUT\MACHINE-1 and D:\demo\IDEAL_JSON were not available on this VM.
+    This page uses synthetic sample_capture_data from v360-machine-health commit 1af6f9d.
+    Values are demonstration fixtures, not production calibration.
+  </div>
+  <main>
+    <h2>What this page is</h2>
+    <p>Side-by-side comparison of three verified sources for six stones. Folder names in the compilation are <code>D-1</code>…<code>D-6</code> because those are the real sample names. Customer aliases <code>MACHINE-1</code>, <code>M-1</code>…<code>M-6</code>, and <code>REC-1</code>…<code>REC-6</code> are labeled here and were not present as folders on this VM.</p>
+    <table>
+      <thead><tr><th>User / V360 name</th><th>Source used</th><th>JSON MachineName</th></tr></thead>
+      <tbody>
+        <tr><td>MACHINE-1 / customer machine</td><td><code>Customer_Captures/D-&lt;stone&gt;-01</code></td><td>Machine 01</td></tr>
+        <tr><td>Ideal / REC-1…REC-6</td><td><code>Ideal_Reference/D-1</code>…<code>D-6</code></td><td>Ideal Reference</td></tr>
+        <tr><td>B2B mini 5.0 EDF</td><td><code>V50_EDF_Reference/D-1</code>…<code>D-6</code></td><td>V360 5.0 EDF</td></tr>
+      </tbody>
+    </table>
+    <h3>Counts</h3>
+    <ul>
+      <li>Stones compiled: 6</li>
+      <li>JSON files parsed: 18 (failed: 0)</li>
+      <li><code>1.json</code>–<code>7.json</code> found: 0</li>
+      <li>HTML files in stone folders: 0</li>
+      <li>Live MACHINE-1 folders found: 0</li>
+    </ul>
+    <nav>
+      <a href="#stone-1">D-1</a>
+      <a href="#stone-2">D-2</a>
+      <a href="#stone-3">D-3</a>
+      <a href="#stone-4">D-4</a>
+      <a href="#stone-5">D-5</a>
+      <a href="#stone-6">D-6</a>
+      <a href="#assumptions">Assumptions</a>
+    </nav>
+    
+<section class="stone" id="stone-1">
+  <h2>D-1 <span class="aliases">aliases: REC-1 / M-1</span></h2>
+  <p class="stone-type">Declared stoneType (machine): <strong>Round</strong></p>
+  <div class="media-row">
+    <figure>
+      <img src="../machine-1/D-1/still.jpg" alt="Machine-1 analog still D-1" width="260" height="180">
+      <figcaption>Machine 01 still.jpg</figcaption>
+    </figure>
+    <figure>
+      <img src="../stonewise-ideal-reference/D-1/still.jpg" alt="Ideal still D-1" width="260" height="180">
+      <figcaption>Ideal still.jpg</figcaption>
+    </figure>
+    <figure>
+      <img src="../b2b-mini-50-edf-reference/D-1/still.jpg" alt="5.0 EDF still D-1" width="260" height="180">
+      <figcaption>5.0 EDF still.jpg</figcaption>
+    </figure>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Field</th><th>Machine 01</th><th>Ideal</th><th>B2B mini 5.0 EDF</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>R, G, B</td><td>205, 209, 221</td><td>204, 210, 220</td><td>205, 211, 221</td></tr>
+      <tr><td>OldRGB (parsed)</td><td>245, 244, 247</td><td>244, 244, 246</td><td>244, 245, 246</td></tr>
+      <tr><td>NewRGB (parsed)</td><td>249, 248, 251</td><td>247, 247, 249</td><td>247, 248, 249</td></tr>
+      <tr><td>OldRGB → NewRGB distance</td><td>6.928</td><td>5.196</td><td>5.196</td></tr>
+      <tr><td>sharpness</td><td>4</td><td>4</td><td>7</td></tr>
+      <tr><td>contrast</td><td></td><td></td><td></td></tr>
+      <tr><td>TotalTime (raw)</td><td>00:00:45</td><td>00:00:41</td><td>00:00:49</td></tr>
+      <tr><td>TotalTime (seconds)</td><td>45</td><td>41</td><td>49</td></tr>
+      <tr><td>Camera</td><td>Canon EOS R8</td><td>Canon EOS R8</td><td>Canon EOS R8</td></tr>
+      <tr><td>MachineName</td><td>Machine 01</td><td>Ideal Reference</td><td>V360 5.0 EDF</td></tr>
+      <tr><td>AV / TV / ISO</td><td>8.0 / 1/80 / 100</td><td>8.0 / 1/80 / 100</td><td>8.0 / 1/80 / 100</td></tr>
+      <tr><td>WB / K</td><td>Color Temperature / 5600</td><td>Color Temperature / 5600</td><td>Color Temperature / 5600</td></tr>
+      <tr><td>JSON width × height</td><td>192 × 108</td><td>192 × 108</td><td>192 × 108</td></tr>
+      <tr><td>ImageQuality</td><td>Fine</td><td>Fine</td><td>Fine</td></tr>
+      <tr><td>0.json wrap style</td><td>direct-object</td><td>direct-object</td><td>direct-object</td></tr>
+    </tbody>
+  </table>
+  <div class="metrics">
+    <div class="metric"><span>RGB distance machine vs ideal</span><strong>1.732</strong></div>
+    <div class="metric"><span>RGB distance machine vs EDF</span><strong>2</strong></div>
+    <div class="metric"><span>Sharpness |M − I|</span><strong></strong></div>
+    <div class="metric"><span>Sharpness |M − EDF|</span><strong>3</strong></div>
+    <div class="metric"><span>Contrast |M − I|</span><strong></strong></div>
+    <div class="metric"><span>TotalTime ratio M / I</span><strong>1.0976</strong></div>
+    <div class="metric"><span>TotalTime ratio M / EDF</span><strong>0.9184</strong></div>
+  </div>
+  <p class="inventory">Files in source: 0.json, still.jpg, video.mp4 present. 1.json–7.json and HTML absent.</p>
+</section>
+
+<section class="stone" id="stone-2">
+  <h2>D-2 <span class="aliases">aliases: REC-2 / M-2</span></h2>
+  <p class="stone-type">Declared stoneType (machine): <strong>Oval</strong></p>
+  <div class="media-row">
+    <figure>
+      <img src="../machine-1/D-2/still.jpg" alt="Machine-1 analog still D-2" width="260" height="180">
+      <figcaption>Machine 01 still.jpg</figcaption>
+    </figure>
+    <figure>
+      <img src="../stonewise-ideal-reference/D-2/still.jpg" alt="Ideal still D-2" width="260" height="180">
+      <figcaption>Ideal still.jpg</figcaption>
+    </figure>
+    <figure>
+      <img src="../b2b-mini-50-edf-reference/D-2/still.jpg" alt="5.0 EDF still D-2" width="260" height="180">
+      <figcaption>5.0 EDF still.jpg</figcaption>
+    </figure>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Field</th><th>Machine 01</th><th>Ideal</th><th>B2B mini 5.0 EDF</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>R, G, B</td><td>210, 212, 220</td><td>208, 212, 218</td><td>209, 213, 219</td></tr>
+      <tr><td>OldRGB (parsed)</td><td>247, 244, 249</td><td>245, 245, 247</td><td>245, 246, 247</td></tr>
+      <tr><td>NewRGB (parsed)</td><td>251, 248, 253</td><td>248, 248, 250</td><td>248, 249, 250</td></tr>
+      <tr><td>OldRGB → NewRGB distance</td><td>6.928</td><td>5.196</td><td>5.196</td></tr>
+      <tr><td>sharpness</td><td>4</td><td>4</td><td>7</td></tr>
+      <tr><td>contrast</td><td></td><td></td><td></td></tr>
+      <tr><td>TotalTime (raw)</td><td>00:00:46</td><td>00:00:42</td><td>00:00:50</td></tr>
+      <tr><td>TotalTime (seconds)</td><td>46</td><td>42</td><td>5</td></tr>
+      <tr><td>Camera</td><td>Canon EOS R8</td><td>Canon EOS R8</td><td>Canon EOS R8</td></tr>
+      <tr><td>MachineName</td><td>Machine 01</td><td>Ideal Reference</td><td>V360 5.0 EDF</td></tr>
+      <tr><td>AV / TV / ISO</td><td>8.0 / 1/80 / 100</td><td>8.0 / 1/80 / 100</td><td>8.0 / 1/80 / 100</td></tr>
+      <tr><td>WB / K</td><td>Color Temperature / 5600</td><td>Color Temperature / 5600</td><td>Color Temperature / 5600</td></tr>
+      <tr><td>JSON width × height</td><td>192 × 108</td><td>192 × 108</td><td>192 × 108</td></tr>
+      <tr><td>ImageQuality</td><td>Fine</td><td>Fine</td><td>Fine</td></tr>
+      <tr><td>0.json wrap style</td><td>direct-object</td><td>direct-object</td><td>direct-object</td></tr>
+    </tbody>
+  </table>
+  <div class="metrics">
+    <div class="metric"><span>RGB distance machine vs ideal</span><strong>2.828</strong></div>
+    <div class="metric"><span>RGB distance machine vs EDF</span><strong>1.732</strong></div>
+    <div class="metric"><span>Sharpness |M − I|</span><strong></strong></div>
+    <div class="metric"><span>Sharpness |M − EDF|</span><strong>3</strong></div>
+    <div class="metric"><span>Contrast |M − I|</span><strong></strong></div>
+    <div class="metric"><span>TotalTime ratio M / I</span><strong>1.0952</strong></div>
+    <div class="metric"><span>TotalTime ratio M / EDF</span><strong>0.92</strong></div>
+  </div>
+  <p class="inventory">Files in source: 0.json, still.jpg, video.mp4 present. 1.json–7.json and HTML absent.</p>
+</section>
+
+<section class="stone" id="stone-3">
+  <h2>D-3 <span class="aliases">aliases: REC-3 / M-3</span></h2>
+  <p class="stone-type">Declared stoneType (machine): <strong>Cushion</strong></p>
+  <div class="media-row">
+    <figure>
+      <img src="../machine-1/D-3/still.jpg" alt="Machine-1 analog still D-3" width="260" height="180">
+      <figcaption>Machine 01 still.jpg</figcaption>
+    </figure>
+    <figure>
+      <img src="../stonewise-ideal-reference/D-3/still.jpg" alt="Ideal still D-3" width="260" height="180">
+      <figcaption>Ideal still.jpg</figcaption>
+    </figure>
+    <figure>
+      <img src="../b2b-mini-50-edf-reference/D-3/still.jpg" alt="5.0 EDF still D-3" width="260" height="180">
+      <figcaption>5.0 EDF still.jpg</figcaption>
+    </figure>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Field</th><th>Machine 01</th><th>Ideal</th><th>B2B mini 5.0 EDF</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>R, G, B</td><td>200, 204, 216</td><td>200, 206, 216</td><td>201, 207, 217</td></tr>
+      <tr><td>OldRGB (parsed)</td><td>243, 245, 246</td><td>243, 244, 246</td><td>243, 245, 246</td></tr>
+      <tr><td>NewRGB (parsed)</td><td>247, 249, 250</td><td>246, 247, 249</td><td>246, 248, 249</td></tr>
+      <tr><td>OldRGB → NewRGB distance</td><td>6.928</td><td>5.196</td><td>5.196</td></tr>
+      <tr><td>sharpness</td><td>4</td><td>4</td><td>7</td></tr>
+      <tr><td>contrast</td><td></td><td></td><td></td></tr>
+      <tr><td>TotalTime (raw)</td><td>00:00:47</td><td>00:00:43</td><td>00:00:51</td></tr>
+      <tr><td>TotalTime (seconds)</td><td>47</td><td>43</td><td>51</td></tr>
+      <tr><td>Camera</td><td>Canon EOS R8</td><td>Canon EOS R8</td><td>Canon EOS R8</td></tr>
+      <tr><td>MachineName</td><td>Machine 01</td><td>Ideal Reference</td><td>V360 5.0 EDF</td></tr>
+      <tr><td>AV / TV / ISO</td><td>8.0 / 1/80 / 100</td><td>8.0 / 1/80 / 100</td><td>8.0 / 1/80 / 100</td></tr>
+      <tr><td>WB / K</td><td>Color Temperature / 5600</td><td>Color Temperature / 5600</td><td>Color Temperature / 5600</td></tr>
+      <tr><td>JSON width × height</td><td>192 × 108</td><td>192 × 108</td><td>192 × 108</td></tr>
+      <tr><td>ImageQuality</td><td>Fine</td><td>Fine</td><td>Fine</td></tr>
+      <tr><td>0.json wrap style</td><td>direct-object</td><td>direct-object</td><td>payload-pascal-case</td></tr>
+    </tbody>
+  </table>
+  <div class="metrics">
+    <div class="metric"><span>RGB distance machine vs ideal</span><strong>2</strong></div>
+    <div class="metric"><span>RGB distance machine vs EDF</span><strong>3.317</strong></div>
+    <div class="metric"><span>Sharpness |M − I|</span><strong></strong></div>
+    <div class="metric"><span>Sharpness |M − EDF|</span><strong>3</strong></div>
+    <div class="metric"><span>Contrast |M − I|</span><strong></strong></div>
+    <div class="metric"><span>TotalTime ratio M / I</span><strong>1.093</strong></div>
+    <div class="metric"><span>TotalTime ratio M / EDF</span><strong>0.9216</strong></div>
+  </div>
+  <p class="inventory">Files in source: 0.json, still.jpg, video.mp4 present. 1.json–7.json and HTML absent.</p>
+</section>
+
+<section class="stone" id="stone-4">
+  <h2>D-4 <span class="aliases">aliases: REC-4 / M-4</span></h2>
+  <p class="stone-type">Declared stoneType (machine): <strong>Princess</strong></p>
+  <div class="media-row">
+    <figure>
+      <img src="../machine-1/D-4/still.jpg" alt="Machine-1 analog still D-4" width="260" height="180">
+      <figcaption>Machine 01 still.jpg</figcaption>
+    </figure>
+    <figure>
+      <img src="../stonewise-ideal-reference/D-4/still.jpg" alt="Ideal still D-4" width="260" height="180">
+      <figcaption>Ideal still.jpg</figcaption>
+    </figure>
+    <figure>
+      <img src="../b2b-mini-50-edf-reference/D-4/still.jpg" alt="5.0 EDF still D-4" width="260" height="180">
+      <figcaption>5.0 EDF still.jpg</figcaption>
+    </figure>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Field</th><th>Machine 01</th><th>Ideal</th><th>B2B mini 5.0 EDF</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>R, G, B</td><td>213, 215, 225</td><td>212, 216, 224</td><td>213, 217, 225</td></tr>
+      <tr><td>OldRGB (parsed)</td><td>247, 246, 248</td><td>246, 246, 247</td><td>246, 247, 247</td></tr>
+      <tr><td>NewRGB (parsed)</td><td>251, 250, 252</td><td>249, 249, 250</td><td>249, 250, 250</td></tr>
+      <tr><td>OldRGB → NewRGB distance</td><td>6.928</td><td>5.196</td><td>5.196</td></tr>
+      <tr><td>sharpness</td><td>4</td><td>4</td><td>7</td></tr>
+      <tr><td>contrast</td><td></td><td></td><td></td></tr>
+      <tr><td>TotalTime (raw)</td><td>00:00:48</td><td>00:00:44</td><td>00:00:52</td></tr>
+      <tr><td>TotalTime (seconds)</td><td>48</td><td>44</td><td>52</td></tr>
+      <tr><td>Camera</td><td>Canon EOS R8</td><td>Canon EOS R8</td><td>Canon EOS R8</td></tr>
+      <tr><td>MachineName</td><td>Machine 01</td><td>Ideal Reference</td><td>V360 5.0 EDF</td></tr>
+      <tr><td>AV / TV / ISO</td><td>8.0 / 1/80 / 100</td><td>8.0 / 1/80 / 100</td><td>8.0 / 1/80 / 100</td></tr>
+      <tr><td>WB / K</td><td>Color Temperature / 5600</td><td>Color Temperature / 5600</td><td>Color Temperature / 5600</td></tr>
+      <tr><td>JSON width × height</td><td>192 × 108</td><td>192 × 108</td><td>192 × 108</td></tr>
+      <tr><td>ImageQuality</td><td>Fine</td><td>Fine</td><td>Fine</td></tr>
+      <tr><td>0.json wrap style</td><td>direct-object</td><td>direct-object</td><td>direct-object</td></tr>
+    </tbody>
+  </table>
+  <div class="metrics">
+    <div class="metric"><span>RGB distance machine vs ideal</span><strong>1.732</strong></div>
+    <div class="metric"><span>RGB distance machine vs EDF</span><strong>2</strong></div>
+    <div class="metric"><span>Sharpness |M − I|</span><strong></strong></div>
+    <div class="metric"><span>Sharpness |M − EDF|</span><strong>3</strong></div>
+    <div class="metric"><span>Contrast |M − I|</span><strong></strong></div>
+    <div class="metric"><span>TotalTime ratio M / I</span><strong>1.0909</strong></div>
+    <div class="metric"><span>TotalTime ratio M / EDF</span><strong>0.9231</strong></div>
+  </div>
+  <p class="inventory">Files in source: 0.json, still.jpg, video.mp4 present. 1.json–7.json and HTML absent.</p>
+</section>
+
+<section class="stone" id="stone-5">
+  <h2>D-5 <span class="aliases">aliases: REC-5 / M-5</span></h2>
+  <p class="stone-type">Declared stoneType (machine): <strong>Emerald</strong></p>
+  <div class="media-row">
+    <figure>
+      <img src="../machine-1/D-5/still.jpg" alt="Machine-1 analog still D-5" width="260" height="180">
+      <figcaption>Machine 01 still.jpg</figcaption>
+    </figure>
+    <figure>
+      <img src="../stonewise-ideal-reference/D-5/still.jpg" alt="Ideal still D-5" width="260" height="180">
+      <figcaption>Ideal still.jpg</figcaption>
+    </figure>
+    <figure>
+      <img src="../b2b-mini-50-edf-reference/D-5/still.jpg" alt="5.0 EDF still D-5" width="260" height="180">
+      <figcaption>5.0 EDF still.jpg</figcaption>
+    </figure>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Field</th><th>Machine 01</th><th>Ideal</th><th>B2B mini 5.0 EDF</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>R, G, B</td><td>204, 209, 221</td><td>202, 209, 219</td><td>203, 210, 220</td></tr>
+      <tr><td>OldRGB (parsed)</td><td>246, 244, 248</td><td>244, 245, 246</td><td>244, 246, 246</td></tr>
+      <tr><td>NewRGB (parsed)</td><td>250, 248, 252</td><td>247, 248, 249</td><td>247, 249, 249</td></tr>
+      <tr><td>OldRGB → NewRGB distance</td><td>6.928</td><td>5.196</td><td>5.196</td></tr>
+      <tr><td>sharpness</td><td>4</td><td>4</td><td>7</td></tr>
+      <tr><td>contrast</td><td></td><td></td><td></td></tr>
+      <tr><td>TotalTime (raw)</td><td>00:00:49</td><td>00:00:45</td><td>00:00:53</td></tr>
+      <tr><td>TotalTime (seconds)</td><td>49</td><td>45</td><td>53</td></tr>
+      <tr><td>Camera</td><td>Canon EOS R8</td><td>Canon EOS R8</td><td>Canon EOS R8</td></tr>
+      <tr><td>MachineName</td><td>Machine 01</td><td>Ideal Reference</td><td>V360 5.0 EDF</td></tr>
+      <tr><td>AV / TV / ISO</td><td>8.0 / 1/80 / 100</td><td>8.0 / 1/80 / 100</td><td>8.0 / 1/80 / 100</td></tr>
+      <tr><td>WB / K</td><td>Color Temperature / 5600</td><td>Color Temperature / 5600</td><td>Color Temperature / 5600</td></tr>
+      <tr><td>JSON width × height</td><td>192 × 108</td><td>192 × 108</td><td>192 × 108</td></tr>
+      <tr><td>ImageQuality</td><td>Fine</td><td>Fine</td><td>Fine</td></tr>
+      <tr><td>0.json wrap style</td><td>direct-object</td><td>array-envelope</td><td>direct-object</td></tr>
+    </tbody>
+  </table>
+  <div class="metrics">
+    <div class="metric"><span>RGB distance machine vs ideal</span><strong>2.828</strong></div>
+    <div class="metric"><span>RGB distance machine vs EDF</span><strong>1.732</strong></div>
+    <div class="metric"><span>Sharpness |M − I|</span><strong></strong></div>
+    <div class="metric"><span>Sharpness |M − EDF|</span><strong>3</strong></div>
+    <div class="metric"><span>Contrast |M − I|</span><strong></strong></div>
+    <div class="metric"><span>TotalTime ratio M / I</span><strong>1.0889</strong></div>
+    <div class="metric"><span>TotalTime ratio M / EDF</span><strong>0.9245</strong></div>
+  </div>
+  <p class="inventory">Files in source: 0.json, still.jpg, video.mp4 present. 1.json–7.json and HTML absent.</p>
+</section>
+
+<section class="stone" id="stone-6">
+  <h2>D-6 <span class="aliases">aliases: REC-6 / M-6</span></h2>
+  <p class="stone-type">Declared stoneType (machine): <strong>Pear</strong></p>
+  <div class="media-row">
+    <figure>
+      <img src="../machine-1/D-6/still.jpg" alt="Machine-1 analog still D-6" width="260" height="180">
+      <figcaption>Machine 01 still.jpg</figcaption>
+    </figure>
+    <figure>
+      <img src="../stonewise-ideal-reference/D-6/still.jpg" alt="Ideal still D-6" width="260" height="180">
+      <figcaption>Ideal still.jpg</figcaption>
+    </figure>
+    <figure>
+      <img src="../b2b-mini-50-edf-reference/D-6/still.jpg" alt="5.0 EDF still D-6" width="260" height="180">
+      <figcaption>5.0 EDF still.jpg</figcaption>
+    </figure>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Field</th><th>Machine 01</th><th>Ideal</th><th>B2B mini 5.0 EDF</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>R, G, B</td><td>206, 209, 221</td><td>206, 211, 221</td><td>207, 212, 222</td></tr>
+      <tr><td>OldRGB (parsed)</td><td>245, 245, 247</td><td>245, 244, 247</td><td>245, 245, 247</td></tr>
+      <tr><td>NewRGB (parsed)</td><td>249, 249, 251</td><td>248, 247, 250</td><td>248, 248, 250</td></tr>
+      <tr><td>OldRGB → NewRGB distance</td><td>6.928</td><td>5.196</td><td>5.196</td></tr>
+      <tr><td>sharpness</td><td>4</td><td>4</td><td>7</td></tr>
+      <tr><td>contrast</td><td></td><td></td><td></td></tr>
+      <tr><td>TotalTime (raw)</td><td>00:00:50</td><td>00:00:46</td><td>00:00:54</td></tr>
+      <tr><td>TotalTime (seconds)</td><td>5</td><td>46</td><td>54</td></tr>
+      <tr><td>Camera</td><td>Canon EOS R8</td><td>Canon EOS R8</td><td>Canon EOS R8</td></tr>
+      <tr><td>MachineName</td><td>Machine 01</td><td>Ideal Reference</td><td>V360 5.0 EDF</td></tr>
+      <tr><td>AV / TV / ISO</td><td>8.0 / 1/80 / 100</td><td>8.0 / 1/80 / 100</td><td>8.0 / 1/80 / 100</td></tr>
+      <tr><td>WB / K</td><td>Color Temperature / 5600</td><td>Color Temperature / 5600</td><td>Color Temperature / 5600</td></tr>
+      <tr><td>JSON width × height</td><td>192 × 108</td><td>192 × 108</td><td>192 × 108</td></tr>
+      <tr><td>ImageQuality</td><td>Fine</td><td>Fine</td><td>Fine</td></tr>
+      <tr><td>0.json wrap style</td><td>array-envelope</td><td>payload-wrapper</td><td>direct-object</td></tr>
+    </tbody>
+  </table>
+  <div class="metrics">
+    <div class="metric"><span>RGB distance machine vs ideal</span><strong>2</strong></div>
+    <div class="metric"><span>RGB distance machine vs EDF</span><strong>3.317</strong></div>
+    <div class="metric"><span>Sharpness |M − I|</span><strong></strong></div>
+    <div class="metric"><span>Sharpness |M − EDF|</span><strong>3</strong></div>
+    <div class="metric"><span>Contrast |M − I|</span><strong></strong></div>
+    <div class="metric"><span>TotalTime ratio M / I</span><strong>1.087</strong></div>
+    <div class="metric"><span>TotalTime ratio M / EDF</span><strong>0.9259</strong></div>
+  </div>
+  <p class="inventory">Files in source: 0.json, still.jpg, video.mp4 present. 1.json–7.json and HTML absent.</p>
+</section>
+
+    <section id="assumptions">
+      <h2>Assumptions and limits</h2>
+      <ul><li>Live D:\demo Machine-1 / IDEAL_JSON files were not on this VM. Compilation uses the v360-machine-health sample_capture_data fixtures at commit 1af6f9d.</li>
+<li>Machine 01 (flat suffix -01) is treated as the MACHINE-1 analog because that is the only complete customer machine labeled Machine 01 in the fixtures.</li>
+<li>Stone folders are named D-1..D-6 because those are the actual source folder names. REC-1..REC-6 and M-1..M-6 are documented aliases only.</li>
+<li>RGB Euclidean distance uses visionProfile.currentProfile R/G/B integers (or parsed equivalents).</li>
+<li>OldRGB strings such as RGB(247, 244, 249) are parsed to three integers before distance is computed.</li>
+<li>Wrapped JSON (array envelope, payload wrapper, Pascal-case Payload) is unwrapped using the same capture/payload walk as the V360 generator.</li>
+<li>1.json–7.json and HTML were not present in these sample stone folders and are labeled absent. They were not invented.</li>
+<li>video.mp4 files are 29-byte ASCII placeholders, not playable video.</li>
+<li>still.jpg pixel size is 520x360 on disk. JSON width/height declare 1920x1080. Both values are reported; neither is altered.</li>
+<li>No composite health score was computed. Upstream validation report scores are cited only as a separate-document note.</li></ul>
+      <h3>Source files read</h3>
+      <ul><li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-1-01/0.json</code></li>
+<li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-2-01/0.json</code></li>
+<li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-3-01/0.json</code></li>
+<li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-4-01/0.json</code></li>
+<li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-5-01/0.json</code></li>
+<li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Customer_Captures/D-6-01/0.json</code></li>
+<li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-1/0.json</code></li>
+<li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-2/0.json</code></li>
+<li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-3/0.json</code></li>
+<li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-4/0.json</code></li>
+<li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-5/0.json</code></li>
+<li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/Ideal_Reference/D-6/0.json</code></li>
+<li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-1/0.json</code></li>
+<li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-2/0.json</code></li>
+<li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-3/0.json</code></li>
+<li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-4/0.json</code></li>
+<li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-5/0.json</code></li>
+<li><code>/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-6/0.json</code></li></ul>
+    </section>
+  </main>
+  <footer>V360 Machine Health compilation — sample fixtures only. Still images are 520×360 demonstration JPEGs. Videos are text placeholders.</footer>
+</body>
+</html>

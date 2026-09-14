@@ -1,0 +1,47 @@
+{
+  "visionProfile": {
+    "currentProfile": {
+      "R": 213,
+      "G": 217,
+      "B": 225,
+      "OldRGB": [
+        246,
+        247,
+        247
+      ],
+      "NewRGB": [
+        249,
+        250,
+        250
+      ],
+      "sharpness": 7,
+      "contrast": 0,
+      "saturation": 0,
+      "colorTone": 0,
+      "AV": "8.0",
+      "TV": "1/80",
+      "ISO": 100,
+      "K": 5600,
+      "WB": "Color Temperature",
+      "pictureStyle": "Neutral",
+      "quality": "L",
+      "width": 1920,
+      "height": 1080,
+      "tolerance": 5,
+      "cameraAppVersion": "4.2.0",
+      "machineName": "V360 5.0 EDF",
+      "stoneType": "Princess",
+      "isFreeze": false,
+      "lightName": "V360 Master Light"
+    }
+  },
+  "TotalTime": "00:00:52",
+  "ImageQuality": "Fine",
+  "Gamma": 1.0,
+  "MinInputLevel": 0,
+  "MaxInputLevel": 255,
+  "MinOutputLevel": 0,
+  "MaxOutputLevel": 255,
+  "Camera": "Canon EOS R8",
+  "MachineName": "V360 5.0 EDF"
+}
