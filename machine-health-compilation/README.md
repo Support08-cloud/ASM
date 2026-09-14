@@ -12,6 +12,9 @@ The fixtures are synthetic demonstration content, not calibrated production meas
 machine-health-compilation/
   README.md                              This file: structure, purpose, assumptions
   SOURCES.md                             Every path searched or read (maintained separately)
+  reports/
+    V360_Machine_Health_Report_Machine-1.html   SAMPLE standalone report (packaged generator)
+    V360_Machine_Health_Report_Machine-1.audit.json  Audit sidecar (no media payloads)
   datasheet/
     machine-1-datasheet.md               Human-readable key fields and inventories
     machine-1-comparison.json            Machine vs ideal vs EDF, stone-wise
@@ -28,12 +31,15 @@ machine-health-compilation/
     D-1/ … D-6/
   tools/
     build_compilation.py                 Re-runnable extractor (no invented fields)
+    generate_machine1_report.py          Runs packaged generator for Machine 01 only
 ```
 
 ## Purpose of each component
 
 | Path | Purpose |
 |---|---|
+| `reports/V360_Machine_Health_Report_Machine-1.html` | **SAMPLE** standalone Machine Health report (banner: live D:\\demo not on this VM) |
+| `reports/V360_Machine_Health_Report_Machine-1.audit.json` | Generator audit JSON + provenance; media data URLs stripped |
 | `datasheet/machine-1-datasheet.md` | Printable sheet of extracted numbers, missing slots, and formulas |
 | `datasheet/machine-1-comparison.json` | Same data for tools; includes per-stone inventories |
 | `reference/machine-1-comparison.html` | Browser view with stills and side-by-side fields |
@@ -97,9 +103,21 @@ are **not** Machine-1 captures and were **not** copied (large embedded JPEGs; di
 - 1.json–7.json and HTML were not present in these sample stone folders and are labeled absent. They were not invented.
 - video.mp4 files are 29-byte ASCII placeholders, not playable video.
 - still.jpg pixel size is 520x360 on disk. JSON width/height declare 1920x1080. Both values are reported; neither is altered.
-- No composite health score was computed. Upstream validation report scores are cited only as a separate-document note.
+- The datasheet does not invent a second scoring model. The SAMPLE standalone report in `reports/` is scored by the packaged generator (`provisional-v1.0`). Machine 01 composite on this run: **95/100** (color 95, picture 100, consistency 93, correction 96, speed 92) from 6/6 stones.
 
-## How to regenerate
+## SAMPLE Machine Health report
+
+`reports/V360_Machine_Health_Report_Machine-1.html` is one standalone report for the Machine-1 analog. The orange banner states that **live `D:\demo` is not on this VM**. Open the HTML locally; a matching audit sidecar sits beside it. Copies were also written to `/opt/cursor/artifacts/`. No Windows `D:\` save path was given, so nothing was written to `D:`.
+
+To regenerate the SAMPLE report (Playwright + Chrome, Machine 01 folders only):
+
+```bash
+python3 -m venv /tmp/pwvenv
+/tmp/pwvenv/bin/pip install playwright
+/tmp/pwvenv/bin/python machine-health-compilation/tools/generate_machine1_report.py
+```
+
+## How to regenerate the compilation
 
 ```bash
 python3 machine-health-compilation/tools/build_compilation.py

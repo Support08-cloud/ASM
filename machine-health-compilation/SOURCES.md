@@ -15,6 +15,7 @@ Only paths listed here were opened or hashed during this compilation. Nothing el
 | `/home/ubuntu/Machine Health Report` | Not present |
 | `/home/ubuntu/.cursor/projects/workspace/uploads` | `image-resize-tool_c9f5.html` only |
 | `/opt/cursor` capture trees | No MACHINE-1 / IDEAL_JSON / EDF capture folders |
+| `/tmp`, `/mnt`, `/media`, `/home/ubuntu` (re-search 2026-09-14 report run) | Still no live `D:\demo`, `MACHINE-1`, `IDEAL_JSON`, `REC-1`, or EDF capture trees |
 
 ## Fixtures used (v360-machine-health commit `1af6f9d`)
 

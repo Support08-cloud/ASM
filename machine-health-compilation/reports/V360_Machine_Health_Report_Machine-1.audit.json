@@ -1,0 +1,2156 @@
+{
+  "title": "V360 Machine Health Report — Machine-1 (SAMPLE)",
+  "live_customer_files_available": false,
+  "data_class": "synthetic_sample_fixtures",
+  "banner": "SAMPLE REPORT — live D:\\demo is not available on this Linux VM.",
+  "generated_at": "2026-09-14T05:48:03.049Z",
+  "save_path_note": "No Windows D: write was attempted. Report saved to the workspace reports/ folder and /opt/cursor/artifacts/. A user save path has not been provided yet.",
+  "provenance": {
+    "generator": "/tmp/v360-machine-health/executed_source/V360_Machine_Health_Audit_Generator.html",
+    "git_repo": "https://github.com/Support08-cloud/v360-machine-health",
+    "git_commit": "1af6f9d",
+    "sample_root": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat",
+    "customer_input": "/tmp/mh-machine1-only/Customer_Captures",
+    "mapping": {
+      "MACHINE-1": "Customer_Captures D-<stone>-01 (JSON MachineName = Machine 01)",
+      "Ideal_Reference / REC-*": "Ideal_Reference/D-1..D-6",
+      "V50_EDF_Reference": "B2B mini 5.0 EDF (JSON MachineName = V360 5.0 EDF)"
+    }
+  },
+  "counts": {
+    "stones_scored": 6,
+    "machines_in_report": 1,
+    "excluded_machines": 0,
+    "live_machine_1_folders_found": 0,
+    "json_slots_1_through_7_used": 0
+  },
+  "composite_scores": {
+    "Machine 01": 95
+  },
+  "assumptions": [
+    "Live D:\\demo Machine-1 / IDEAL_JSON files were not on this VM.",
+    "Machine 01 (flat suffix -01) is the MACHINE-1 analog in sample_capture_data.",
+    "Scoring used the packaged generator provisional-v1.0 formulas; missing metrics were not invented.",
+    "Normalization is not production-calibrated (see generator disclosure).",
+    "video.mp4 files in the sample tree are ASCII placeholders, not playable video."
+  ],
+  "generator_audit": {
+    "schemaVersion": "1.0.0",
+    "mode": "real",
+    "generatedAt": "2026-09-14T05:48:03.049Z",
+    "customer": {
+      "name": "SAMPLE Machine-1",
+      "preparedBy": "Cursor Cloud Agent",
+      "reportDate": "2026-09-14",
+      "contactPerson": "Format demo — live D:\\demo not uploaded",
+      "location": "Linux cloud VM (not Windows D:\\demo)"
+    },
+    "manifest": {
+      "customer": {
+        "name": "SAMPLE Machine-1",
+        "preparedBy": "Cursor Cloud Agent",
+        "reportDate": "2026-09-14",
+        "contactPerson": "Format demo — live D:\\demo not uploaded",
+        "location": "Linux cloud VM (not Windows D:\\demo)"
+      },
+      "generatedAt": "2026-09-14T05:48:03.043Z",
+      "folders": {
+        "ideal": {
+          "rootName": "Ideal_Reference",
+          "stonesDetected": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6"
+          ],
+          "jsonDetected": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6"
+          ]
+        },
+        "cust": {
+          "rootName": "Customer_Captures",
+          "pattern": "flat",
+          "machines": [
+            {
+              "name": "Machine 01",
+              "stonesDetected": [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6"
+              ],
+              "jsonDetected": [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6"
+              ]
+            }
+          ]
+        },
+        "v50": {
+          "rootName": "V50_Reference",
+          "stonesDetected": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6"
+          ],
+          "jsonDetected": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6"
+          ]
+        },
+        "v50edf": {
+          "rootName": "V50_EDF_Reference",
+          "stonesDetected": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6"
+          ],
+          "jsonDetected": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6"
+          ]
+        }
+      }
+    },
+    "stones": [
+      {
+        "id": "D-1",
+        "shape": "Master stone"
+      },
+      {
+        "id": "D-2",
+        "shape": "Master stone"
+      },
+      {
+        "id": "D-3",
+        "shape": "Master stone"
+      },
+      {
+        "id": "D-4",
+        "shape": "Princess"
+      },
+      {
+        "id": "D-5",
+        "shape": "Master stone"
+      },
+      {
+        "id": "D-6",
+        "shape": "Master stone"
+      }
+    ],
+    "calibration": {
+      "version": "provisional-v1.0 · 22 Aug 2026",
+      "color": {
+        "method": "Euclidean RGB",
+        "pointsPerUnit": 2.5,
+        "okDistance": 3,
+        "warnDistance": 8
+      },
+      "picture": {
+        "sharpnessPenalty": 12,
+        "contrastPenalty": 8
+      },
+      "consistency": {
+        "meanPenalty": 2.5,
+        "variabilityPenalty": 2
+      },
+      "correction": {
+        "pointsPerExcess": 2.5,
+        "variabilityPenalty": 1,
+        "okExcess": 8,
+        "warnExcess": 25
+      },
+      "speed": {
+        "method": "min(100, 100 × ideal seconds / machine seconds)"
+      },
+      "weights": {
+        "color": 30,
+        "picture": 20,
+        "consistency": 20,
+        "speed": 12,
+        "correction": 18
+      },
+      "thresholds": {
+        "healthy": 80,
+        "danger": 60
+      }
+    },
+    "sourceSummary": {
+      "idealRoot": "Ideal_Reference",
+      "customerRoot": "Customer_Captures",
+      "customerPattern": "flat",
+      "hasV50": true,
+      "hasV50Edf": true,
+      "partialPolicy": "strict-exclude",
+      "videosEmbedded": false,
+      "imageBytesEmbedded": 383797,
+      "videoBytesEmbedded": 0
+    },
+    "references": {
+      "ideal": {
+        "D-1": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "Ideal_Reference/D-1/still.jpg",
+              "bytes": 15535
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "Ideal_Reference/D-1/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 41,
+          "sharpness": 4,
+          "contrast": 0,
+          "sourcePath": "Ideal_Reference/D-1/0.json"
+        },
+        "D-2": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "Ideal_Reference/D-2/still.jpg",
+              "bytes": 15427
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "Ideal_Reference/D-2/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 42,
+          "sharpness": 4,
+          "contrast": 0,
+          "sourcePath": "Ideal_Reference/D-2/0.json"
+        },
+        "D-3": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "Ideal_Reference/D-3/still.jpg",
+              "bytes": 15651
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "Ideal_Reference/D-3/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 43,
+          "sharpness": 4,
+          "contrast": 0,
+          "sourcePath": "Ideal_Reference/D-3/0.json"
+        },
+        "D-4": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "Ideal_Reference/D-4/still.jpg",
+              "bytes": 15691
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "Ideal_Reference/D-4/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 44,
+          "sharpness": 4,
+          "contrast": 0,
+          "sourcePath": "Ideal_Reference/D-4/0.json"
+        },
+        "D-5": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "Ideal_Reference/D-5/still.jpg",
+              "bytes": 15673
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "Ideal_Reference/D-5/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 45,
+          "sharpness": 4,
+          "contrast": 0,
+          "sourcePath": "Ideal_Reference/D-5/0.json"
+        },
+        "D-6": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "Ideal_Reference/D-6/still.jpg",
+              "bytes": 15396
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "Ideal_Reference/D-6/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 46,
+          "sharpness": 4,
+          "contrast": 0,
+          "sourcePath": "Ideal_Reference/D-6/0.json"
+        }
+      },
+      "v50": {
+        "D-1": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "V50_Reference/D-1/still.jpg",
+              "bytes": 16238
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "V50_Reference/D-1/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 32,
+          "sharpness": 5,
+          "contrast": 0,
+          "sourcePath": "V50_Reference/D-1/0.json"
+        },
+        "D-2": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "V50_Reference/D-2/still.jpg",
+              "bytes": 16027
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "V50_Reference/D-2/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 33,
+          "sharpness": 5,
+          "contrast": 0,
+          "sourcePath": "V50_Reference/D-2/0.json"
+        },
+        "D-3": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "V50_Reference/D-3/still.jpg",
+              "bytes": 16369
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "V50_Reference/D-3/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 34,
+          "sharpness": 5,
+          "contrast": 0,
+          "sourcePath": "V50_Reference/D-3/0.json"
+        },
+        "D-4": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "V50_Reference/D-4/still.jpg",
+              "bytes": 16400
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "V50_Reference/D-4/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 35,
+          "sharpness": 5,
+          "contrast": 0,
+          "sourcePath": "V50_Reference/D-4/0.json"
+        },
+        "D-5": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "V50_Reference/D-5/still.jpg",
+              "bytes": 16414
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "V50_Reference/D-5/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 36,
+          "sharpness": 5,
+          "contrast": 0,
+          "sourcePath": "V50_Reference/D-5/0.json"
+        },
+        "D-6": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "V50_Reference/D-6/still.jpg",
+              "bytes": 16141
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "V50_Reference/D-6/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 37,
+          "sharpness": 5,
+          "contrast": 0,
+          "sourcePath": "V50_Reference/D-6/0.json"
+        }
+      },
+      "v50edf": {
+        "D-1": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "V50_EDF_Reference/D-1/still.jpg",
+              "bytes": 16630
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "V50_EDF_Reference/D-1/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 49,
+          "sharpness": 7,
+          "contrast": 0,
+          "sourcePath": "V50_EDF_Reference/D-1/0.json"
+        },
+        "D-2": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "V50_EDF_Reference/D-2/still.jpg",
+              "bytes": 16444
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "V50_EDF_Reference/D-2/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 50,
+          "sharpness": 7,
+          "contrast": 0,
+          "sourcePath": "V50_EDF_Reference/D-2/0.json"
+        },
+        "D-3": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "V50_EDF_Reference/D-3/still.jpg",
+              "bytes": 16738
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "V50_EDF_Reference/D-3/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 51,
+          "sharpness": 7,
+          "contrast": 0,
+          "sourcePath": "V50_EDF_Reference/D-3/0.json"
+        },
+        "D-4": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "V50_EDF_Reference/D-4/still.jpg",
+              "bytes": 16800
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "V50_EDF_Reference/D-4/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 52,
+          "sharpness": 7,
+          "contrast": 0,
+          "sourcePath": "V50_EDF_Reference/D-4/0.json"
+        },
+        "D-5": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "V50_EDF_Reference/D-5/still.jpg",
+              "bytes": 16831
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "V50_EDF_Reference/D-5/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 53,
+          "sharpness": 7,
+          "contrast": 0,
+          "sourcePath": "V50_EDF_Reference/D-5/0.json"
+        },
+        "D-6": {
+          "assets": {
+            "still": {
+              "name": "still.jpg",
+              "path": "V50_EDF_Reference/D-6/still.jpg",
+              "bytes": 16529
+            },
+            "video": {
+              "name": "video.mp4",
+              "path": "V50_EDF_Reference/D-6/video.mp4",
+              "bytes": 29
+            }
+          },
+          "totalSeconds": 54,
+          "sharpness": 7,
+          "contrast": 0,
+          "sourcePath": "V50_EDF_Reference/D-6/0.json"
+        }
+      }
+    },
+    "machines": [
+      {
+        "id": "Machine 01",
+        "scores": {
+          "color": 95,
+          "picture": 100,
+          "consistency": 93,
+          "correction": 96,
+          "speed": 92,
+          "composite": 95
+        },
+        "stonesData": [
+          {
+            "id": "D-1",
+            "available": true,
+            "score": 96,
+            "componentScores": {
+              "color": 95.6698729810778,
+              "picture": 100,
+              "consistency": 96.46446609406726,
+              "correction": 95.6698729810778,
+              "speed": 91.11111111111111
+            },
+            "color": {
+              "diamond": {
+                "mach": [
+                  205,
+                  209,
+                  221
+                ],
+                "ideal": [
+                  204,
+                  210,
+                  220
+                ],
+                "dist": 1.7320508075688772
+              },
+              "bg": {
+                "mach": [
+                  245,
+                  244,
+                  247
+                ],
+                "ideal": [
+                  244,
+                  244,
+                  246
+                ],
+                "dist": 1.4142135623730951
+              }
+            },
+            "quality": {
+              "sharpness": {
+                "mach": 4,
+                "ideal": 4,
+                "diff": 0
+              },
+              "contrast": {
+                "mach": 0,
+                "ideal": 0,
+                "diff": 0
+              }
+            },
+            "correction": {
+              "mach": 6.928203230275509,
+              "ideal": 5.196152422706632,
+              "over": 1.7320508075688767
+            },
+            "speed": {
+              "machSeconds": 45,
+              "idealSeconds": 41,
+              "score": 91.11111111111111
+            },
+            "metadata": {
+              "sections": [
+                {
+                  "name": "Capture settings",
+                  "rows": [
+                    {
+                      "field": "AV",
+                      "mach": "8.0",
+                      "ideal": "8.0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "TV",
+                      "mach": "1/80",
+                      "ideal": "1/80",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ISO",
+                      "mach": "100",
+                      "ideal": "100",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "K",
+                      "mach": "5600",
+                      "ideal": "5600",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "WB",
+                      "mach": "Color Temperature",
+                      "ideal": "Color Temperature",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "PictureStyle",
+                      "mach": "Neutral",
+                      "ideal": "Neutral",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Quality",
+                      "mach": "L",
+                      "ideal": "L",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Sharpness",
+                      "mach": "4",
+                      "ideal": "4",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Contrast",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Saturation",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ColorTone",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Frame / image settings",
+                  "rows": [
+                    {
+                      "field": "Width",
+                      "mach": "1920",
+                      "ideal": "1920",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Height",
+                      "mach": "1080",
+                      "ideal": "1080",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ImageQuality",
+                      "mach": "Fine",
+                      "ideal": "Fine",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Lighting / tone settings",
+                  "rows": [
+                    {
+                      "field": "Gamma",
+                      "mach": "1",
+                      "ideal": "1",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MinInputLevel",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MaxInputLevel",
+                      "mach": "255",
+                      "ideal": "255",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MinOutputLevel",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MaxOutputLevel",
+                      "mach": "255",
+                      "ideal": "255",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Tolerance",
+                      "mach": "5",
+                      "ideal": "5",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Machine / software",
+                  "rows": [
+                    {
+                      "field": "Camera",
+                      "mach": "Canon EOS R8",
+                      "ideal": "Canon EOS R8",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "CameraAppVersion",
+                      "mach": "4.2.0",
+                      "ideal": "4.2.0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MachineName",
+                      "mach": "Machine 01",
+                      "ideal": "Ideal Reference",
+                      "mismatch": true
+                    },
+                    {
+                      "field": "StoneType",
+                      "mach": "Round",
+                      "ideal": "Round",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "IsFreeze",
+                      "mach": "False",
+                      "ideal": "False",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Profile",
+                  "rows": [
+                    {
+                      "field": "VisionProfile",
+                      "mach": "V360 Master Light",
+                      "ideal": "V360 Master Light",
+                      "mismatch": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "assets": {
+              "machineStill": {
+                "name": "still.jpg",
+                "path": "Customer_Captures/D-1-01/still.jpg",
+                "bytes": 15463
+              },
+              "machineVideo": {
+                "name": "video.mp4",
+                "path": "Customer_Captures/D-1-01/video.mp4",
+                "bytes": 29
+              }
+            },
+            "sourcePath": "Customer_Captures/D-1-01/0.json",
+            "warnings": []
+          },
+          {
+            "id": "D-2",
+            "available": true,
+            "score": 95,
+            "componentScores": {
+              "color": 92.92893218813452,
+              "picture": 100,
+              "consistency": 92.5,
+              "correction": 95.6698729810778,
+              "speed": 91.30434782608695
+            },
+            "color": {
+              "diamond": {
+                "mach": [
+                  210,
+                  212,
+                  220
+                ],
+                "ideal": [
+                  208,
+                  212,
+                  218
+                ],
+                "dist": 2.8284271247461903
+              },
+              "bg": {
+                "mach": [
+                  247,
+                  244,
+                  249
+                ],
+                "ideal": [
+                  245,
+                  245,
+                  247
+                ],
+                "dist": 3
+              }
+            },
+            "quality": {
+              "sharpness": {
+                "mach": 4,
+                "ideal": 4,
+                "diff": 0
+              },
+              "contrast": {
+                "mach": 0,
+                "ideal": 0,
+                "diff": 0
+              }
+            },
+            "correction": {
+              "mach": 6.928203230275509,
+              "ideal": 5.196152422706632,
+              "over": 1.7320508075688767
+            },
+            "speed": {
+              "machSeconds": 46,
+              "idealSeconds": 42,
+              "score": 91.30434782608695
+            },
+            "metadata": {
+              "sections": [
+                {
+                  "name": "Capture settings",
+                  "rows": [
+                    {
+                      "field": "AV",
+                      "mach": "8.0",
+                      "ideal": "8.0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "TV",
+                      "mach": "1/80",
+                      "ideal": "1/80",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ISO",
+                      "mach": "100",
+                      "ideal": "100",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "K",
+                      "mach": "5600",
+                      "ideal": "5600",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "WB",
+                      "mach": "Color Temperature",
+                      "ideal": "Color Temperature",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "PictureStyle",
+                      "mach": "Neutral",
+                      "ideal": "Neutral",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Quality",
+                      "mach": "L",
+                      "ideal": "L",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Sharpness",
+                      "mach": "4",
+                      "ideal": "4",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Contrast",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Saturation",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ColorTone",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Frame / image settings",
+                  "rows": [
+                    {
+                      "field": "Width",
+                      "mach": "1920",
+                      "ideal": "1920",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Height",
+                      "mach": "1080",
+                      "ideal": "1080",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ImageQuality",
+                      "mach": "Fine",
+                      "ideal": "Fine",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Lighting / tone settings",
+                  "rows": [
+                    {
+                      "field": "Gamma",
+                      "mach": "1",
+                      "ideal": "1",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MinInputLevel",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MaxInputLevel",
+                      "mach": "255",
+                      "ideal": "255",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MinOutputLevel",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MaxOutputLevel",
+                      "mach": "255",
+                      "ideal": "255",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Tolerance",
+                      "mach": "5",
+                      "ideal": "5",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Machine / software",
+                  "rows": [
+                    {
+                      "field": "Camera",
+                      "mach": "Canon EOS R8",
+                      "ideal": "Canon EOS R8",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "CameraAppVersion",
+                      "mach": "4.2.0",
+                      "ideal": "4.2.0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MachineName",
+                      "mach": "Machine 01",
+                      "ideal": "Ideal Reference",
+                      "mismatch": true
+                    },
+                    {
+                      "field": "StoneType",
+                      "mach": "Oval",
+                      "ideal": "Oval",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "IsFreeze",
+                      "mach": "False",
+                      "ideal": "False",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Profile",
+                  "rows": [
+                    {
+                      "field": "VisionProfile",
+                      "mach": "V360 Master Light",
+                      "ideal": "V360 Master Light",
+                      "mismatch": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "assets": {
+              "machineStill": {
+                "name": "still.jpg",
+                "path": "Customer_Captures/D-2-01/still.jpg",
+                "bytes": 15375
+              },
+              "machineVideo": {
+                "name": "video.mp4",
+                "path": "Customer_Captures/D-2-01/video.mp4",
+                "bytes": 29
+              }
+            },
+            "sourcePath": "Customer_Captures/D-2-01/0.json",
+            "warnings": []
+          },
+          {
+            "id": "D-3",
+            "available": true,
+            "score": 96,
+            "componentScores": {
+              "color": 95,
+              "picture": 100,
+              "consistency": 97.5,
+              "correction": 95.6698729810778,
+              "speed": 91.48936170212765
+            },
+            "color": {
+              "diamond": {
+                "mach": [
+                  200,
+                  204,
+                  216
+                ],
+                "ideal": [
+                  200,
+                  206,
+                  216
+                ],
+                "dist": 2
+              },
+              "bg": {
+                "mach": [
+                  243,
+                  245,
+                  246
+                ],
+                "ideal": [
+                  243,
+                  244,
+                  246
+                ],
+                "dist": 1
+              }
+            },
+            "quality": {
+              "sharpness": {
+                "mach": 4,
+                "ideal": 4,
+                "diff": 0
+              },
+              "contrast": {
+                "mach": 0,
+                "ideal": 0,
+                "diff": 0
+              }
+            },
+            "correction": {
+              "mach": 6.928203230275509,
+              "ideal": 5.196152422706632,
+              "over": 1.7320508075688767
+            },
+            "speed": {
+              "machSeconds": 47,
+              "idealSeconds": 43,
+              "score": 91.48936170212765
+            },
+            "metadata": {
+              "sections": [
+                {
+                  "name": "Capture settings",
+                  "rows": [
+                    {
+                      "field": "AV",
+                      "mach": "8.0",
+                      "ideal": "8.0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "TV",
+                      "mach": "1/80",
+                      "ideal": "1/80",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ISO",
+                      "mach": "100",
+                      "ideal": "100",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "K",
+                      "mach": "5600",
+                      "ideal": "5600",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "WB",
+                      "mach": "Color Temperature",
+                      "ideal": "Color Temperature",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "PictureStyle",
+                      "mach": "Neutral",
+                      "ideal": "Neutral",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Quality",
+                      "mach": "L",
+                      "ideal": "L",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Sharpness",
+                      "mach": "4",
+                      "ideal": "4",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Contrast",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Saturation",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ColorTone",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Frame / image settings",
+                  "rows": [
+                    {
+                      "field": "Width",
+                      "mach": "1920",
+                      "ideal": "1920",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Height",
+                      "mach": "1080",
+                      "ideal": "1080",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ImageQuality",
+                      "mach": "Fine",
+                      "ideal": "Fine",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Lighting / tone settings",
+                  "rows": [
+                    {
+                      "field": "Gamma",
+                      "mach": "1",
+                      "ideal": "1",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MinInputLevel",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MaxInputLevel",
+                      "mach": "255",
+                      "ideal": "255",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MinOutputLevel",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MaxOutputLevel",
+                      "mach": "255",
+                      "ideal": "255",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Tolerance",
+                      "mach": "5",
+                      "ideal": "5",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Machine / software",
+                  "rows": [
+                    {
+                      "field": "Camera",
+                      "mach": "Canon EOS R8",
+                      "ideal": "Canon EOS R8",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "CameraAppVersion",
+                      "mach": "4.2.0",
+                      "ideal": "4.2.0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MachineName",
+                      "mach": "Machine 01",
+                      "ideal": "Ideal Reference",
+                      "mismatch": true
+                    },
+                    {
+                      "field": "StoneType",
+                      "mach": "Cushion",
+                      "ideal": "Cushion",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "IsFreeze",
+                      "mach": "False",
+                      "ideal": "False",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Profile",
+                  "rows": [
+                    {
+                      "field": "VisionProfile",
+                      "mach": "V360 Master Light",
+                      "ideal": "V360 Master Light",
+                      "mismatch": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "assets": {
+              "machineStill": {
+                "name": "still.jpg",
+                "path": "Customer_Captures/D-3-01/still.jpg",
+                "bytes": 15532
+              },
+              "machineVideo": {
+                "name": "video.mp4",
+                "path": "Customer_Captures/D-3-01/video.mp4",
+                "bytes": 29
+              }
+            },
+            "sourcePath": "Customer_Captures/D-3-01/0.json",
+            "warnings": []
+          },
+          {
+            "id": "D-4",
+            "available": true,
+            "score": 96,
+            "componentScores": {
+              "color": 95.6698729810778,
+              "picture": 100,
+              "consistency": 96.46446609406726,
+              "correction": 95.6698729810778,
+              "speed": 91.66666666666667
+            },
+            "color": {
+              "diamond": {
+                "mach": [
+                  213,
+                  215,
+                  225
+                ],
+                "ideal": [
+                  212,
+                  216,
+                  224
+                ],
+                "dist": 1.7320508075688772
+              },
+              "bg": {
+                "mach": [
+                  247,
+                  246,
+                  248
+                ],
+                "ideal": [
+                  246,
+                  246,
+                  247
+                ],
+                "dist": 1.4142135623730951
+              }
+            },
+            "quality": {
+              "sharpness": {
+                "mach": 4,
+                "ideal": 4,
+                "diff": 0
+              },
+              "contrast": {
+                "mach": 0,
+                "ideal": 0,
+                "diff": 0
+              }
+            },
+            "correction": {
+              "mach": 6.928203230275509,
+              "ideal": 5.196152422706632,
+              "over": 1.7320508075688767
+            },
+            "speed": {
+              "machSeconds": 48,
+              "idealSeconds": 44,
+              "score": 91.66666666666667
+            },
+            "metadata": {
+              "sections": [
+                {
+                  "name": "Capture settings",
+                  "rows": [
+                    {
+                      "field": "AV",
+                      "mach": "8.0",
+                      "ideal": "8.0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "TV",
+                      "mach": "1/80",
+                      "ideal": "1/80",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ISO",
+                      "mach": "100",
+                      "ideal": "100",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "K",
+                      "mach": "5600",
+                      "ideal": "5600",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "WB",
+                      "mach": "Color Temperature",
+                      "ideal": "Color Temperature",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "PictureStyle",
+                      "mach": "Neutral",
+                      "ideal": "Neutral",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Quality",
+                      "mach": "L",
+                      "ideal": "L",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Sharpness",
+                      "mach": "4",
+                      "ideal": "4",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Contrast",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Saturation",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ColorTone",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Frame / image settings",
+                  "rows": [
+                    {
+                      "field": "Width",
+                      "mach": "1920",
+                      "ideal": "1920",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Height",
+                      "mach": "1080",
+                      "ideal": "1080",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ImageQuality",
+                      "mach": "Fine",
+                      "ideal": "Fine",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Lighting / tone settings",
+                  "rows": [
+                    {
+                      "field": "Gamma",
+                      "mach": "1",
+                      "ideal": "1",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MinInputLevel",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MaxInputLevel",
+                      "mach": "255",
+                      "ideal": "255",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MinOutputLevel",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MaxOutputLevel",
+                      "mach": "255",
+                      "ideal": "255",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Tolerance",
+                      "mach": "5",
+                      "ideal": "5",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Machine / software",
+                  "rows": [
+                    {
+                      "field": "Camera",
+                      "mach": "Canon EOS R8",
+                      "ideal": "Canon EOS R8",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "CameraAppVersion",
+                      "mach": "4.2.0",
+                      "ideal": "4.2.0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MachineName",
+                      "mach": "Machine 01",
+                      "ideal": "Ideal Reference",
+                      "mismatch": true
+                    },
+                    {
+                      "field": "StoneType",
+                      "mach": "Princess",
+                      "ideal": "Princess",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "IsFreeze",
+                      "mach": "False",
+                      "ideal": "False",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Profile",
+                  "rows": [
+                    {
+                      "field": "VisionProfile",
+                      "mach": "V360 Master Light",
+                      "ideal": "V360 Master Light",
+                      "mismatch": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "assets": {
+              "machineStill": {
+                "name": "still.jpg",
+                "path": "Customer_Captures/D-4-01/still.jpg",
+                "bytes": 15545
+              },
+              "machineVideo": {
+                "name": "video.mp4",
+                "path": "Customer_Captures/D-4-01/video.mp4",
+                "bytes": 29
+              }
+            },
+            "sourcePath": "Customer_Captures/D-4-01/0.json",
+            "warnings": []
+          },
+          {
+            "id": "D-5",
+            "available": true,
+            "score": 95,
+            "componentScores": {
+              "color": 92.92893218813452,
+              "picture": 100,
+              "consistency": 92.5,
+              "correction": 95.6698729810778,
+              "speed": 91.83673469387755
+            },
+            "color": {
+              "diamond": {
+                "mach": [
+                  204,
+                  209,
+                  221
+                ],
+                "ideal": [
+                  202,
+                  209,
+                  219
+                ],
+                "dist": 2.8284271247461903
+              },
+              "bg": {
+                "mach": [
+                  246,
+                  244,
+                  248
+                ],
+                "ideal": [
+                  244,
+                  245,
+                  246
+                ],
+                "dist": 3
+              }
+            },
+            "quality": {
+              "sharpness": {
+                "mach": 4,
+                "ideal": 4,
+                "diff": 0
+              },
+              "contrast": {
+                "mach": 0,
+                "ideal": 0,
+                "diff": 0
+              }
+            },
+            "correction": {
+              "mach": 6.928203230275509,
+              "ideal": 5.196152422706632,
+              "over": 1.7320508075688767
+            },
+            "speed": {
+              "machSeconds": 49,
+              "idealSeconds": 45,
+              "score": 91.83673469387755
+            },
+            "metadata": {
+              "sections": [
+                {
+                  "name": "Capture settings",
+                  "rows": [
+                    {
+                      "field": "AV",
+                      "mach": "8.0",
+                      "ideal": "8.0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "TV",
+                      "mach": "1/80",
+                      "ideal": "1/80",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ISO",
+                      "mach": "100",
+                      "ideal": "100",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "K",
+                      "mach": "5600",
+                      "ideal": "5600",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "WB",
+                      "mach": "Color Temperature",
+                      "ideal": "Color Temperature",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "PictureStyle",
+                      "mach": "Neutral",
+                      "ideal": "Neutral",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Quality",
+                      "mach": "L",
+                      "ideal": "L",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Sharpness",
+                      "mach": "4",
+                      "ideal": "4",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Contrast",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Saturation",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ColorTone",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Frame / image settings",
+                  "rows": [
+                    {
+                      "field": "Width",
+                      "mach": "1920",
+                      "ideal": "1920",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Height",
+                      "mach": "1080",
+                      "ideal": "1080",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ImageQuality",
+                      "mach": "Fine",
+                      "ideal": "Fine",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Lighting / tone settings",
+                  "rows": [
+                    {
+                      "field": "Gamma",
+                      "mach": "1",
+                      "ideal": "1",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MinInputLevel",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MaxInputLevel",
+                      "mach": "255",
+                      "ideal": "255",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MinOutputLevel",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MaxOutputLevel",
+                      "mach": "255",
+                      "ideal": "255",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Tolerance",
+                      "mach": "5",
+                      "ideal": "5",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Machine / software",
+                  "rows": [
+                    {
+                      "field": "Camera",
+                      "mach": "Canon EOS R8",
+                      "ideal": "Canon EOS R8",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "CameraAppVersion",
+                      "mach": "4.2.0",
+                      "ideal": "4.2.0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MachineName",
+                      "mach": "Machine 01",
+                      "ideal": "Ideal Reference",
+                      "mismatch": true
+                    },
+                    {
+                      "field": "StoneType",
+                      "mach": "Emerald",
+                      "ideal": "Emerald",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "IsFreeze",
+                      "mach": "False",
+                      "ideal": "False",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Profile",
+                  "rows": [
+                    {
+                      "field": "VisionProfile",
+                      "mach": "V360 Master Light",
+                      "ideal": "V360 Master Light",
+                      "mismatch": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "assets": {
+              "machineStill": {
+                "name": "still.jpg",
+                "path": "Customer_Captures/D-5-01/still.jpg",
+                "bytes": 15687
+              },
+              "machineVideo": {
+                "name": "video.mp4",
+                "path": "Customer_Captures/D-5-01/video.mp4",
+                "bytes": 29
+              }
+            },
+            "sourcePath": "Customer_Captures/D-5-01/0.json",
+            "warnings": []
+          },
+          {
+            "id": "D-6",
+            "available": true,
+            "score": 96,
+            "componentScores": {
+              "color": 95,
+              "picture": 100,
+              "consistency": 97.5,
+              "correction": 95.6698729810778,
+              "speed": 92
+            },
+            "color": {
+              "diamond": {
+                "mach": [
+                  206,
+                  209,
+                  221
+                ],
+                "ideal": [
+                  206,
+                  211,
+                  221
+                ],
+                "dist": 2
+              },
+              "bg": {
+                "mach": [
+                  245,
+                  245,
+                  247
+                ],
+                "ideal": [
+                  245,
+                  244,
+                  247
+                ],
+                "dist": 1
+              }
+            },
+            "quality": {
+              "sharpness": {
+                "mach": 4,
+                "ideal": 4,
+                "diff": 0
+              },
+              "contrast": {
+                "mach": 0,
+                "ideal": 0,
+                "diff": 0
+              }
+            },
+            "correction": {
+              "mach": 6.928203230275509,
+              "ideal": 5.196152422706632,
+              "over": 1.7320508075688767
+            },
+            "speed": {
+              "machSeconds": 50,
+              "idealSeconds": 46,
+              "score": 92
+            },
+            "metadata": {
+              "sections": [
+                {
+                  "name": "Capture settings",
+                  "rows": [
+                    {
+                      "field": "AV",
+                      "mach": "8.0",
+                      "ideal": "8.0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "TV",
+                      "mach": "1/80",
+                      "ideal": "1/80",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ISO",
+                      "mach": "100",
+                      "ideal": "100",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "K",
+                      "mach": "5600",
+                      "ideal": "5600",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "WB",
+                      "mach": "Color Temperature",
+                      "ideal": "Color Temperature",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "PictureStyle",
+                      "mach": "Neutral",
+                      "ideal": "Neutral",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Quality",
+                      "mach": "L",
+                      "ideal": "L",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Sharpness",
+                      "mach": "4",
+                      "ideal": "4",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Contrast",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Saturation",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ColorTone",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Frame / image settings",
+                  "rows": [
+                    {
+                      "field": "Width",
+                      "mach": "1920",
+                      "ideal": "1920",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Height",
+                      "mach": "1080",
+                      "ideal": "1080",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "ImageQuality",
+                      "mach": "Fine",
+                      "ideal": "Fine",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Lighting / tone settings",
+                  "rows": [
+                    {
+                      "field": "Gamma",
+                      "mach": "1",
+                      "ideal": "1",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MinInputLevel",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MaxInputLevel",
+                      "mach": "255",
+                      "ideal": "255",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MinOutputLevel",
+                      "mach": "0",
+                      "ideal": "0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MaxOutputLevel",
+                      "mach": "255",
+                      "ideal": "255",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "Tolerance",
+                      "mach": "5",
+                      "ideal": "5",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Machine / software",
+                  "rows": [
+                    {
+                      "field": "Camera",
+                      "mach": "Canon EOS R8",
+                      "ideal": "Canon EOS R8",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "CameraAppVersion",
+                      "mach": "4.2.0",
+                      "ideal": "4.2.0",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "MachineName",
+                      "mach": "Machine 01",
+                      "ideal": "Ideal Reference",
+                      "mismatch": true
+                    },
+                    {
+                      "field": "StoneType",
+                      "mach": "Pear",
+                      "ideal": "Pear",
+                      "mismatch": false
+                    },
+                    {
+                      "field": "IsFreeze",
+                      "mach": "False",
+                      "ideal": "False",
+                      "mismatch": false
+                    }
+                  ]
+                },
+                {
+                  "name": "Profile",
+                  "rows": [
+                    {
+                      "field": "VisionProfile",
+                      "mach": "V360 Master Light",
+                      "ideal": "V360 Master Light",
+                      "mismatch": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "assets": {
+              "machineStill": {
+                "name": "still.jpg",
+                "path": "Customer_Captures/D-6-01/still.jpg",
+                "bytes": 15261
+              },
+              "machineVideo": {
+                "name": "video.mp4",
+                "path": "Customer_Captures/D-6-01/video.mp4",
+                "bytes": 29
+              }
+            },
+            "sourcePath": "Customer_Captures/D-6-01/0.json",
+            "warnings": []
+          }
+        ],
+        "coverage": {
+          "matched": 6,
+          "expected": 6,
+          "partial": false,
+          "missing": []
+        },
+        "recommendedFixes": [
+          {
+            "field": "MachineName",
+            "actual": "Machine 01",
+            "ideal": "Ideal Reference",
+            "count": 6,
+            "total": 6
+          }
+        ],
+        "rawMetrics": {
+          "meanDiamondDistance": 2.186825977438356,
+          "meanBackgroundDistance": 1.804737854124365,
+          "backgroundResidualVariability": 1.4142135623730951,
+          "meanCorrectionExcess": 1.7320508075688767,
+          "correctionExcessStdDev": 0,
+          "meanMachineSeconds": 47.5,
+          "meanIdealSeconds": 43.5
+        }
+      }
+    ],
+    "excludedMachines": [],
+    "warnings": []
+  }
+}
