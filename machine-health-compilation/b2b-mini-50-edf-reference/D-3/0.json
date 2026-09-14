@@ -1,0 +1,49 @@
+{
+  "Payload": {
+    "VisionProfile": {
+      "CurrentProfile": {
+        "R": 201,
+        "G": 207,
+        "B": 217,
+        "OldRGB": [
+          243,
+          245,
+          246
+        ],
+        "NewRGB": [
+          246,
+          248,
+          249
+        ],
+        "sharpness": 7,
+        "contrast": 0,
+        "saturation": 0,
+        "colorTone": 0,
+        "AV": "8.0",
+        "TV": "1/80",
+        "ISO": 100,
+        "K": 5600,
+        "WB": "Color Temperature",
+        "pictureStyle": "Neutral",
+        "quality": "L",
+        "width": 1920,
+        "height": 1080,
+        "tolerance": 5,
+        "cameraAppVersion": "4.2.0",
+        "machineName": "V360 5.0 EDF",
+        "stoneType": "Cushion",
+        "isFreeze": false,
+        "lightName": "V360 Master Light"
+      }
+    },
+    "totaltime": "00:00:51",
+    "imagequality": "Fine",
+    "gamma": 1.0,
+    "mininputlevel": 0,
+    "maxinputlevel": 255,
+    "minoutputlevel": 0,
+    "maxoutputlevel": 255,
+    "camera": "Canon EOS R8",
+    "machinename": "V360 5.0 EDF"
+  }
+}

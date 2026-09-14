@@ -1,0 +1,53 @@
+{
+  "stone": "D-2",
+  "aliases": [
+    "REC-2",
+    "M-2",
+    "D-2"
+  ],
+  "tier": "B2B mini 5.0 EDF",
+  "source_dir": "/tmp/v360-machine-health/executed_source/sample_capture_data/flat/V50_EDF_Reference/D-2",
+  "copied": [
+    "0.json",
+    "still.jpg",
+    "video.mp4"
+  ],
+  "skipped": [],
+  "inventory": {
+    "source_dir_exists": true,
+    "present": [
+      "0.json",
+      "still.jpg",
+      "video.mp4"
+    ],
+    "absent": [
+      "1.json",
+      "2.json",
+      "3.json",
+      "4.json",
+      "5.json",
+      "6.json",
+      "7.json",
+      "html"
+    ],
+    "extra_files": [],
+    "details": {
+      "0.json": {
+        "bytes": 911
+      },
+      "still.jpg": {
+        "bytes": 17405,
+        "pixel_size": {
+          "width": 520,
+          "height": 360
+        }
+      },
+      "video.mp4": {
+        "bytes": 29,
+        "is_playable_mp4": false,
+        "ascii_contents": "V360-SAMPLE-VIDEO-PLACEHOLDER",
+        "note": "ASCII placeholder, not a playable MP4 bitstream"
+      }
+    }
+  }
+}
