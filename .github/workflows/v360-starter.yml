@@ -1,0 +1,29 @@
+name: V360 Starter
+
+on:
+  push:
+    paths:
+      - 'v360-starter/**'
+      - '.github/workflows/v360-starter.yml'
+  pull_request:
+    paths:
+      - 'v360-starter/**'
+      - '.github/workflows/v360-starter.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: v360-starter
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: v360-starter/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build

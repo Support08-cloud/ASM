@@ -1,0 +1,42 @@
+name: New Project Script
+
+on:
+  push:
+    paths:
+      - 'scripts/**'
+      - 'v360-starter/**'
+      - '.github/workflows/new-project.yml'
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'v360-starter/**'
+      - '.github/workflows/new-project.yml'
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test scripts/*.test.mjs
+
+  generated-project:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: v360-starter/package-lock.json
+      - name: Generate a project from the template
+        run: node scripts/new-project.mjs acme-tool --title "Acme Tool" --tagline "Generated in CI"
+      - name: Verify the generated project is green
+        working-directory: acme-tool
+        run: |
+          npm ci
+          npm run lint
+          npm test
+          npm run build
