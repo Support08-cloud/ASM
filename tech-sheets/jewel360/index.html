@@ -835,7 +835,7 @@
       <div class="orange-stripe"></div>
       <div class="charcoal-band">
         <span>Vision 360° · Jewel360</span>
-        <span>01 / 05</span>
+        <span class="page-no"><span class="on-screen">01 / 04</span><span class="on-print">01 / 05</span></span>
         <span>
           <a href="https://www.v360.in" target="_blank" rel="noopener noreferrer">www.v360.in</a>
           &nbsp;|&nbsp;
@@ -922,7 +922,7 @@
       <aside class="spec-link">
         <div>
           <p class="spec-link-kicker">Full workstation specification</p>
-          <p>Operating system, processor, chipset, memory, storage, expansion slots, and ports. The full page follows in this sheet.</p>
+          <p>Operating system, processor, chipset, memory, storage, expansion slots, and ports. Save as PDF adds this page from the computer tech sheet.</p>
           <p class="sheet-url">admin.v360.tech/documents/d4fdf5b2-ddab-4cf4-b417-28e63e60791a</p>
         </div>
         <a class="btn" href="https://admin.v360.tech/documents/d4fdf5b2-ddab-4cf4-b417-28e63e60791a" target="_blank" rel="noopener noreferrer">Computer tech sheet</a>
@@ -940,7 +940,7 @@
       <div class="orange-stripe"></div>
       <div class="charcoal-band">
         <span>Vision 360° · Jewel360</span>
-        <span>02 / 05</span>
+        <span class="page-no"><span class="on-screen">02 / 04</span><span class="on-print">02 / 05</span></span>
         <span>
           <a href="https://www.v360.in" target="_blank" rel="noopener noreferrer">www.v360.in</a>
           &nbsp;|&nbsp;
@@ -1541,7 +1541,7 @@ viewBox="0 0 740.72 345.14"
       <div class="orange-stripe"></div>
       <div class="charcoal-band">
         <span>Vision 360° · Jewel360</span>
-        <span>04 / 05</span>
+        <span class="page-no"><span class="on-screen">03 / 04</span><span class="on-print">04 / 05</span></span>
         <span>
           <a href="https://www.v360.in" target="_blank" rel="noopener noreferrer">www.v360.in</a>
           &nbsp;|&nbsp;
@@ -1623,7 +1623,7 @@ viewBox="0 0 740.72 345.14"
       <div class="orange-stripe"></div>
       <div class="charcoal-band">
         <span>Vision 360° · Jewel360</span>
-        <span>05 / 05</span>
+        <span class="page-no"><span class="on-screen">04 / 04</span><span class="on-print">05 / 05</span></span>
         <span>
           <a href="https://www.v360.in" target="_blank" rel="noopener noreferrer">www.v360.in</a>
           &nbsp;|&nbsp;
@@ -1755,6 +1755,23 @@ viewBox="0 0 740.72 345.14"
   }
   .product img {
     height: 180px;
+  }
+}
+.linked-sheet {
+  display: none !important;
+}
+.on-print {
+  display: none;
+}
+@media print {
+  .linked-sheet {
+    display: block !important;
+  }
+  .on-screen {
+    display: none !important;
+  }
+  .on-print {
+    display: inline !important;
   }
 }
 </style>
