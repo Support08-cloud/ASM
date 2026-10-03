@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import watermark from '../../assets/brand/v360-wordmark-white.png'
 import type { DuckingSettings, EditorClip, ExtraClip } from '../../models/editor'
 import { DEFAULT_DUCKING } from '../../models/editor'
 import { cropInsets, cssClipPathForClip, cssFilterForClip, cssTransformForClip } from '../../services/edit-graph'
 import { extraPlaybackVolume } from '../../services/editor-audio'
-import { toVideoSrc } from '../../services/media-url'
+import { clipPlaybackSources } from '../../services/media-url'
 import { clipPlayDurationMs, extrasForPreview, sourceTimeMs } from '../../services/timeline'
 import { titleBoxStyle } from '../../services/title-style'
 
@@ -19,6 +19,8 @@ interface PreviewStageProps {
   transitionOpacity: number
   showCrop: boolean
   selectedExtraId?: string | null
+  poster?: string
+  emptyLabel?: string
   onDuration: (clipId: string, durationMs: number) => void
 }
 
@@ -33,13 +35,18 @@ export function PreviewStage({
   transitionOpacity,
   showCrop,
   selectedExtraId,
+  poster,
+  emptyLabel,
   onDuration,
 }: PreviewStageProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioRefs = useRef<Record<string, HTMLAudioElement | null>>({})
   const overlayRefs = useRef<Record<string, HTMLVideoElement | null>>({})
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
-  const src = clip ? toVideoSrc(clip) : undefined
+  const [srcIndex, setSrcIndex] = useState(0)
+  const [retry, setRetry] = useState(0)
+  const sources = useMemo(() => (clip ? clipPlaybackSources(clip) : []), [clip?.id, clip?.proxyPath, clip?.absolutePath, clip?.mediaUrl, clip?.sourcePath])
+  const src = sources[Math.min(srcIndex, Math.max(sources.length - 1, 0))]
   const titles = extras.filter((extra) => extra.kind === 'text')
   const musicTracks = extras.filter((extra) => extra.kind === 'audio')
   const overlays = extras.filter((extra) => extra.kind === 'overlay')
@@ -50,15 +57,20 @@ export function PreviewStage({
   const effect = clip && clip.effect !== 'none' ? clip.effect : ''
 
   useEffect(() => {
+    setSrcIndex(0)
+    setStatus(clip ? 'loading' : 'idle')
+  }, [clip?.id])
+
+  useEffect(() => {
     const video = videoRef.current
     if (!video || !clip || !src) return
-    const same = video.dataset.src === src
-    if (!same) {
-      video.dataset.src = src
+    const token = `${clip.id}:${src}:${retry}`
+    if (video.dataset.src !== token) {
+      video.dataset.src = token
       video.src = src
       setStatus('loading')
     }
-  }, [clip?.id, src])
+  }, [clip?.id, src, retry])
 
   useEffect(() => {
     const video = videoRef.current
@@ -74,7 +86,11 @@ export function PreviewStage({
     const target = sourceTimeMs(clip, localMs) / 1000
     const apply = () => {
       if (Number.isFinite(target) && Math.abs(video.currentTime - target) > 0.12) {
-        video.currentTime = Math.max(0, target)
+        try {
+          video.currentTime = Math.max(0, target)
+        } catch {
+          /* seek can fail while the next source is still opening */
+        }
       }
       video.playbackRate = Math.max(0.25, clip.speed)
       if (playing) {
@@ -87,7 +103,7 @@ export function PreviewStage({
             video.volume = volume
             setStatus('ready')
           })
-          .catch(() => setStatus('ready'))
+          .catch(() => setStatus((value) => (value === 'error' ? value : 'ready')))
       } else {
         video.pause()
         setStatus((value) => (value === 'loading' ? 'ready' : value))
@@ -95,14 +111,18 @@ export function PreviewStage({
     }
     if (video.readyState >= 1) apply()
     else video.addEventListener('loadedmetadata', apply, { once: true })
-  }, [playing, clip?.id, src, clip?.inMs, clip?.speed])
+  }, [playing, clip?.id, src, clip?.inMs, clip?.speed, retry])
 
   useEffect(() => {
     const video = videoRef.current
     if (!video || !clip || playing) return
     const target = sourceTimeMs(clip, localMs) / 1000
     if (Number.isFinite(target) && video.readyState >= 1 && Math.abs(video.currentTime - target) > 0.04) {
-      video.currentTime = Math.max(0, target)
+      try {
+        video.currentTime = Math.max(0, target)
+      } catch {
+        /* ignore transient seek errors */
+      }
     }
   }, [playing, localMs, clip?.id, clip?.inMs])
 
@@ -151,8 +171,31 @@ export function PreviewStage({
     })
   }, [overlays.map((item) => item.id).join(','), playing, playheadMs])
 
+  const handleError = () => {
+    if (srcIndex < sources.length - 1) {
+      setSrcIndex((value) => value + 1)
+      setStatus('loading')
+      return
+    }
+    setStatus('error')
+  }
+
+  const retryPlayback = () => {
+    setSrcIndex(0)
+    setRetry((value) => value + 1)
+    setStatus('loading')
+    const video = videoRef.current
+    if (video && sources[0]) {
+      video.src = sources[0]
+      video.load()
+    }
+  }
+
   return (
     <div className="v360-stage">
+      {poster && (!src || status === 'error' || status === 'loading') ? (
+        <img className="v360-video-fallback" src={poster} alt="" />
+      ) : null}
       {src && clip ? (
         <div className={`v360-fx${effect ? ` is-fx-${effect}` : ''}`}>
           <video
@@ -162,20 +205,21 @@ export function PreviewStage({
               filter: cssFilterForClip(clip),
               transform: cssTransformForClip(clip),
               clipPath: cssClipPathForClip(clip),
-              opacity: fadeOpacity * transitionOpacity * clip.grade.transparency,
+              opacity: status === 'error' ? 0 : fadeOpacity * transitionOpacity * clip.grade.transparency,
             }}
             playsInline
             preload="auto"
+            poster={poster}
             onLoadedMetadata={(event) => {
               setStatus('ready')
               onDuration(clip.id, event.currentTarget.duration * 1000)
             }}
             onCanPlay={() => setStatus('ready')}
-            onError={() => setStatus('error')}
+            onError={handleError}
           />
         </div>
       ) : (
-        <div className="v360-stage-label">{clip?.error ?? clip?.label ?? 'Add a clip'}</div>
+        <div className="v360-stage-label">{clip?.error ?? emptyLabel ?? clip?.label ?? 'Add a clip'}</div>
       )}
       {overlays.map((overlay) => {
         const srcUrl = overlay.mediaUrl || (overlay.absolutePath && window.desktop?.toMediaUrl?.(overlay.absolutePath))
@@ -201,7 +245,14 @@ export function PreviewStage({
       })}
       {status === 'loading' && src ? <div className="v360-stage-status">Loading video…</div> : null}
       {status === 'error' || clip?.error ? (
-        <div className="v360-stage-status is-error">{clip?.error || 'This MP4 could not be played.'}</div>
+        <div className="v360-stage-status is-error">
+          <span>{clip?.error || 'This MP4 could not be played.'}</span>
+          {src ? (
+            <button type="button" className="v360-ghost" onClick={retryPlayback}>
+              Retry
+            </button>
+          ) : null}
+        </div>
       ) : null}
       {titles.map((title) => {
         const style = titleBoxStyle(title, playheadMs)

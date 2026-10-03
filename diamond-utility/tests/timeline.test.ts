@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  addLibraryClipsToTimeline,
   applyTransition,
   clipPlayDurationMs,
   createExtra,
+  editorProjectFromCopiedFiles,
   extrasAtTime,
   extrasForPreview,
   moveClip,
@@ -31,6 +33,7 @@ describe('timeline', () => {
     const files = ['260602-362-1', '260602-362-2', '260602-362-3', '260602-362-RG'].map(file)
     const project = projectFromCopiedFiles(files, 'D:/Output_Testing/260602-362', '260602-362')
     expect(project.clips).toHaveLength(4)
+    expect(project.libraryClips).toHaveLength(4)
     expect(project.extraClips).toEqual([])
     expect(project.masterVolume).toBe(1)
     expect(project.clips[0].volume).toBe(1)
@@ -95,6 +98,19 @@ describe('timeline', () => {
     expect(extrasAtTime([title], 100)).toEqual([])
     expect(extrasForPreview([title], 100, title.id)).toEqual([title])
     expect(extrasForPreview([title], 4500, title.id)).toEqual([title])
+  })
+
+  it('keeps jewelry MP4s in the editor library until the user adds them', () => {
+    const files = ['260602-362-1', '260602-362-2', '260602-362-RG'].map(file)
+    const project = editorProjectFromCopiedFiles(files, 'D:/Output_Testing/260602-362', '260602-362')
+    expect(project.libraryClips).toHaveLength(3)
+    expect(project.clips).toEqual([])
+    const one = addLibraryClipsToTimeline(project, [project.libraryClips[1].id])
+    expect(one.clips).toHaveLength(1)
+    expect(one.clips[0].label).toBe('260602-362-2.mp4')
+    expect(one.clips[0].id).not.toBe(project.libraryClips[1].id)
+    const together = addLibraryClipsToTimeline(project, [project.libraryClips[0].id, project.libraryClips[2].id])
+    expect(together.clips.map((clip) => clip.label)).toEqual(['260602-362-1.mp4', '260602-362-RG.mp4'])
   })
 
   it('advances the playhead on a clock so Play does not depend on video timeupdate', () => {

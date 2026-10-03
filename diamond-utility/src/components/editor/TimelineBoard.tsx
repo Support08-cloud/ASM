@@ -249,6 +249,9 @@ export function TimelineBoard({
                   </div>
                 )
               })}
+              {project.clips.length === 0 ? (
+                <div className="v360-lane-empty">Select jewelry MP4s in Media, then Add or Add selected</div>
+              ) : null}
             </div>
             <div className="v360-lane is-a1">
               {project.clips.map((clip, index) => {

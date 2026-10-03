@@ -184,6 +184,7 @@ export interface ExtraClip {
 export interface EditorProject {
   diamondName: string
   outputDir: string
+  libraryClips: EditorClip[]
   clips: EditorClip[]
   extraClips: ExtraClip[]
   selectedClipId: string | null

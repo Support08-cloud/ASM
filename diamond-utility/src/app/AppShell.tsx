@@ -8,10 +8,12 @@ import { OperationsPage } from '../pages/OperationsPage'
 import { HistoryPage } from '../pages/HistoryPage'
 import { SettingsPage } from '../pages/SettingsPage'
 import { ProcessingPanel } from '../components/processing/ProcessingPanel'
+import { SelectionToolbar } from '../components/diamond/SelectionToolbar'
+import { getMp4BlockedReason } from '../services/get-mp4'
 import { isModKey } from '../utils/format'
 
 export function AppShell() {
-  const { state, dispatch, visibleDiamonds, rescan, confirmGetMp4, cancelProcessing } = useAppStore()
+  const { state, dispatch, visibleDiamonds, rescan, confirmGetMp4, cancelProcessing, startGetMp4 } = useAppStore()
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -59,6 +61,8 @@ export function AppShell() {
   const overlayProcessing = state.phase === 'processing' && state.route === 'dashboard' && state.processProgress
   const editorOpen = state.phase === 'editing' || state.phase === 'exporting'
   const flush = Boolean(overlayProcessing || editorOpen)
+  const getMp4Reason = getMp4BlockedReason(state)
+  const showGetMp4Bar = state.route === 'dashboard' && !editorOpen && !overlayProcessing
 
   return (
     <div className={`app-shell${state.settings.sidebarCollapsed ? ' is-collapsed' : ''}${editorOpen ? ' is-editor' : ''}`}>
@@ -76,6 +80,15 @@ export function AppShell() {
             </>
           )}
         </div>
+        {showGetMp4Bar ? (
+          <SelectionToolbar
+            count={state.selectedIds.length}
+            disabled={Boolean(getMp4Reason)}
+            reason={getMp4Reason}
+            onClear={() => dispatch({ type: 'clear-selection' })}
+            onProcess={startGetMp4}
+          />
+        ) : null}
       </main>
       {editorOpen ? null : <StatusBar />}
       <ToastViewport />

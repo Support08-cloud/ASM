@@ -2,7 +2,7 @@ import type { EditorClip, EditorProject } from '../models/editor'
 import { buildProxyArgs, proxyOutputPath } from './ffmpeg-export'
 import { ffmpegInputPath } from './media-url'
 import { isRealDiskPath } from './sample-media'
-import { applyDuration } from './timeline'
+import { applyDuration, clipSourceKey } from './timeline'
 
 export interface PrepareProgress {
   current: number
@@ -41,21 +41,50 @@ export async function prepareEditorProject(
   project: EditorProject,
   onProgress: (progress: PrepareProgress) => void,
 ): Promise<EditorProject> {
-  const clips: EditorClip[] = []
-  for (let index = 0; index < project.clips.length; index += 1) {
-    const clip = project.clips[index]
+  const library = project.libraryClips ?? []
+  const unique = new Map<string, EditorClip>()
+  for (const clip of [...library, ...project.clips]) {
+    const key = clipSourceKey(clip)
+    if (!unique.has(key)) unique.set(key, clip)
+  }
+  const queue = [...unique.values()]
+  const preparedByKey = new Map<string, EditorClip>()
+  for (let index = 0; index < queue.length; index += 1) {
+    const clip = queue[index]
     onProgress({
       current: index + 1,
-      total: project.clips.length,
+      total: Math.max(queue.length, 1),
       message: `Preparing ${clip.label}`,
     })
-    clips.push(await prepareClip(clip, project.outputDir))
+    preparedByKey.set(clipSourceKey(clip), await prepareClip(clip, project.outputDir))
   }
-  return { ...project, clips }
+
+  const applyPrepared = (clip: EditorClip): EditorClip => {
+    const prepared = preparedByKey.get(clipSourceKey(clip))
+    if (!prepared) return clip
+    return {
+      ...clip,
+      proxyPath: prepared.proxyPath ?? clip.proxyPath,
+      mediaUrl: prepared.mediaUrl ?? clip.mediaUrl,
+      absolutePath: prepared.absolutePath ?? clip.absolutePath,
+      ready: prepared.ready ?? clip.ready,
+      error: prepared.error,
+      hasAudio: prepared.hasAudio ?? clip.hasAudio,
+      sourceDurationMs: clip.durationProbed ? clip.sourceDurationMs : prepared.sourceDurationMs,
+      durationProbed: clip.durationProbed || prepared.durationProbed,
+      outMs: clip.durationProbed ? clip.outMs : prepared.outMs,
+    }
+  }
+
+  return {
+    ...project,
+    libraryClips: library.map(applyPrepared),
+    clips: project.clips.map(applyPrepared),
+  }
 }
 
 async function prepareClip(clip: EditorClip, outputDir: string): Promise<EditorClip> {
-  const input = ffmpegInputPath(clip)
+  const input = ffmpegInputPath({ ...clip, proxyPath: undefined })
   let next = { ...clip }
   try {
     if (window.desktop?.mediaInfo && (isRealDiskPath(input) || input)) {
@@ -77,11 +106,15 @@ async function prepareClip(clip: EditorClip, outputDir: string): Promise<EditorC
       const proxyPath = proxyOutputPath(outputDir, clip.id)
       const existing = desktop.mediaInfo ? await desktop.mediaInfo(proxyPath).catch(() => null) : null
       if (!existing?.durationMs) {
-        await desktop.runFfmpeg(buildProxyArgs(input, proxyPath, next.hasAudio !== false))
+        try {
+          await desktop.runFfmpeg(buildProxyArgs(input, proxyPath, next.hasAudio !== false))
+        } catch {
+          return { ...next, ready: true, error: undefined }
+        }
       }
       const proxyInfo = desktop.mediaInfo ? await desktop.mediaInfo(proxyPath).catch(() => null) : null
       if (!proxyInfo?.durationMs) {
-        return { ...next, error: 'Could not prepare this MP4 for playback', ready: false }
+        return { ...next, ready: true, error: undefined }
       }
       next = {
         ...next,
@@ -100,7 +133,7 @@ async function prepareClip(clip: EditorClip, outputDir: string): Promise<EditorC
   } catch (error) {
     return {
       ...next,
-      ready: false,
+      ready: true,
       error: error instanceof Error ? error.message : 'Could not prepare this MP4',
     }
   }

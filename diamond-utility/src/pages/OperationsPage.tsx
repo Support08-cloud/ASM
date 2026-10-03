@@ -5,7 +5,7 @@ import { EmptyState } from '../components/common/States'
 import { PageHeader } from '../components/navigation/PageHeader'
 import { ProcessingPanel } from '../components/processing/ProcessingPanel'
 import { VideoEditor } from '../components/editor/VideoEditor'
-import { outputDirFromFiles, projectFromCopiedFiles } from '../services/timeline'
+import { editorProjectFromCopiedFiles, outputDirFromFiles } from '../services/timeline'
 
 export function OperationsPage() {
   const { state, dispatch, cancelProcessing, cancelExport, openOutput, exportTimeline, saveEditor } = useAppStore()
@@ -20,9 +20,16 @@ export function OperationsPage() {
     const scoped = state.editorDiamond ? files.filter((file) => file.diamondName === state.editorDiamond) : files
     if (scoped.length === 0) return null
     const diamondName = state.editorDiamond || scoped[0].diamondName || 'diamond'
+    const built = editorProjectFromCopiedFiles(scoped, outputDirFromFiles(scoped, editorSource.outputPath), diamondName)
     const draft = state.editorDrafts[diamondName]
-    if (draft && draft.clips.length > 0) return { ...draft, outputDir: draft.outputDir || outputDirFromFiles(scoped, editorSource.outputPath) }
-    return projectFromCopiedFiles(scoped, outputDirFromFiles(scoped, editorSource.outputPath), diamondName)
+    if (draft && ((draft.libraryClips?.length ?? 0) > 0 || draft.clips.length > 0)) {
+      return {
+        ...draft,
+        outputDir: draft.outputDir || built.outputDir,
+        libraryClips: draft.libraryClips?.length ? draft.libraryClips : built.libraryClips,
+      }
+    }
+    return built
   }, [editorSource, state.editorDiamond, state.editorDrafts])
 
   if (state.phase === 'editing' || state.phase === 'exporting') {
