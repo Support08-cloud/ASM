@@ -1030,7 +1030,7 @@
 .toast-stack {
   position: fixed;
   right: 20px;
-  bottom: 52px;
+  top: 20px;
   display: flex;
   flex-direction: column;
   gap: 8px;
