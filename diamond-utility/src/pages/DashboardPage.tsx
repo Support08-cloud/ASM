@@ -5,7 +5,6 @@ import { DiamondTable } from '../components/diamond/DiamondTable'
 import { FilterPopover } from '../components/diamond/FilterPopover'
 import { PathCard } from '../components/diamond/PathCard'
 import { SearchBar } from '../components/diamond/SearchBar'
-import { SelectionToolbar } from '../components/diamond/SelectionToolbar'
 import { ConfirmationDialog } from '../components/dialogs/ConfirmationDialog'
 import { EmptyState, ErrorState, ScanPanel, SkeletonGrid } from '../components/common/States'
 import { PageHeader } from '../components/navigation/PageHeader'
@@ -23,7 +22,6 @@ export function DashboardPage() {
     clearOutput,
     loadSample,
     rescan,
-    startGetMp4,
     confirmGetMp4,
     detailsDiamond,
     confirmSummary,
@@ -33,16 +31,6 @@ export function DashboardPage() {
   const total = state.diamonds.length
   const filterCount = activeFilterCount(state.filters)
   const searching = Boolean(state.search.trim()) || filterCount > 0
-  const getMp4Reason =
-    state.phase === 'scanning'
-      ? 'Scan in progress'
-      : !state.sourcePath
-        ? 'Select a source folder first'
-        : !state.outputPath
-          ? 'Choose an output folder first'
-          : state.selectedIds.length === 0
-            ? 'Select one or more variant folders'
-            : undefined
 
   return (
     <>
@@ -201,14 +189,6 @@ export function DashboardPage() {
           )}
         </>
       ) : null}
-
-      <SelectionToolbar
-        count={state.selectedIds.length}
-        disabled={Boolean(getMp4Reason)}
-        reason={getMp4Reason}
-        onClear={() => dispatch({ type: 'clear-selection' })}
-        onProcess={startGetMp4}
-      />
 
       {detailsDiamond ? (
         <DiamondDetailsDrawer

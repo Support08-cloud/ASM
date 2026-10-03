@@ -217,6 +217,67 @@ export function createExtra(kind: ExtraKind, startMs: number, patch?: Partial<Ex
   return { ...base, ...patch }
 }
 
+export function clipSourceKey(clip: Pick<EditorClip, 'absolutePath' | 'sourcePath' | 'id'>): string {
+  return (clip.absolutePath || clip.sourcePath || clip.id).replace(/\\/g, '/').toLowerCase()
+}
+
+export function cloneClipForTimeline(clip: EditorClip, index: number): EditorClip {
+  const duration = Math.max(MIN_CLIP_MS, clip.sourceDurationMs || clip.outMs || DEFAULT_CLIP_DURATION_MS)
+  return {
+    ...clip,
+    id: uid('clip'),
+    color: CLIP_COLORS[index % CLIP_COLORS.length],
+    inMs: 0,
+    outMs: duration,
+    sourceDurationMs: duration,
+    speed: 1,
+    volume: 1,
+    muted: false,
+    filter: 'none',
+    effect: 'none',
+    grade: { ...DEFAULT_GRADE },
+    transform: { ...DEFAULT_TRANSFORM },
+    fadeInMs: 0,
+    fadeOutMs: 0,
+    transition: 'fade',
+    transitionMs: DEFAULT_TRANSITION_MS,
+    error: undefined,
+  }
+}
+
+export function addLibraryClipsToTimeline(project: EditorProject, libraryIds: string[]): EditorProject {
+  const pool = project.libraryClips ?? []
+  const selected = libraryIds
+    .map((id) => pool.find((clip) => clip.id === id))
+    .filter((clip): clip is EditorClip => Boolean(clip))
+  if (selected.length === 0) return project
+  const room = Math.max(0, MAX_TIMELINE_CLIPS - project.clips.length)
+  const adding = selected.slice(0, room).map((clip, index) => cloneClipForTimeline(clip, project.clips.length + index))
+  if (adding.length === 0) return project
+  return {
+    ...project,
+    clips: [...project.clips, ...adding],
+    selectedClipId: adding[0].id,
+    selectedExtraId: null,
+    selectedTransitionIndex: null,
+    libraryTab: 'media',
+  }
+}
+
+export function editorProjectFromCopiedFiles(
+  files: ProcessFileResult[],
+  outputDir: string,
+  diamondName: string,
+): EditorProject {
+  const project = projectFromCopiedFiles(files, outputDir, diamondName)
+  return {
+    ...project,
+    clips: [],
+    selectedClipId: null,
+    playheadMs: 0,
+  }
+}
+
 export function projectFromCopiedFiles(
   files: ProcessFileResult[],
   outputDir: string,
@@ -227,6 +288,7 @@ export function projectFromCopiedFiles(
   return {
     diamondName,
     outputDir,
+    libraryClips: clips.map((clip) => ({ ...clip })),
     clips,
     extraClips: [],
     selectedClipId: clips[0]?.id ?? null,

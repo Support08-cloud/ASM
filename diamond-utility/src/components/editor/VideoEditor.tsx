@@ -21,11 +21,13 @@ import { prepareEditorProject } from '../../services/prepare-media'
 import { sampleMusicUrl } from '../../services/sample-media'
 import { captureFilmstrip } from '../../services/thumbnails'
 import {
+  addLibraryClipsToTimeline,
   applyDuration,
   applyTransition,
   advancePlayhead,
   clipAtTime,
   clipPlayDurationMs,
+  clipSourceKey,
   clipStartMs,
   createClipFromFile,
   createExtra,
@@ -40,6 +42,7 @@ import {
   trimClip,
   trimExtra,
 } from '../../services/timeline'
+import { IconCheck } from '../common/Icon'
 import {
   IconAudio,
   IconExport,
@@ -85,10 +88,11 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
   const [exportOpen, setExportOpen] = useState(false)
   const [menu, setMenu] = useState<'file' | 'view' | 'timeline' | null>(null)
   const [query, setQuery] = useState('')
+  const [selectedLibraryIds, setSelectedLibraryIds] = useState<string[]>([])
   const [preparing, setPreparing] = useState<{ current: number; total: number; message: string } | null>({
     current: 0,
-    total: initial.clips.length,
-    message: 'Preparing clips',
+    total: Math.max(initial.libraryClips?.length || initial.clips.length, 1),
+    message: 'Preparing jewelry videos',
   })
   const mediaInputRef = useRef<HTMLInputElement>(null)
   const musicInputRef = useRef<HTMLInputElement>(null)
@@ -119,6 +123,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
       setProject((current) =>
         withDefaults({
           ...current,
+          libraryClips: mergePreparedClips(current.libraryClips ?? [], next.libraryClips ?? []),
           clips: mergePreparedClips(current.clips, next.clips),
         }),
       )
@@ -166,11 +171,13 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
       commit({ extraClips: project.extraClips.filter((extra) => extra.id !== selectedExtra.id), selectedExtraId: null })
       return
     }
-    if (!selected || project.clips.length <= 1) return
+    if (!selected) return
+    const clips = project.clips.filter((clip) => clip.id !== selected.id)
     commit({
-      clips: project.clips.filter((clip) => clip.id !== selected.id),
-      selectedClipId: project.clips.find((clip) => clip.id !== selected.id)?.id ?? null,
+      clips,
+      selectedClipId: clips[0]?.id ?? null,
     })
+    setPlaying(false)
   }
 
   const updateClip = (id: string, patch: Partial<EditorClip>) => {
@@ -204,7 +211,13 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
     if (mediaUrl) clip.mediaUrl = mediaUrl
     if (durationMs) Object.assign(clip, applyDuration(clip, durationMs))
     if (hasAudio != null) clip.hasAudio = hasAudio
-    commit({ clips: [...project.clips, clip], selectedClipId: clip.id, selectedExtraId: null, libraryTab: 'media' })
+    commit({
+      libraryClips: [...(project.libraryClips ?? []), clip],
+      clips: [...project.clips, clip],
+      selectedClipId: clip.id,
+      selectedExtraId: null,
+      libraryTab: 'media',
+    })
   }
 
   const addMedia = async () => {
@@ -271,9 +284,19 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
     overlayInputRef.current?.click()
   }
 
+  const addLibraryToTimeline = (ids: string[]) => {
+    if (ids.length === 0) return
+    commit(addLibraryClipsToTimeline(project, ids))
+    setSelectedLibraryIds([])
+  }
+
+  const toggleLibraryId = (id: string) => {
+    setSelectedLibraryIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]))
+  }
+
   useEffect(() => {
     let cancelled = false
-    const missing = project.clips.filter((clip) => !thumbs[clip.id])
+    const missing = [...(project.libraryClips ?? []), ...project.clips].filter((clip) => !thumbs[clip.id])
     if (missing.length === 0) return
     void (async () => {
       for (const clip of missing) {
@@ -393,7 +416,13 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
           <button type="button" className="v360-ghost" onClick={() => onSave(project)}>
             Save
           </button>
-          <button type="button" className="v360-primary" onClick={() => setExportOpen(true)} disabled={Boolean(exporting)}>
+          <button
+            type="button"
+            className="v360-primary"
+            onClick={() => setExportOpen(true)}
+            disabled={Boolean(exporting) || project.clips.length === 0}
+            title={project.clips.length === 0 ? 'Add jewelry videos to the timeline first' : undefined}
+          >
             <IconExport size={15} />
             Export
           </button>
@@ -438,6 +467,26 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
           <div className="v360-search">
             <input placeholder="Search assets..." value={query} onChange={(event) => setQuery(event.target.value)} />
           </div>
+          {project.libraryTab === 'media' ? (
+            <div className="v360-jewel-actions">
+              <button
+                type="button"
+                className="v360-primary"
+                disabled={selectedLibraryIds.length === 0}
+                onClick={() => addLibraryToTimeline(selectedLibraryIds)}
+              >
+                Add selected{selectedLibraryIds.length ? ` (${selectedLibraryIds.length})` : ''}
+              </button>
+              <button
+                type="button"
+                className="v360-ghost"
+                disabled={(project.libraryClips ?? []).length === 0}
+                onClick={() => addLibraryToTimeline((project.libraryClips ?? []).map((clip) => clip.id))}
+              >
+                Add all
+              </button>
+            </div>
+          ) : null}
           <div className="v360-bin-grid">
             {project.libraryTab === 'effects' || project.libraryTab === 'filters'
               ? lookItems(project.libraryTab, query, selected).map((item) => (
@@ -452,7 +501,35 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
                     <em>{item.meta}</em>
                   </button>
                 ))
-              : libraryItems.filter((item) => !query || item.label.toLowerCase().includes(query.toLowerCase())).map((item) => (
+              : project.libraryTab === 'media'
+                ? jewelryLibraryItems(project, query).map((item) => {
+                    const checked = selectedLibraryIds.includes(item.id)
+                    return (
+                      <article key={item.id} className={`v360-jewel${checked ? ' is-on' : ''}${item.onTimeline ? ' is-used' : ''}`}>
+                        <button
+                          type="button"
+                          className={`v360-jewel-check${checked ? ' is-on' : ''}`}
+                          aria-pressed={checked}
+                          onClick={() => toggleLibraryId(item.id)}
+                        >
+                          <IconCheck size={12} />
+                        </button>
+                        <button type="button" className="v360-jewel-body" onClick={() => toggleLibraryId(item.id)}>
+                          {thumbs[item.id]?.[0] ? (
+                            <img src={thumbs[item.id][0]} alt="" />
+                          ) : (
+                            <span className="v360-bin-swatch" style={{ background: item.color }} />
+                          )}
+                          <strong>{item.label}</strong>
+                          <em>{item.onTimeline ? 'On timeline' : 'Jewelry MP4'}</em>
+                        </button>
+                        <button type="button" className="v360-ghost v360-jewel-add" onClick={() => addLibraryToTimeline([item.id])}>
+                          Add
+                        </button>
+                      </article>
+                    )
+                  })
+                : libraryItems.filter((item) => !query || item.label.toLowerCase().includes(query.toLowerCase())).map((item) => (
               <button
                 key={item.id}
                 type="button"
@@ -500,6 +577,8 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
             transitionOpacity={transitionOpacity}
             showCrop={!playing && Boolean(selected?.transform.cropEnabled)}
             selectedExtraId={project.selectedExtraId}
+            poster={hit?.clip ? thumbs[hit.clip.id]?.[0] : undefined}
+            emptyLabel="Select jewelry MP4s in Media, then Add or Add selected."
             onDuration={(id, durationMs) => {
               setProject((current) => ({
                 ...current,
@@ -706,25 +785,15 @@ export function VideoEditor({ project: initial, exporting, onClose, onSave, onCa
 }
 
 function withDefaults(project: EditorProject): EditorProject {
+  const libraryClips = project.libraryClips?.length ? project.libraryClips : project.clips
   return {
     ...project,
     libraryTab: project.libraryTab ?? 'media',
     timelineTool: project.timelineTool ?? 'select',
     ducking: project.ducking ?? { ...DEFAULT_DUCKING },
     exportSettings: project.exportSettings ?? { ...DEFAULT_EXPORT },
-    clips: project.clips.map((clip) => ({
-      ...clip,
-      transform: {
-        ...clip.transform,
-        rotation: clip.transform.rotation ?? 0,
-        cropTop: clip.transform.cropTop ?? 0,
-        cropBottom: clip.transform.cropBottom ?? 0,
-        cropLeft: clip.transform.cropLeft ?? 0,
-        cropRight: clip.transform.cropRight ?? 0,
-        cropAspect: clip.transform.cropAspect ?? '16:9',
-        cropEnabled: clip.transform.cropEnabled ?? false,
-      },
-    })),
+    libraryClips: libraryClips.map(withClipDefaults),
+    clips: project.clips.map(withClipDefaults),
     extraClips: project.extraClips.map((extra) => ({
       ...extra,
       posX: extra.posX ?? 0.5,
@@ -777,8 +846,37 @@ const RAIL_ICONS = {
   effects: IconFx,
 } as const
 
+function withClipDefaults(clip: EditorClip): EditorClip {
+  return {
+    ...clip,
+    transform: {
+      ...clip.transform,
+      rotation: clip.transform.rotation ?? 0,
+      cropTop: clip.transform.cropTop ?? 0,
+      cropBottom: clip.transform.cropBottom ?? 0,
+      cropLeft: clip.transform.cropLeft ?? 0,
+      cropRight: clip.transform.cropRight ?? 0,
+      cropAspect: clip.transform.cropAspect ?? '16:9',
+      cropEnabled: clip.transform.cropEnabled ?? false,
+    },
+  }
+}
+
+function jewelryLibraryItems(project: EditorProject, query: string) {
+  const q = query.toLowerCase()
+  const used = new Set(project.clips.map((clip) => clipSourceKey(clip)))
+  return (project.libraryClips ?? [])
+    .filter((clip) => !q || clip.label.toLowerCase().includes(q))
+    .map((clip) => ({
+      id: clip.id,
+      label: clip.label.replace(/\.mp4$/i, ''),
+      color: clip.color,
+      onTimeline: used.has(clipSourceKey(clip)),
+    }))
+}
+
 function libraryTitle(tab: EditorProject['libraryTab']) {
-  if (tab === 'media') return 'Project Media'
+  if (tab === 'media') return 'Jewelry MP4s'
   if (tab === 'text') return 'Titles'
   if (tab === 'audio') return 'Music'
   if (tab === 'filters') return 'Looks'
