@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Global Power Compatibility Reference — Vision 360°</title>
+  <meta name="description" content="Check plug family, voltage, and frequency before a Vision 360° system, or any associated electrical equipment, is shipped or powered on.">
+  <link rel="icon" href="assets/v360-black.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#checker">Skip to compatibility check</a>
+
+  <header class="site-header">
+    <div class="wrap header-bar">
+      <a class="brand" href="#top">
+        <img class="logo-light" src="assets/v360-white.svg" alt="Vision 360°">
+        <img class="logo-dark" src="assets/v360-black.svg" alt="">
+      </a>
+      <div class="header-copy">
+        <p class="doc-title">Global Power Compatibility Reference</p>
+        <nav id="site-nav" class="site-nav" aria-label="Sections">
+          <a href="#checker">Compatibility</a>
+          <a href="#matrix">Plug types</a>
+          <a href="#guide">Adapter and transformer</a>
+          <a href="#checklist">Handover</a>
+        </nav>
+      </div>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <a class="btn btn-primary" href="#checker">Check compatibility</a>
+    </div>
+  </header>
+
+  <section class="hero" id="top">
+    <div class="wrap">
+      <div class="hero-mark" aria-hidden="true"></div>
+      <p class="kicker">V360.Tech reference</p>
+      <h1>Global power compatibility</h1>
+      <p class="lede">Confirm the socket family, the nominal voltage, and the line frequency before a Vision 360° system, or any associated electrical equipment, is shipped or powered on.</p>
+      <dl class="stats">
+        <div>
+          <dt>Plug families</dt>
+          <dd>A–O</dd>
+        </div>
+        <div>
+          <dt>Voltage band</dt>
+          <dd>100–240 V</dd>
+        </div>
+        <div>
+          <dt>Line frequency</dt>
+          <dd>50 Hz and 60 Hz</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <main>
+    <section class="band band-ice" id="checker">
+      <div class="wrap">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="kicker">Compatibility check</p>
+              <h2>Origin and destination</h2>
+              <p class="sub">Origin is locked to India. Choose the destination supply. The rating plate still governs: the check uses a 15 V band and treats a Type C overlap as 2.5 A with no earth.</p>
+            </div>
+            <div class="mode" role="group" aria-label="Equipment class">
+              <button id="modeMachinery" type="button" aria-pressed="true">Machinery</button>
+              <button id="modeTravel" type="button" aria-pressed="false">Personal travel</button>
+            </div>
+          </div>
+
+          <div class="pair">
+            <div class="field field-locked">
+              <div class="lbl-row">
+                <p class="lbl" id="sourceLabel">Origin standard</p>
+                <span class="lock-tag">Locked</span>
+              </div>
+              <p id="sourceLock" class="locked-value" aria-labelledby="sourceLabel">India</p>
+              <div id="sourceFacts" class="facts"></div>
+            </div>
+            <div class="field">
+              <label class="lbl" for="targetSelect">Destination supply</label>
+              <select id="targetSelect"></select>
+              <div id="targetFacts" class="facts"></div>
+            </div>
+          </div>
+
+          <div id="routes" class="routes" aria-label="Common routes"></div>
+          <div id="result" class="result" aria-live="polite">
+            <p class="sub">Select an origin and a destination.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="matrix">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Plug atlas</p>
+            <h2>Types A to O</h2>
+            <p class="sub">Pin geometry, earth, voltage, and current. Letters follow the common world-plug designation used for travel and commissioning.</p>
+          </div>
+          <div class="tools">
+            <label class="search">
+              <span class="visually-hidden">Search plug types</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="11" cy="11" r="6"/>
+                <path d="M16 16l5 5"/>
+              </svg>
+              <input id="plugSearch" type="search" placeholder="Search type, country, or pins">
+            </label>
+          </div>
+        </div>
+        <div id="plugFilters" class="filters" role="group" aria-label="Filter plug types">
+          <button type="button" data-filter="all" aria-pressed="true">All</button>
+          <button type="button" data-filter="grounded" aria-pressed="false">Earthed</button>
+          <button type="button" data-filter="unearthed" aria-pressed="false">Unearthed</button>
+          <button type="button" data-filter="low" aria-pressed="false">100–127 V</button>
+          <button type="button" data-filter="high" aria-pressed="false">220–240 V</button>
+        </div>
+        <p id="plugCount" class="ready">15 of 15 shown</p>
+        <div class="atlas">
+          <div id="plugList" class="plug-list" role="listbox" aria-label="Plug types"></div>
+          <article id="plugDetail" class="plug-detail"></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="band band-cloud" id="guide">
+      <div class="wrap">
+        <p class="kicker">Critical distinction</p>
+        <h2>Adapter and transformer</h2>
+        <p class="sub">A pin adapter changes the shape of the contact. It does not change voltage or frequency. That is the usual cause of a burnt supply on imported equipment.</p>
+        <div class="split">
+          <article class="panel card">
+            <p class="tag">Physical fit only</p>
+            <h3>Pass-through plug adapter</h3>
+            <ul>
+              <li>Changes the pin layout so the plug can enter the local socket.</li>
+              <li>Does not convert voltage. 110 V equipment on a 230 V socket can fail immediately.</li>
+              <li>Safe where the plate reads 100–240 V, 50/60 Hz, as on a switch-mode supply.</li>
+            </ul>
+          </article>
+          <article class="panel card">
+            <p class="tag">Voltage conversion</p>
+            <h3>Step-up or step-down transformer</h3>
+            <ul>
+              <li>Changes 220–240 V to 110–120 V, or the reverse, for a single-voltage device.</li>
+              <li>Size it for continuous duty, with 150% of peak wattage as headroom.</li>
+              <li>Does not change 50 Hz to 60 Hz. A synchronous motor will change speed.</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="wizard">
+          <h3>Device class check</h3>
+          <div class="wizard-grid">
+            <div>
+              <label class="lbl" for="wizAppliance">Equipment</label>
+              <select id="wizAppliance">
+                <option value="dual">Charger or laptop supply marked 100–240 V</option>
+                <option value="single110">Single-voltage device, 110–120 V only</option>
+                <option value="single230">Single-voltage device, 220–240 V only</option>
+                <option value="motor">AC motor or heavy inductive load</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl" for="wizGrid">Destination grid</label>
+              <select id="wizGrid">
+                <option value="230">220–240 V, 50 Hz</option>
+                <option value="120">120 V, 60 Hz</option>
+                <option value="100">Japan, 100 V, 50/60 Hz</option>
+              </select>
+            </div>
+            <button id="wizRun" class="btn" type="button">Evaluate</button>
+          </div>
+          <div id="wizResult" class="verdict" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="checklist">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Client delivery</p>
+            <h2>Handover checks</h2>
+            <p class="sub">Use this list before commissioning, and attach the clause to the delivery note.</p>
+          </div>
+        </div>
+        <div class="handover">
+          <div>
+            <p id="readyCount" class="ready">3 of 4 checks confirmed</p>
+            <div id="checks">
+              <label class="check">
+                <input type="checkbox" checked>
+                <span><strong>Voltage.</strong> Nominal voltage on the rating plate matches the site supply, within ±5%.</span>
+              </label>
+              <label class="check">
+                <input type="checkbox" checked>
+                <span><strong>Protective earth.</strong> The frame is bonded to a verified low-resistance earth.</span>
+              </label>
+              <label class="check">
+                <input type="checkbox" checked>
+                <span><strong>Frequency.</strong> Motors, pumps, and cycle-timed devices are rated for the site frequency.</span>
+              </label>
+              <label class="check">
+                <input type="checkbox">
+                <span><strong>Connector.</strong> Above 13–16 A, the supply is an IEC 60309 industrial plug or a hard-wired junction, not a domestic socket.</span>
+              </label>
+            </div>
+          </div>
+          <div>
+            <div class="clause-head">
+              <p class="lbl">Contract clause</p>
+              <button id="copyClause" class="btn" type="button">Copy clause</button>
+            </div>
+            <div id="clause" class="clause">
+              <p>ELECTRICAL COMPLIANCE AND DELIVERY</p>
+              <p>1. The purchaser acknowledges that the equipment operates at the voltage (V), frequency (Hz), and current (A) stated on its rating plate.</p>
+              <p>2. Before installation or the first power-on, the purchaser shall confirm that the facility supply matches that rating plate.</p>
+              <p>3. A non-earthed travel adapter, or any passive pin converter used above its current rating, voids the manufacturer warranty. Where a step-up or step-down transformer is required, it shall be rated for at least 150% of peak operating wattage.</p>
+              <p>4. Damage from the wrong voltage, the wrong line frequency, or a missing protective earth remains the purchaser’s liability.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-row">
+      <div class="footer-brand">
+        <img src="assets/v360-white.svg" alt="Vision 360°">
+        <p>V360 Technetronic LLP · Surat</p>
+      </div>
+      <div>
+        <nav class="family" aria-label="Product family">
+          <span>Studio</span>
+          <span class="is-current">Tech</span>
+          <span>Micro</span>
+          <span>Measure</span>
+          <span>Light</span>
+        </nav>
+        <p class="legal legal-gap">Reference values for planning. The equipment rating plate and the supply at the point of installation govern commissioning. Plug letters A–O are the common world-plug designations.</p>
+      </div>
+    </div>
+    <div class="orange-stripe" aria-hidden="true"></div>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <noscript>
+    <p class="wrap">This reference needs JavaScript to compare supplies.</p>
+  </noscript>
+  <script src="app.js"></script>
+</body>
+</html>
