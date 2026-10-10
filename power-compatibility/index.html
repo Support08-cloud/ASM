@@ -428,7 +428,7 @@ h3 {
 
 .pair {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
   align-items: stretch;
 }
@@ -441,6 +441,51 @@ h3 {
 }
 
 .band-ice .field {
+  background: var(--white);
+}
+
+.band-ice .field.field-locked {
+  background: var(--orange-100);
+  border-color: var(--orange);
+  border-left-width: 4px;
+}
+
+.lbl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lbl-row .lbl {
+  margin-bottom: 8px;
+}
+
+.lock-tag {
+  margin-bottom: 8px;
+  color: var(--orange-700);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.locked-value {
+  margin: 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--white);
+  border: 1px solid var(--orange);
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.field-locked .fact {
   background: var(--white);
 }
 
@@ -494,32 +539,6 @@ input:disabled {
   color: var(--n700);
   font-size: 14px;
   line-height: 22px;
-}
-
-.swap-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.swap {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 1px solid var(--n300);
-  background: var(--white);
-  color: var(--charcoal);
-}
-
-.swap:hover {
-  background: var(--cloud);
-}
-
-.swap svg {
-  width: 20px;
-  height: 20px;
-  display: block;
-  margin: 0 auto;
 }
 
 .routes {
@@ -1295,7 +1314,7 @@ input:disabled {
             <div>
               <p class="kicker">Compatibility check</p>
               <h2>Origin and destination</h2>
-              <p class="sub">The rating plate governs. This check compares the published national standards within a 15 V band and flags a Type C overlap, which is limited to 2.5 A and has no earth.</p>
+              <p class="sub">Origin is locked to India. Choose the destination supply. The rating plate still governs: the check uses a 15 V band and treats a Type C overlap as 2.5 A with no earth.</p>
             </div>
             <div class="mode" role="group" aria-label="Equipment class">
               <button id="modeMachinery" type="button" aria-pressed="true">Machinery</button>
@@ -1304,17 +1323,13 @@ input:disabled {
           </div>
 
           <div class="pair">
-            <div class="field">
-              <label class="lbl" for="sourceSelect">Origin standard</label>
-              <select id="sourceSelect"></select>
+            <div class="field field-locked">
+              <div class="lbl-row">
+                <p class="lbl" id="sourceLabel">Origin standard</p>
+                <span class="lock-tag">Locked</span>
+              </div>
+              <p id="sourceLock" class="locked-value" aria-labelledby="sourceLabel">India</p>
               <div id="sourceFacts" class="facts"></div>
-            </div>
-            <div class="swap-wrap">
-              <button id="swapBtn" class="swap" type="button" aria-label="Swap origin and destination">
-                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <path d="M7 7h11M15 4l3 3-3 3M17 17H6M9 14l-3 3 3 3"/>
-                </svg>
-              </button>
             </div>
             <div class="field">
               <label class="lbl" for="targetSelect">Destination supply</label>
@@ -1827,13 +1842,16 @@ input:disabled {
     { id: "PH", name: "Philippines", voltage: 220, freq: 60, plugs: ["A", "B", "C"] },
   ];
 
+  var ORIGIN_ID = "IN";
+
   var ROUTES = [
-    { label: "New York → Frankfurt", source: "US", target: "DE" },
-    { label: "Surat → Antwerp", source: "IN", target: "BE" },
-    { label: "Mumbai → Dubai", source: "IN", target: "AE" },
-    { label: "Surat → New York", source: "IN", target: "US" },
-    { label: "Hong Kong → London", source: "HK", target: "GB" },
-    { label: "Tokyo → Sydney", source: "JP", target: "AU" },
+    { label: "Antwerp", target: "BE" },
+    { label: "Dubai", target: "AE" },
+    { label: "Germany", target: "DE" },
+    { label: "New York", target: "US" },
+    { label: "London", target: "GB" },
+    { label: "Hong Kong", target: "HK" },
+    { label: "Singapore", target: "SG" },
   ];
 
   var mode = "machinery";
@@ -2134,7 +2152,7 @@ input:disabled {
   }
 
   function renderResult() {
-    var source = byId(document.getElementById("sourceSelect").value);
+    var source = byId(ORIGIN_ID);
     var target = byId(document.getElementById("targetSelect").value);
     fillFacts(document.getElementById("sourceFacts"), source);
     fillFacts(document.getElementById("targetFacts"), target);
@@ -2182,7 +2200,8 @@ input:disabled {
         toast("Assessment copied.");
       });
     });
-    markRoute(source.id, target.id);
+    document.getElementById("sourceLock").textContent = source.name;
+    markRoute(target.id);
   }
 
   function assessmentText(result) {
@@ -2203,9 +2222,9 @@ input:disabled {
     ].join("\n");
   }
 
-  function markRoute(sourceId, targetId) {
+  function markRoute(targetId) {
     document.querySelectorAll("#routes button").forEach(function (button) {
-      var on = button.getAttribute("data-source") === sourceId && button.getAttribute("data-target") === targetId;
+      var on = button.getAttribute("data-target") === targetId;
       button.setAttribute("aria-pressed", on ? "true" : "false");
     });
   }
@@ -2419,22 +2438,18 @@ input:disabled {
     var sorted = COUNTRIES.slice().sort(function (a, b) {
       return a.name.localeCompare(b.name);
     });
-    ["sourceSelect", "targetSelect"].forEach(function (id) {
-      var select = document.getElementById(id);
-      sorted.forEach(function (country) {
-        select.append(h("option", { value: country.id }, optionLabel(country)));
-      });
+    var select = document.getElementById("targetSelect");
+    sorted.forEach(function (country) {
+      select.append(h("option", { value: country.id }, optionLabel(country)));
     });
-    document.getElementById("sourceSelect").value = "US";
-    document.getElementById("targetSelect").value = "DE";
+    select.value = "DE";
   }
 
   function renderRoutes() {
     var root = document.getElementById("routes");
     ROUTES.forEach(function (route) {
-      var button = h("button", { type: "button", "data-source": route.source, "data-target": route.target }, route.label);
+      var button = h("button", { type: "button", "data-target": route.target }, route.label);
       button.addEventListener("click", function () {
-        document.getElementById("sourceSelect").value = route.source;
         document.getElementById("targetSelect").value = route.target;
         renderResult();
       });
@@ -2450,16 +2465,7 @@ input:disabled {
   }
 
   function bind() {
-    document.getElementById("sourceSelect").addEventListener("change", renderResult);
     document.getElementById("targetSelect").addEventListener("change", renderResult);
-    document.getElementById("swapBtn").addEventListener("click", function () {
-      var source = document.getElementById("sourceSelect");
-      var target = document.getElementById("targetSelect");
-      var hold = source.value;
-      source.value = target.value;
-      target.value = hold;
-      renderResult();
-    });
     document.getElementById("modeMachinery").addEventListener("click", function () {
       setMode("machinery");
     });

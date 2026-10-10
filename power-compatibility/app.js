@@ -333,13 +333,16 @@
     { id: "PH", name: "Philippines", voltage: 220, freq: 60, plugs: ["A", "B", "C"] },
   ];
 
+  var ORIGIN_ID = "IN";
+
   var ROUTES = [
-    { label: "New York → Frankfurt", source: "US", target: "DE" },
-    { label: "Surat → Antwerp", source: "IN", target: "BE" },
-    { label: "Mumbai → Dubai", source: "IN", target: "AE" },
-    { label: "Surat → New York", source: "IN", target: "US" },
-    { label: "Hong Kong → London", source: "HK", target: "GB" },
-    { label: "Tokyo → Sydney", source: "JP", target: "AU" },
+    { label: "Antwerp", target: "BE" },
+    { label: "Dubai", target: "AE" },
+    { label: "Germany", target: "DE" },
+    { label: "New York", target: "US" },
+    { label: "London", target: "GB" },
+    { label: "Hong Kong", target: "HK" },
+    { label: "Singapore", target: "SG" },
   ];
 
   var mode = "machinery";
@@ -640,7 +643,7 @@
   }
 
   function renderResult() {
-    var source = byId(document.getElementById("sourceSelect").value);
+    var source = byId(ORIGIN_ID);
     var target = byId(document.getElementById("targetSelect").value);
     fillFacts(document.getElementById("sourceFacts"), source);
     fillFacts(document.getElementById("targetFacts"), target);
@@ -688,7 +691,8 @@
         toast("Assessment copied.");
       });
     });
-    markRoute(source.id, target.id);
+    document.getElementById("sourceLock").textContent = source.name;
+    markRoute(target.id);
   }
 
   function assessmentText(result) {
@@ -709,9 +713,9 @@
     ].join("\n");
   }
 
-  function markRoute(sourceId, targetId) {
+  function markRoute(targetId) {
     document.querySelectorAll("#routes button").forEach(function (button) {
-      var on = button.getAttribute("data-source") === sourceId && button.getAttribute("data-target") === targetId;
+      var on = button.getAttribute("data-target") === targetId;
       button.setAttribute("aria-pressed", on ? "true" : "false");
     });
   }
@@ -925,22 +929,18 @@
     var sorted = COUNTRIES.slice().sort(function (a, b) {
       return a.name.localeCompare(b.name);
     });
-    ["sourceSelect", "targetSelect"].forEach(function (id) {
-      var select = document.getElementById(id);
-      sorted.forEach(function (country) {
-        select.append(h("option", { value: country.id }, optionLabel(country)));
-      });
+    var select = document.getElementById("targetSelect");
+    sorted.forEach(function (country) {
+      select.append(h("option", { value: country.id }, optionLabel(country)));
     });
-    document.getElementById("sourceSelect").value = "US";
-    document.getElementById("targetSelect").value = "DE";
+    select.value = "DE";
   }
 
   function renderRoutes() {
     var root = document.getElementById("routes");
     ROUTES.forEach(function (route) {
-      var button = h("button", { type: "button", "data-source": route.source, "data-target": route.target }, route.label);
+      var button = h("button", { type: "button", "data-target": route.target }, route.label);
       button.addEventListener("click", function () {
-        document.getElementById("sourceSelect").value = route.source;
         document.getElementById("targetSelect").value = route.target;
         renderResult();
       });
@@ -956,16 +956,7 @@
   }
 
   function bind() {
-    document.getElementById("sourceSelect").addEventListener("change", renderResult);
     document.getElementById("targetSelect").addEventListener("change", renderResult);
-    document.getElementById("swapBtn").addEventListener("click", function () {
-      var source = document.getElementById("sourceSelect");
-      var target = document.getElementById("targetSelect");
-      var hold = source.value;
-      source.value = target.value;
-      target.value = hold;
-      renderResult();
-    });
     document.getElementById("modeMachinery").addEventListener("click", function () {
       setMode("machinery");
     });

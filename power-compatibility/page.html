@@ -65,7 +65,7 @@
             <div>
               <p class="kicker">Compatibility check</p>
               <h2>Origin and destination</h2>
-              <p class="sub">The rating plate governs. This check compares the published national standards within a 15 V band and flags a Type C overlap, which is limited to 2.5 A and has no earth.</p>
+              <p class="sub">Origin is locked to India. Choose the destination supply. The rating plate still governs: the check uses a 15 V band and treats a Type C overlap as 2.5 A with no earth.</p>
             </div>
             <div class="mode" role="group" aria-label="Equipment class">
               <button id="modeMachinery" type="button" aria-pressed="true">Machinery</button>
@@ -74,17 +74,13 @@
           </div>
 
           <div class="pair">
-            <div class="field">
-              <label class="lbl" for="sourceSelect">Origin standard</label>
-              <select id="sourceSelect"></select>
+            <div class="field field-locked">
+              <div class="lbl-row">
+                <p class="lbl" id="sourceLabel">Origin standard</p>
+                <span class="lock-tag">Locked</span>
+              </div>
+              <p id="sourceLock" class="locked-value" aria-labelledby="sourceLabel">India</p>
               <div id="sourceFacts" class="facts"></div>
-            </div>
-            <div class="swap-wrap">
-              <button id="swapBtn" class="swap" type="button" aria-label="Swap origin and destination">
-                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <path d="M7 7h11M15 4l3 3-3 3M17 17H6M9 14l-3 3 3 3"/>
-                </svg>
-              </button>
             </div>
             <div class="field">
               <label class="lbl" for="targetSelect">Destination supply</label>
