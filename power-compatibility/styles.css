@@ -641,6 +641,22 @@ input:disabled {
   font-weight: 600;
 }
 
+.phase-name {
+  margin: 16px 0 4px;
+  color: var(--orange-700);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.phase-line {
+  margin: 0;
+  font-size: 16px;
+  line-height: 26px;
+}
+
 .verdict {
   border: 1px solid var(--n300);
   border-left: 4px solid var(--success);

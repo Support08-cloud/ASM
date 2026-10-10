@@ -387,6 +387,8 @@
         faceSet(wall, "Wall socket, " + result.country.name),
       ]),
       h("p", { class: "buy-line" }, adapterText(result)),
+      h("p", { class: "phase-name" }, "Receiver’s purchase"),
+      h("p", { class: "phase-line" }, "Once you receive the machine, purchase the power converter for your country’s supply and voltage. The plug faces show the machine side and the wall side for the country of sale."),
     ]);
   }
 
@@ -412,6 +414,7 @@
       "Vision 360° — Machine export supply",
       "Machine: India — 230 V, 50 Hz, Type C/D/M",
       "Country of sale: " + result.country.name + " — " + voltageLabel(result.country) + ", " + freqLabel(result.country) + ", " + plugLabel(result.country),
+      "Receiver’s purchase: Once you receive the machine, purchase the power converter for your country’s supply and voltage.",
       "Adapter: " + adapterText(result),
       "Specify: " + result.title,
       "1. Connector — " + connector.badge + ". " + connector.text,
