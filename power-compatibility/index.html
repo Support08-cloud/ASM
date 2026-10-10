@@ -569,6 +569,89 @@ input:disabled {
   margin-top: 24px;
 }
 
+.adapter-buy {
+  margin-bottom: 16px;
+  background: var(--white);
+  border: 1px solid var(--n300);
+  border-radius: var(--radius-md);
+  padding: 16px 20px 20px;
+}
+
+.adapter-buy h3 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  line-height: 26px;
+}
+
+.adapter-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.face-set {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.face-card {
+  margin: 0;
+  width: 148px;
+  text-align: center;
+}
+
+.face-card .diagram svg {
+  width: 132px;
+  height: 132px;
+}
+
+.face-card figcaption {
+  margin-top: 8px;
+}
+
+.face-card strong {
+  display: block;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.face-card span {
+  display: block;
+  color: var(--n700);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.adapter-mid {
+  width: 88px;
+  text-align: center;
+  color: var(--orange-700);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.adapter-mid b {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--orange);
+  font-size: 28px;
+  line-height: 32px;
+  letter-spacing: 0;
+}
+
+.buy-line {
+  margin: 16px 0 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
 .verdict {
   border: 1px solid var(--n300);
   border-left: 4px solid var(--success);
@@ -1164,6 +1247,7 @@ input:disabled {
 
   .stats,
   .pair,
+  .adapter-grid,
   .factors,
   .atlas,
   .split,
@@ -1410,6 +1494,24 @@ input:disabled {
     voltage: 230,
     freq: 50,
     plugs: ["C", "D", "M"],
+  };
+
+  var PLUGS = {
+    A: { type: "Type A", pins: "2 flat blades", draw: [{ t: "rect", x: 36, y: 38, w: 12, h: 40 }, { t: "rect", x: 72, y: 38, w: 12, h: 40 }] },
+    B: { type: "Type B", pins: "2 flat blades and a round earth", draw: [{ t: "rect", x: 34, y: 28, w: 12, h: 32 }, { t: "rect", x: 74, y: 28, w: 12, h: 32 }, { t: "circle", x: 60, y: 82, r: 8 }] },
+    C: { type: "Type C", pins: "2 round pins, no earth", draw: [{ t: "circle", x: 42, y: 60, r: 8 }, { t: "circle", x: 78, y: 60, r: 8 }] },
+    D: { type: "Type D", pins: "3 round pins, 5 A", draw: [{ t: "circle", x: 60, y: 32, r: 9 }, { t: "circle", x: 34, y: 78, r: 8 }, { t: "circle", x: 86, y: 78, r: 8 }] },
+    E: { type: "Type E", pins: "2 round pins and an earth hole", draw: [{ t: "circle", x: 60, y: 34, r: 8, hole: true }, { t: "circle", x: 38, y: 78, r: 8 }, { t: "circle", x: 82, y: 78, r: 8 }] },
+    F: { type: "Type F", pins: "2 round pins and side earth clips", draw: [{ t: "circle", x: 40, y: 60, r: 8 }, { t: "circle", x: 80, y: 60, r: 8 }, { t: "rect", x: 50, y: 22, w: 20, h: 8 }, { t: "rect", x: 50, y: 90, w: 20, h: 8 }] },
+    G: { type: "Type G", pins: "3 rectangular blades", draw: [{ t: "rect", x: 52, y: 22, w: 16, h: 28 }, { t: "rect", x: 22, y: 74, w: 30, h: 14 }, { t: "rect", x: 68, y: 74, w: 30, h: 14 }] },
+    H: { type: "Type H", pins: "3 round pins", draw: [{ t: "circle", x: 36, y: 42, r: 7 }, { t: "circle", x: 84, y: 42, r: 7 }, { t: "circle", x: 60, y: 80, r: 7 }] },
+    I: { type: "Type I", pins: "flat blades in an inverted V", draw: [{ t: "poly", points: "40,40 50,36 64,70 54,74" }, { t: "poly", points: "80,40 70,36 56,70 66,74" }, { t: "rect", x: 54, y: 78, w: 12, h: 24 }] },
+    J: { type: "Type J", pins: "3 round pins, offset earth", draw: [{ t: "circle", x: 38, y: 46, r: 7 }, { t: "circle", x: 82, y: 46, r: 7 }, { t: "circle", x: 60, y: 76, r: 7 }] },
+    K: { type: "Type K", pins: "2 round pins and a half-round earth", draw: [{ t: "circle", x: 38, y: 46, r: 7 }, { t: "circle", x: 82, y: 46, r: 7 }, { t: "path", d: "M46 78 A14 14 0 0 1 74 78 L74 88 L46 88 Z" }] },
+    L: { type: "Type L", pins: "3 round pins in a line", draw: [{ t: "circle", x: 28, y: 60, r: 7 }, { t: "circle", x: 60, y: 60, r: 7 }, { t: "circle", x: 92, y: 60, r: 7 }] },
+    M: { type: "Type M", pins: "3 large round pins, 15 A", draw: [{ t: "circle", x: 60, y: 28, r: 11 }, { t: "circle", x: 30, y: 82, r: 9 }, { t: "circle", x: 90, y: 82, r: 9 }] },
+    N: { type: "Type N", pins: "3 round pins, flat triangle", draw: [{ t: "circle", x: 36, y: 50, r: 7 }, { t: "circle", x: 84, y: 50, r: 7 }, { t: "circle", x: 60, y: 72, r: 7 }] },
+    O: { type: "Type O", pins: "3 round pins in a triangle", draw: [{ t: "circle", x: 60, y: 34, r: 7 }, { t: "circle", x: 36, y: 78, r: 7 }, { t: "circle", x: 84, y: 78, r: 7 }] },
   };
 
   var COUNTRIES = [
@@ -1708,7 +1810,71 @@ input:disabled {
   }
 
   function commissioning(result) {
-    return "Above a 13–16 A wall socket in " + result.country.name + ", do not use a travel adapter. Specify an IEC 60309 industrial connector or a hard-wired junction, and prove the protective earth before the first power-on. This check uses the published single-phase nominal. A 400 V three-phase feed is a separate specification.";
+    return "Above a 13–16 A wall socket, do not use a travel adapter. Specify an IEC 60309 connector with the wall-socket shape shown above, or a hard-wired junction, and prove the protective earth before the first power-on. This check uses the published single-phase nominal. A 400 V three-phase feed is a separate specification.";
+  }
+
+  function shapeMarkup(shape) {
+    if (shape.t === "rect") {
+      return '<rect class="pin" x="' + shape.x + '" y="' + shape.y + '" width="' + shape.w + '" height="' + shape.h + '" rx="2"/>';
+    }
+    if (shape.t === "circle") {
+      return '<circle class="' + (shape.hole ? "hole" : "pin") + '" cx="' + shape.x + '" cy="' + shape.y + '" r="' + shape.r + '"/>';
+    }
+    if (shape.t === "poly") return '<polygon class="pin" points="' + shape.points + '"/>';
+    if (shape.t === "path") return '<path class="pin" d="' + shape.d + '"/>';
+    return "";
+  }
+
+  function faceSvg(letter) {
+    var plug = PLUGS[letter];
+    var body = plug.draw.map(shapeMarkup).join("");
+    return '<svg viewBox="0 0 120 120" role="img" aria-label="' + plug.type + " " + plug.pins + '"><rect class="face" x="6" y="6" width="108" height="108" rx="22"/>' + body + "</svg>";
+  }
+
+  function socketLetters(country) {
+    var earthed = earthedPlugs(country.plugs);
+    return earthed.length ? earthed : country.plugs.slice();
+  }
+
+  function faceFigure(letter) {
+    var plug = PLUGS[letter];
+    var figure = h("figure", { class: "face-card" }, [
+      h("div", { class: "diagram" }),
+      h("figcaption", null, [h("strong", null, plug.type), h("span", null, plug.pins)]),
+    ]);
+    figure.querySelector(".diagram").innerHTML = faceSvg(letter);
+    return figure;
+  }
+
+  function faceSet(letters, caption) {
+    return h("div", null, [
+      h("p", { class: "lbl" }, caption),
+      h("div", { class: "face-set" }, letters.map(faceFigure)),
+    ]);
+  }
+
+  function adapterText(result) {
+    var wall = socketLetters(result.country).map(function (letter) {
+      return PLUGS[letter].type;
+    }).join(" or ");
+    if (result.connector === "fit") {
+      return "No adapter. The Type D or Type M plug on the machine seats in the " + result.country.name + " socket.";
+    }
+    return "Buy an adapter with a Type D or Type M plug on the machine and a " + wall + " socket on the wall.";
+  }
+
+  function adapterBlock(result) {
+    var wall = socketLetters(result.country);
+    var fits = result.connector === "fit";
+    return h("section", { class: "adapter-buy" }, [
+      h("h3", null, fits ? "No adapter to buy" : "Adapter to buy"),
+      h("div", { class: "adapter-grid" }, [
+        faceSet(["D", "M"], "Plug on the machine"),
+        h("p", { class: "adapter-mid" }, [h("b", null, fits ? "=" : "→"), fits ? "Same shape" : "Buy"]),
+        faceSet(wall, "Wall socket, " + result.country.name),
+      ]),
+      h("p", { class: "buy-line" }, adapterText(result)),
+    ]);
   }
 
   function fillFacts(container, country) {
@@ -1733,6 +1899,7 @@ input:disabled {
       "Vision 360° — Machine export supply",
       "Machine: India — 230 V, 50 Hz, Type C/D/M",
       "Country of sale: " + result.country.name + " — " + voltageLabel(result.country) + ", " + freqLabel(result.country) + ", " + plugLabel(result.country),
+      "Adapter: " + adapterText(result),
       "Specify: " + result.title,
       "1. Connector — " + connector.badge + ". " + connector.text,
       "2. Voltage — " + voltage.badge + ". " + voltage.text,
@@ -1799,7 +1966,7 @@ input:disabled {
       h("p", null, commissioning(result)),
     ]);
     var root = document.getElementById("result");
-    root.replaceChildren(verdict, factors, note);
+    root.replaceChildren(verdict, adapterBlock(result), factors, note);
     document.getElementById("copySpec").addEventListener("click", function () {
       copyText(specificationText(result)).then(function () {
         toast("Specification copied.");
