@@ -11,10 +11,10 @@ def data_uri(path):
     return "data:image/svg+xml;charset=utf-8," + urllib.parse.quote(svg, safe="")
 
 
-def main():
-    html = (root / "page.html").read_text()
+def pack(page_name, script_name, out_name):
+    html = (root / page_name).read_text()
     css = (root / "styles.css").read_text()
-    js = (root / "app.js").read_text()
+    js = (root / script_name).read_text()
     white = data_uri(root / "assets/v360-white.svg")
     black = data_uri(root / "assets/v360-black.svg")
     html = html.replace('  <link rel="icon" href="assets/v360-black.svg">\n', "")
@@ -25,12 +25,16 @@ def main():
     html = html.replace('src="assets/v360-white.svg"', 'src="' + white + '"')
     html = html.replace('src="assets/v360-black.svg"', 'src="' + black + '"')
     html = html.replace(
-        '  <script src="app.js"></script>',
+        '  <script src="' + script_name + '"></script>',
         "  <script>\n" + js + "\n  </script>",
     )
-    if "styles.css" in html or 'src="app.js"' in html or "assets/" in html:
-        raise SystemExit("page.html still points at a separate file")
-    (root / "index.html").write_text(html)
+    if "styles.css" in html or 'src="' + script_name + '"' in html or "assets/" in html:
+        raise SystemExit(page_name + " still points at a separate file")
+    (root / out_name).write_text(html)
+
+
+def main():
+    pack("machine-page.html", "machine.js", "index.html")
 
 
 if __name__ == "__main__":

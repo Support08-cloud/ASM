@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Machine export supply — Vision 360°</title>
+  <meta name="description" content="Check the connector, voltage, and frequency when a machine built in India is sold to another country.">
+  <link rel="icon" href="assets/v360-black.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#checker">Skip to the sale check</a>
+
+  <header class="site-header">
+    <div class="wrap header-bar">
+      <a class="brand" href="#top">
+        <img class="logo-light" src="assets/v360-white.svg" alt="Vision 360°">
+        <img class="logo-dark" src="assets/v360-black.svg" alt="">
+      </a>
+      <div class="header-copy">
+        <p class="doc-title">Machine export supply</p>
+        <nav id="site-nav" class="site-nav" aria-label="Sections">
+          <a href="#checker">Sale check</a>
+          <a href="#rules">How it decides</a>
+        </nav>
+      </div>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <a class="btn btn-primary" href="#checker">Check a sale</a>
+    </div>
+  </header>
+
+  <section class="hero" id="top">
+    <div class="wrap">
+      <div class="hero-mark" aria-hidden="true"></div>
+      <p class="kicker">V360.Tech · built in India</p>
+      <h1>Selling a machine abroad</h1>
+      <p class="lede">The machine leaves the factory built for the Indian supply. Choose the country where the buyer will power it. The check says what to specify: the connector, the voltage, and the motor frequency.</p>
+      <dl class="stats">
+        <div>
+          <dt>Machine supply</dt>
+          <dd>230 V</dd>
+        </div>
+        <div>
+          <dt>Line frequency</dt>
+          <dd>50 Hz</dd>
+        </div>
+        <div>
+          <dt>Plug family</dt>
+          <dd>Type C/D/M</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <main>
+    <section class="band band-ice" id="checker">
+      <div class="wrap">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="kicker">Sale check</p>
+              <h2>Machine and country of sale</h2>
+              <p class="sub">The machine supply is locked to India. Choose the buyer’s country. A result within 15 V of 230 V needs no transformer. Type C is 2.5 A with no earth, so it is never a machine connection.</p>
+            </div>
+          </div>
+
+          <div class="pair">
+            <div class="field field-locked">
+              <div class="lbl-row">
+                <p class="lbl" id="machineLabel">Machine supply</p>
+                <span class="lock-tag">Built in India</span>
+              </div>
+              <p id="machineLock" class="locked-value" aria-labelledby="machineLabel">India</p>
+              <div id="machineFacts" class="facts"></div>
+            </div>
+            <div class="field">
+              <label class="lbl" for="countrySelect">Country of sale</label>
+              <select id="countrySelect"></select>
+              <div id="countryFacts" class="facts"></div>
+            </div>
+          </div>
+
+          <div id="routes" class="routes" aria-label="Countries of sale"></div>
+          <div id="result" class="result" aria-live="polite">
+            <p class="sub">Choose the country of sale.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="rules">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <p class="kicker">How it decides</p>
+            <h2>Three questions before shipment</h2>
+            <p class="sub">The machine is the Indian side. The buyer’s wall is the other side. A transformer changes voltage only.</p>
+          </div>
+        </div>
+        <div class="factors">
+          <article class="factor">
+            <header>
+              <h4>1. Connector</h4>
+              <span class="badge">Earth and current</span>
+            </header>
+            <p>Type D or Type M can seat in a matching earthed socket. Type C cannot supply a machine. Every other country needs its own earthed plug, an IEC 60309 connector, or a hard-wired junction.</p>
+          </article>
+          <article class="factor">
+            <header>
+              <h4>2. Voltage</h4>
+              <span class="badge">15 V band</span>
+            </header>
+            <p>220–240 V matches a 230 V machine. A 100–127 V site needs a continuous-duty step-up transformer rated to at least 150% of peak wattage, or a machine built for that voltage.</p>
+          </article>
+          <article class="factor">
+            <header>
+              <h4>3. Frequency</h4>
+              <span class="badge">Motor speed</span>
+            </header>
+            <p>India is 50 Hz. On 60 Hz a synchronous motor runs about 20% faster. Specify a 60 Hz motor or a variable-frequency drive. A supply marked 50/60 Hz is unaffected.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-row">
+      <div class="footer-brand">
+        <img src="assets/v360-white.svg" alt="Vision 360°">
+        <p>V360 Technetronic LLP · Surat</p>
+      </div>
+      <div>
+        <nav class="family" aria-label="Product family">
+          <span>Studio</span>
+          <span class="is-current">Tech</span>
+          <span>Micro</span>
+          <span>Measure</span>
+          <span>Light</span>
+        </nav>
+        <p class="legal legal-gap">Planning values for a machine built to the Indian single-phase nominal. The rating plate and the supply at the point of installation govern commissioning. A 400 V three-phase feed is specified separately.</p>
+      </div>
+    </div>
+    <div class="orange-stripe" aria-hidden="true"></div>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <noscript>
+    <p class="wrap">This check needs JavaScript to compare the machine with the country of sale.</p>
+  </noscript>
+  <script src="machine.js"></script>
+</body>
+</html>
