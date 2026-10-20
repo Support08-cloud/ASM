@@ -22,7 +22,8 @@ import type { ConfirmSummary, HistoryRecord, ProcessResult } from '../../models/
 import { buildExportPlan, concatListContents, durationMatches } from '../../services/ffmpeg-export'
 import { ffmpegInputPath } from '../../services/media-url'
 import { isRealDiskPath } from '../../services/sample-media'
-import { exportFileName } from '../../services/timeline'
+import { exportFileName, mediaFilesForEdit } from '../../services/timeline'
+import { MAX_TIMELINE_CLIPS } from '../../models/editor'
 
 interface AppStoreValue {
   state: AppState
@@ -38,6 +39,7 @@ interface AppStoreValue {
   clearOutput: () => void
   rescan: () => Promise<void>
   startGetMp4: () => void
+  startEditMerge: () => void
   confirmGetMp4: () => Promise<void>
   exportTimeline: (project: EditorProject) => Promise<void>
   cancelProcessing: () => void
@@ -66,6 +68,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       history,
       sourcePath: paths.sourcePath,
       outputPath: paths.outputPath,
+      sourceKind: paths.sourceKind,
     })
   }, [])
 
@@ -81,8 +84,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     savePaths({
       sourcePath: state.sourcePath ?? undefined,
       outputPath: state.outputPath ?? undefined,
+      sourceKind: state.sourceKind,
     })
-  }, [state.sourcePath, state.outputPath])
+  }, [state.sourcePath, state.outputPath, state.sourceKind])
 
   useEffect(() => {
     document.documentElement.dataset.theme = state.settings.theme
@@ -295,11 +299,51 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }
 
   const rescan = async () => {
-    if (stateRef.current.sourceKind === 'none' || !stateRef.current.sourcePath) {
+    const current = stateRef.current
+    if (!current.sourcePath) {
       await chooseSource()
       return
     }
-    await runScan(stateRef.current.sourceKind === 'demo' ? 'demo' : 'directory')
+    const kind = current.sourceKind === 'demo' || current.sourcePath.includes('Sample Dataset') ? 'demo' : 'directory'
+    await runScan(kind)
+  }
+
+  const startEditMerge = () => {
+    const current = stateRef.current
+    if (!current.outputPath) {
+      toast('warning', 'Select an output folder first. The merged video is saved there.')
+      return
+    }
+    if (current.selectedIds.length === 0) {
+      toast('info', 'Select the folders you want to edit and merge.')
+      return
+    }
+    if (current.phase === 'scanning' || current.phase === 'processing' || current.phase === 'exporting') return
+    const selected = withSelectedFolders(current.diamonds, current.selectedIds)
+    const found = mediaFilesForEdit(selected, current.sourceKind === 'demo')
+    if (found.length === 0) {
+      toast('warning', 'Those folders do not contain an MP4.')
+      return
+    }
+    const names = [...new Set(selected.map((diamond) => diamond.baseName))]
+    const diamondName = names.length === 1 ? names[0] : 'merged'
+    const files = found.slice(0, MAX_TIMELINE_CLIPS).map((file) => ({ ...file, diamondName }))
+    if (found.length > MAX_TIMELINE_CLIPS) toast('warning', `Only the first ${MAX_TIMELINE_CLIPS} videos are opened.`)
+    const outputDir = joinPath(current.outputPath, diamondName)
+    dispatch({
+      type: 'open-merge',
+      diamondName,
+      outputDir,
+      result: {
+        outcome: 'success',
+        copied: files.length,
+        skipped: 0,
+        failed: 0,
+        total: files.length,
+        outputPath: outputDir,
+        files,
+      },
+    })
   }
 
   const startGetMp4 = () => {
@@ -343,6 +387,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         onProgress: (progress) => dispatch({ type: 'process-progress', progress }),
         copyFile: window.desktop?.isElectron
           ? (sourcePath, destinationPath) => window.desktop!.copyFile(sourcePath, destinationPath)
+          : undefined,
+        fileExists: window.desktop?.fileExists
+          ? (path) => window.desktop!.fileExists!(path)
           : undefined,
       })
       const record = toHistory(result, selected, current.sourcePath ?? 'Unknown', new Date().toISOString())
@@ -450,19 +497,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'export-complete', result })
       toast('success', window.desktop?.runFfmpeg ? 'Edited video exported' : `Export planned: ${exportFileName(project.diamondName)}`)
     } catch (error) {
-      dispatch({
-        type: 'export-complete',
-        result: {
-          outcome: 'error',
-          copied: 0,
-          skipped: 0,
-          failed: 1,
-          total: 1,
-          outputPath: project.outputDir,
-          files: [],
-          errorMessage: error instanceof Error ? error.message : 'Export failed',
-        },
-      })
+      dispatch({ type: 'export-failed' })
       toast('error', error instanceof Error ? error.message.slice(0, 180) : 'Could not export the edited video')
     }
   }
@@ -481,6 +516,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     clearOutput,
     rescan,
     startGetMp4,
+    startEditMerge,
     confirmGetMp4,
     exportTimeline,
     cancelProcessing,
@@ -494,6 +530,14 @@ export function useAppStore(): AppStoreValue {
   const value = useContext(AppStoreContext)
   if (!value) throw new Error('useAppStore must be used within AppStoreProvider')
   return value
+}
+
+function joinPath(...parts: string[]): string {
+  const root = parts[0] ?? ''
+  const sep = root.includes('\\') ? '\\' : '/'
+  return parts
+    .map((part, index) => (index === 0 ? part.replace(/[\\/]+$/, '') : part.replace(/^[\\/]+/, '')))
+    .join(sep)
 }
 
 function wait(ms: number): Promise<void> {

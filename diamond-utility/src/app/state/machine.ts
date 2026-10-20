@@ -31,6 +31,7 @@ export interface AppState {
   lastProcessResult: ProcessResult | null
   exportProgress: { percent: number; message: string } | null
   editorDiamond: string | null
+  editorOutputDir: string | null
   history: HistoryRecord[]
   toasts: ToastItem[]
   settings: AppSettings
@@ -56,13 +57,14 @@ export const initialState: AppState = {
   lastProcessResult: null,
   exportProgress: null,
   editorDiamond: null,
+  editorOutputDir: null,
   history: [],
   toasts: [],
   settings: DEFAULT_SETTINGS,
 }
 
 export type AppAction =
-  | { type: 'hydrate'; settings: AppSettings; history: HistoryRecord[]; sourcePath?: string; outputPath?: string }
+  | { type: 'hydrate'; settings: AppSettings; history: HistoryRecord[]; sourcePath?: string; outputPath?: string; sourceKind?: AppState['sourceKind'] }
   | { type: 'navigate'; route: RouteId }
   | { type: 'toggle-sidebar' }
   | { type: 'set-theme'; theme: AppSettings['theme'] }
@@ -90,7 +92,9 @@ export type AppAction =
   | { type: 'process-progress'; progress: ProcessProgress }
   | { type: 'process-complete'; result: ProcessResult; record: HistoryRecord }
   | { type: 'open-editor'; diamondName?: string }
+  | { type: 'open-merge'; diamondName: string; outputDir: string; result: ProcessResult }
   | { type: 'close-editor' }
+  | { type: 'export-failed' }
   | { type: 'export-start' }
   | { type: 'export-progress'; percent: number; message: string }
   | { type: 'export-complete'; result: ProcessResult }
@@ -108,8 +112,10 @@ export function reducer(state: AppState, action: AppAction): AppState {
         history: action.history,
         sourcePath: action.sourcePath ?? state.sourcePath,
         outputPath: action.outputPath ?? state.outputPath,
+        sourceKind: action.sourceKind && action.sourceKind !== 'none' ? action.sourceKind : state.sourceKind,
       }
     case 'navigate':
+      if ((state.phase === 'editing' || state.phase === 'exporting') && action.route !== 'operations') return state
       return { ...state, route: action.route }
     case 'toggle-sidebar':
       return {
@@ -238,10 +244,26 @@ export function reducer(state: AppState, action: AppAction): AppState {
       const names = [...new Set(copied.map((file) => file.diamondName).filter(Boolean))]
       const diamondName = action.diamondName ?? (names.length === 1 ? names[0] : null)
       if (!diamondName) return { ...state, phase: 'completed', route: 'operations' }
-      return { ...state, phase: 'editing', route: 'operations', editorDiamond: diamondName }
+      return { ...state, phase: 'editing', route: 'operations', editorDiamond: diamondName, editorOutputDir: null }
     }
+    case 'open-merge':
+      return {
+        ...state,
+        phase: 'editing',
+        route: 'operations',
+        editorDiamond: action.diamondName,
+        editorOutputDir: action.outputDir,
+        lastProcessResult: action.result,
+        processResult: null,
+        exportProgress: null,
+      }
     case 'close-editor':
-      return { ...state, phase: state.lastProcessResult ? 'completed' : 'ready', exportProgress: null }
+      return {
+        ...state,
+        phase: state.lastProcessResult ? 'completed' : 'ready',
+        exportProgress: null,
+        editorOutputDir: null,
+      }
     case 'export-start':
       return {
         ...state,
@@ -258,7 +280,10 @@ export function reducer(state: AppState, action: AppAction): AppState {
         exportProgress: null,
         processResult: action.result,
         lastProcessResult: state.lastProcessResult ?? action.result,
+        editorOutputDir: null,
       }
+    case 'export-failed':
+      return { ...state, phase: state.editorDiamond || state.lastProcessResult ? 'editing' : 'completed', exportProgress: null }
     case 'dismiss-completion':
       return { ...state, phase: 'ready', processResult: null, processProgress: null, route: 'dashboard' }
     case 'add-toast':

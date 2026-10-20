@@ -69,22 +69,23 @@ export function buildExportPlan(project: EditorProject, options: ExportPlanOptio
 
 export function buildPrepareArgs(clip: EditorClip, output: string, masterVolume: number): string[] {
   const playSec = clipPlayDurationMs(clip) / 1000
-  const spanSec = (clip.outMs - clip.inMs) / 1000
+  const inSec = (clip.inMs / 1000).toFixed(3)
+  const outSec = (clip.outMs / 1000).toFixed(3)
   const input = ffmpegInputPath(clip)
-  const videoFilters = videoFiltersForClip(clip, playSec)
+  const videoFilters = [
+    `trim=start=${inSec}:end=${outSec}`,
+    'setpts=PTS-STARTPTS',
+    ...videoFiltersForClip(clip, playSec),
+  ]
   const volume = clip.muted ? 0 : clamp(clip.volume * masterVolume, 0, 4)
   const tempo = atempoChain(clip.speed)
-  const audioFilters = [tempo, `volume=${volume.toFixed(3)}`].filter(Boolean)
+  const audioFilters = [`atrim=start=${inSec}:end=${outSec}`, 'asetpts=PTS-STARTPTS', tempo, `volume=${volume.toFixed(3)}`].filter(Boolean)
 
   if (clip.hasAudio === false) {
     return [
       '-y',
       '-i',
       input,
-      '-ss',
-      (clip.inMs / 1000).toFixed(3),
-      '-t',
-      spanSec.toFixed(3),
       '-f',
       'lavfi',
       '-t',
@@ -112,10 +113,6 @@ export function buildPrepareArgs(clip: EditorClip, output: string, masterVolume:
     '-y',
     '-i',
     input,
-    '-ss',
-    (clip.inMs / 1000).toFixed(3),
-    '-t',
-    spanSec.toFixed(3),
     '-vf',
     videoFilters.join(','),
     '-af',

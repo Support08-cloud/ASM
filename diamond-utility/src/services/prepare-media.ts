@@ -54,7 +54,7 @@ export async function prepareEditorProject(
   return { ...project, clips }
 }
 
-async function prepareClip(clip: EditorClip, outputDir: string): Promise<EditorClip> {
+export async function prepareClip(clip: EditorClip, outputDir: string): Promise<EditorClip> {
   const input = ffmpegInputPath(clip)
   let next = { ...clip }
   try {

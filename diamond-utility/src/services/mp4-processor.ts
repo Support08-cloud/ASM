@@ -9,6 +9,7 @@ export interface ExtractOptions {
   signal?: AbortSignal
   onProgress: (progress: ProcessProgress) => void
   copyFile?: (sourcePath: string, destinationPath: string) => Promise<void>
+  fileExists?: (path: string) => Promise<boolean>
 }
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
@@ -36,7 +37,7 @@ function outputName(folder: DiamondFolder, fileName: string, index: number): str
 }
 
 export async function extractMp4s(options: ExtractOptions): Promise<ProcessResult> {
-  const { diamonds, outputPath, duplicatePolicy, signal, onProgress, copyFile } = options
+  const { diamonds, outputPath, duplicatePolicy, signal, onProgress, copyFile, fileExists } = options
   const jobs: DiamondProcessJob[] = diamonds.map((diamond) => ({
     diamondId: diamond.id,
     diamondName: diamond.baseName,
@@ -103,6 +104,7 @@ export async function extractMp4s(options: ExtractOptions): Promise<ProcessResul
       }
 
       const mp4s = folder.files.filter((file) => file.kind === 'mp4')
+      let folderFailed = 0
       if (mp4s.length === 0) {
         step.status = 'skipped'
         step.message = 'No MP4 found'
@@ -141,8 +143,29 @@ export async function extractMp4s(options: ExtractOptions): Promise<ProcessResul
           continue
         }
 
-        const finalPath =
+        let finalPath =
           usedNames.has(key) && duplicatePolicy === 'rename' ? uniquify(destPath, usedNames) : destPath
+        if (fileExists && (await fileExists(finalPath))) {
+          if (duplicatePolicy === 'skip') {
+            skipped += 1
+            files.push({
+              diamondName: diamond.baseName,
+              viewLabel: folder.folderName,
+              sourcePath: file.relativePath,
+              outputPath: finalPath,
+              status: 'skipped',
+              message: 'File already exists',
+            })
+            continue
+          }
+          if (duplicatePolicy === 'rename') {
+            finalPath = uniquify(finalPath, usedNames)
+            while (await fileExists(finalPath)) {
+              usedNames.set(finalPath.toLowerCase(), 1)
+              finalPath = uniquify(finalPath, usedNames)
+            }
+          }
+        }
         usedNames.set(finalPath.toLowerCase(), 1)
 
         if (copyFile && file.absolutePath) {
@@ -150,6 +173,7 @@ export async function extractMp4s(options: ExtractOptions): Promise<ProcessResul
             await copyFile(file.absolutePath, finalPath)
           } catch (error) {
             failed += 1
+            folderFailed += 1
             files.push({
               diamondName: diamond.baseName,
               viewLabel: folder.folderName,
@@ -174,7 +198,7 @@ export async function extractMp4s(options: ExtractOptions): Promise<ProcessResul
         })
       }
 
-      step.status = countKind(folder, 'mp4') > 1 ? 'done' : 'done'
+      step.status = folderFailed > 0 ? 'error' : 'done'
       completedSteps += 1
       emit(diamondIndex, diamond.baseName)
     }

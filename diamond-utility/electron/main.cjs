@@ -186,6 +186,24 @@ app.whenReady().then(() => {
     return result.filePaths[0]
   })
 
+  ipcMain.handle('desktop:pick-videos', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Select videos to edit and merge',
+      properties: ['openFile', 'multiSelections'],
+      filters: [{ name: 'Video', extensions: ['mp4', 'mov', 'm4v', 'mkv', 'webm'] }],
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return result.filePaths
+  })
+
+  ipcMain.handle('desktop:file-exists', async (_event, filePath) => {
+    try {
+      return fs.existsSync(filePath)
+    } catch {
+      return false
+    }
+  })
+
   ipcMain.handle('desktop:pick-media', async (_event, kind) => {
     const audio = [
       { name: 'Audio', extensions: ['mp3', 'wav', 'm4a', 'aac', 'ogg'] },

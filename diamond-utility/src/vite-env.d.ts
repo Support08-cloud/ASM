@@ -36,6 +36,8 @@ interface Window {
     isElectron: true
     pickDirectory: () => Promise<string | null>
     pickMedia?: (kind: 'video' | 'audio') => Promise<string | null>
+    pickVideos?: () => Promise<string[] | null>
+    fileExists?: (filePath: string) => Promise<boolean>
     scanDirectory: (root: string) => Promise<{
       folders: Array<{
         folderName: string

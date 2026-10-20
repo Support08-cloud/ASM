@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import { groupDiamonds } from '../src/services/diamond-parser'
 import {
   applyTransition,
   clipAtTime,
   clipPlayDurationMs,
   clipStartMs,
   createExtra,
+  mediaFilesForEdit,
   moveClip,
   projectDurationMs,
   projectFromCopiedFiles,
@@ -87,5 +89,15 @@ describe('timeline', () => {
     const music = createExtra('audio', 2000, { durationMs: 8000 })
     expect(projectDurationMs({ clips: project.clips, extraClips: [music] })).toBe(10000)
     expect(clipPlayDurationMs(project.clips[0])).toBe(4000)
+  })
+
+  it('collects every MP4 from the selected machine folders for one merge', () => {
+    const diamonds = groupDiamonds([
+      { folderName: 'yash-01', relativePath: 'D:/in/yash-01', files: [{ name: 'a.mp4', absolutePath: 'D:/in/yash-01/a.mp4' }] },
+      { folderName: 'yash-02', relativePath: 'D:/in/yash-02', files: [{ name: 'b.mp4', absolutePath: 'D:/in/yash-02/b.mp4' }] },
+    ])
+    const files = mediaFilesForEdit(diamonds, false)
+    expect(files.map((file) => file.outputPath)).toEqual(['D:/in/yash-01/a.mp4', 'D:/in/yash-02/b.mp4'])
+    expect(files.every((file) => file.diamondName === 'yash')).toBe(true)
   })
 })

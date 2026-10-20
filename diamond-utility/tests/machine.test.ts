@@ -149,4 +149,27 @@ describe('app state machine', () => {
     expect(opened.phase).toBe('editing')
     expect(opened.editorDiamond).toBe('260609-151')
   })
+
+  it('opens every selected video for edit and merge, and keeps the editor if export fails', () => {
+    const result = {
+      outcome: 'success' as const,
+      copied: 2,
+      skipped: 0,
+      failed: 0,
+      total: 2,
+      outputPath: 'D:/out/yash',
+      files: [
+        { diamondName: 'yash', viewLabel: 'yash-01', sourcePath: 'D:/in/yash-01/a.mp4', outputPath: 'D:/in/yash-01/a.mp4', status: 'copied' as const },
+        { diamondName: 'yash', viewLabel: 'yash-02', sourcePath: 'D:/in/yash-02/b.mp4', outputPath: 'D:/in/yash-02/b.mp4', status: 'copied' as const },
+      ],
+    }
+    const editing = reducer(initialState, { type: 'open-merge', diamondName: 'yash', outputDir: 'D:/out/yash', result })
+    expect(editing.phase).toBe('editing')
+    expect(editing.editorOutputDir).toBe('D:/out/yash')
+    expect(editing.lastProcessResult?.files).toHaveLength(2)
+    const stayed = reducer({ ...editing, phase: 'exporting' }, { type: 'export-failed' })
+    expect(stayed.phase).toBe('editing')
+    const blocked = reducer(editing, { type: 'navigate', route: 'dashboard' })
+    expect(blocked.route).toBe('operations')
+  })
 })

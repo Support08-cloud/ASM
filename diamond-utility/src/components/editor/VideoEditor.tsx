@@ -9,7 +9,8 @@ import {
   type TransitionId,
 } from '../../models/editor'
 import { toVideoSrc } from '../../services/media-url'
-import { prepareEditorProject } from '../../services/prepare-media'
+import { prepareClip, prepareEditorProject } from '../../services/prepare-media'
+import { isRealDiskPath } from '../../services/sample-media'
 import { sampleMusicUrl } from '../../services/sample-media'
 import { captureFilmstrip } from '../../services/thumbnails'
 import {
@@ -162,26 +163,44 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   }
 
   const addVideoClip = async (path: string, mediaUrl?: string, durationMs?: number, hasAudio?: boolean) => {
-    if (project.clips.length >= MAX_TIMELINE_CLIPS) return
+    const current = projectRef.current
+    if (current.clips.length >= MAX_TIMELINE_CLIPS) return
     const name = path.split(/[/\\]/).pop() ?? 'clip.mp4'
-    const clip = createClipFromFile(
+    let clip = createClipFromFile(
       {
-        diamondName: project.diamondName,
+        diamondName: current.diamondName,
         viewLabel: name,
         sourcePath: path,
         outputPath: path,
         status: 'copied',
       },
-      project.clips.length,
+      current.clips.length,
     )
     clip.absolutePath = mediaUrl ? undefined : path
     if (mediaUrl) clip.mediaUrl = mediaUrl
     if (durationMs) Object.assign(clip, applyDuration(clip, durationMs))
     if (hasAudio != null) clip.hasAudio = hasAudio
-    commit({ clips: [...project.clips, clip], selectedClipId: clip.id, selectedExtraId: null })
+    if (!mediaUrl && isRealDiskPath(path) && window.desktop?.runFfmpeg) {
+      setPreparing({ current: current.clips.length + 1, total: current.clips.length + 1, message: `Preparing ${name}` })
+      clip = await prepareClip(clip, current.outputDir)
+      setPreparing(null)
+    }
+    const latest = projectRef.current
+    if (latest.clips.length >= MAX_TIMELINE_CLIPS) return
+    commit({ clips: [...latest.clips, clip], selectedClipId: clip.id, selectedExtraId: null })
   }
 
   const addMedia = async () => {
+    if (window.desktop?.pickVideos) {
+      const picked = await window.desktop.pickVideos()
+      if (!picked?.length) return
+      for (const file of picked) {
+        if (projectRef.current.clips.length >= MAX_TIMELINE_CLIPS) break
+        const info = await window.desktop.mediaInfo?.(file)
+        await addVideoClip(file, undefined, info?.durationMs, info?.hasAudio)
+      }
+      return
+    }
     if (window.desktop?.pickMedia) {
       const picked = await window.desktop.pickMedia('video')
       if (!picked) return
@@ -501,16 +520,18 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
         </div>
       ) : null}
 
-      <input
+          <input
         ref={mediaInputRef}
         className="sr-only"
         type="file"
         accept="video/mp4,video/*"
+        multiple
         onChange={(event) => {
-          const file = event.target.files?.[0]
+          const files = [...(event.target.files ?? [])]
           event.target.value = ''
-          if (!file) return
-          void addVideoClip(file.name, URL.createObjectURL(file))
+          for (const file of files) {
+            void addVideoClip(file.name, URL.createObjectURL(file))
+          }
         }}
       />
       <input

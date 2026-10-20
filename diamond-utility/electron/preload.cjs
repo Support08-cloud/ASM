@@ -4,6 +4,8 @@ contextBridge.exposeInMainWorld('desktop', {
   isElectron: true,
   pickDirectory: () => ipcRenderer.invoke('desktop:pick-directory'),
   pickMedia: (kind) => ipcRenderer.invoke('desktop:pick-media', kind),
+  pickVideos: () => ipcRenderer.invoke('desktop:pick-videos'),
+  fileExists: (filePath) => ipcRenderer.invoke('desktop:file-exists', filePath),
   scanDirectory: (root) => ipcRenderer.invoke('desktop:scan-directory', root),
   copyFile: (sourcePath, destinationPath) =>
     ipcRenderer.invoke('desktop:copy-file', sourcePath, destinationPath),

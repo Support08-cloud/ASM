@@ -14,6 +14,7 @@ import {
   type ExtraKind,
   type TransitionId,
 } from '../models/editor'
+import type { Diamond } from '../models/diamond'
 import type { ProcessFileResult } from '../models/processing'
 import { uid } from '../utils/format'
 import { clampSpeed } from './edit-graph'
@@ -169,6 +170,27 @@ export function createExtra(kind: ExtraKind, startMs: number, patch?: Partial<Ex
     color: kind === 'audio' ? AUDIO_COLOR : TEXT_COLOR,
   }
   return { ...base, ...patch }
+}
+
+export function mediaFilesForEdit(diamonds: Diamond[], demo: boolean): ProcessFileResult[] {
+  const files: ProcessFileResult[] = []
+  for (const diamond of diamonds) {
+    for (const folder of diamond.folders) {
+      for (const file of folder.files) {
+        if (file.kind !== 'mp4') continue
+        const demoPath = `Sample Dataset / Output_Testing/${diamond.baseName}/${folder.folderName}.mp4`
+        const mediaPath = file.absolutePath || (demo ? demoPath : file.relativePath)
+        files.push({
+          diamondName: diamond.baseName,
+          viewLabel: folder.folderName,
+          sourcePath: file.relativePath || mediaPath,
+          outputPath: mediaPath,
+          status: 'copied',
+        })
+      }
+    }
+  }
+  return files
 }
 
 export function projectFromCopiedFiles(

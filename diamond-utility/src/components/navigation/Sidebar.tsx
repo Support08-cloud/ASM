@@ -55,7 +55,16 @@ export function Sidebar() {
               key={item.id}
               type="button"
               className={`nav-btn${state.route === item.id ? ' is-active' : ''}`}
-              onClick={() => dispatch({ type: 'navigate', route: item.id })}
+              onClick={() => {
+                if ((state.phase === 'editing' || state.phase === 'exporting') && item.id !== 'operations') {
+                  dispatch({
+                    type: 'add-toast',
+                    toast: { id: `edit-lock-${Date.now()}`, tone: 'info', title: 'Close the editor before leaving this screen.' },
+                  })
+                  return
+                }
+                dispatch({ type: 'navigate', route: item.id })
+              }}
               aria-current={state.route === item.id ? 'page' : undefined}
               title={collapsed ? item.label : undefined}
             >

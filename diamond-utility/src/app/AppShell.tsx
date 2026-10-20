@@ -48,6 +48,7 @@ export function AppShell() {
       }
       if (isModKey(event) && event.key.toLowerCase() === 'r') {
         event.preventDefault()
+        if (state.phase === 'editing' || state.phase === 'exporting') return
         void rescan()
       }
     }

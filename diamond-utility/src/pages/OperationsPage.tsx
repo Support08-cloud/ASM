@@ -7,6 +7,11 @@ import { ProcessingPanel } from '../components/processing/ProcessingPanel'
 import { VideoEditor } from '../components/editor/VideoEditor'
 import { outputDirFromFiles, projectFromCopiedFiles } from '../services/timeline'
 
+function folderOf(target: string): string {
+  if (/\.(mp4|mov|m4v|mkv|webm)$/i.test(target)) return target.replace(/[/\\][^/\\]+$/, '') || target
+  return target
+}
+
 export function OperationsPage() {
   const { state, dispatch, cancelProcessing, openOutput, exportTimeline } = useAppStore()
   const result = state.processResult ?? state.lastProcessResult
@@ -20,15 +25,19 @@ export function OperationsPage() {
     const scoped = state.editorDiamond ? files.filter((file) => file.diamondName === state.editorDiamond) : files
     if (scoped.length === 0) return null
     const diamondName = state.editorDiamond || scoped[0].diamondName || 'diamond'
-    return projectFromCopiedFiles(scoped, outputDirFromFiles(scoped, editorSource.outputPath), diamondName)
-  }, [editorSource, state.editorDiamond])
+    return projectFromCopiedFiles(
+      scoped,
+      state.editorOutputDir || outputDirFromFiles(scoped, editorSource.outputPath),
+      diamondName,
+    )
+  }, [editorSource, state.editorDiamond, state.editorOutputDir])
 
   if (state.phase === 'editing' || state.phase === 'exporting') {
     if (!project) {
       return (
         <EmptyState
           title="Nothing to edit"
-          body="Run Get MP4 first, then open Edit from the completion screen."
+          body="Select folders on the Dashboard, then choose Edit & merge. Those videos open together on one timeline."
           actionLabel="Go to Dashboard"
           onAction={() => dispatch({ type: 'navigate', route: 'dashboard' })}
         />
@@ -61,7 +70,7 @@ export function OperationsPage() {
           onDone={() => dispatch({ type: 'dismiss-completion' })}
           onEdit={(diamondName) => dispatch({ type: 'open-editor', diamondName })}
           onOpenOutput={() => {
-            void openOutput(state.processResult?.outputPath ?? '')
+            void openOutput(folderOf(state.processResult?.outputPath ?? ''))
           }}
         />
       ) : result ? (
@@ -100,7 +109,7 @@ export function OperationsPage() {
       ) : (
         <EmptyState
           title="No active operation"
-          body="Select variant folders on the Dashboard, then run Get MP4. Live progress and Edit appear here."
+          body="Select the folders already on this PC, then choose Edit & merge. Play runs those videos in order and Export saves one merged file."
           actionLabel="Go to Dashboard"
           onAction={() => dispatch({ type: 'navigate', route: 'dashboard' })}
         />

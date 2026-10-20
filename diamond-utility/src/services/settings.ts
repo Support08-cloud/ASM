@@ -7,6 +7,7 @@ const PATHS_KEY = 'diamond-utility.paths.v1'
 export interface StoredPaths {
   sourcePath?: string
   outputPath?: string
+  sourceKind?: 'none' | 'demo' | 'directory'
 }
 
 export function loadSettings(): AppSettings {

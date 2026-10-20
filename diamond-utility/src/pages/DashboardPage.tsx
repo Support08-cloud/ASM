@@ -24,6 +24,7 @@ export function DashboardPage() {
     loadSample,
     rescan,
     startGetMp4,
+    startEditMerge,
     confirmGetMp4,
     detailsDiamond,
     confirmSummary,
@@ -208,6 +209,7 @@ export function DashboardPage() {
         reason={getMp4Reason}
         onClear={() => dispatch({ type: 'clear-selection' })}
         onProcess={startGetMp4}
+        onMerge={startEditMerge}
       />
 
       {detailsDiamond ? (

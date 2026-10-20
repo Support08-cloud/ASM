@@ -89,6 +89,25 @@ describe('extractMp4s', () => {
     vi.useRealTimers()
   })
 
+  it('does not overwrite a file that is already in the output folder when policy is skip', async () => {
+    const diamonds = groupDiamonds([
+      { folderName: 'yash-01', relativePath: 'yash-01', files: [{ name: 'video.mp4', absolutePath: 'D:/in/yash-01/video.mp4' }] },
+    ])
+    const result = await extractMp4s({
+      diamonds,
+      outputPath: 'D:/Output',
+      duplicatePolicy: 'skip',
+      fileExists: async () => true,
+      copyFile: async () => {
+        throw new Error('should not copy')
+      },
+      onProgress: () => undefined,
+    })
+    expect(result.copied).toBe(0)
+    expect(result.skipped).toBe(1)
+    expect(result.files[0]?.message).toBe('File already exists')
+  })
+
   it('skips missing MP4s and reports inaccessible folders as failures', async () => {
     vi.useFakeTimers()
     const diamonds = groupDiamonds([

@@ -27,9 +27,9 @@ export function uid(prefix: string): string {
 }
 
 export function formatTimecode(ms: number): string {
-  const total = Math.max(0, Math.round(ms / 1000))
-  const minutes = Math.floor(total / 60)
-  const seconds = total % 60
-  const tenths = Math.floor((Math.max(0, ms) % 1000) / 100)
+  const totalTenths = Math.round(Math.max(0, ms) / 100)
+  const minutes = Math.floor(totalTenths / 600)
+  const seconds = Math.floor(totalTenths / 10) % 60
+  const tenths = totalTenths % 10
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${tenths}`
 }
