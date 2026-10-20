@@ -70,8 +70,8 @@ export function OperationsPage() {
             title="Ready to edit"
             body={
               readyDiamonds.length > 1
-                ? 'Choose one diamond. The editor opens a single diamond at a time.'
-                : 'Open the last extracted diamond videos in the timeline editor.'
+                ? 'Choose one group. Edit opens every video from that group together, and Play runs them in order.'
+                : 'Edit opens every copied video for this group on one timeline. Play runs them in order.'
             }
             actionLabel={readyDiamonds.length === 1 ? 'Edit videos' : undefined}
             onAction={

@@ -215,10 +215,10 @@ export function createClipFromFile(file: ProcessFileResult, index: number): Edit
     effect: 'none',
     grade: { ...DEFAULT_GRADE },
     transform: { ...DEFAULT_TRANSFORM },
-    fadeInMs: index === 0 ? 350 : 0,
+    fadeInMs: 0,
     fadeOutMs: 0,
-    transition: 'fade',
-    transitionMs: DEFAULT_TRANSITION_MS,
+    transition: 'none',
+    transitionMs: 0,
     color: CLIP_COLORS[index % CLIP_COLORS.length],
   }
 }

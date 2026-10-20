@@ -54,7 +54,9 @@ export function CompletionDialog({
         </p>
       ) : null}
       {diamonds.length > 1 ? (
-        <p className="card-sub">The editor opens one diamond at a time. Choose which diamond to edit.</p>
+        <p className="card-sub">Choose one group. Edit opens every video from that group together, and Play runs them in order.</p>
+      ) : diamonds.length === 1 ? (
+        <p className="card-sub">Edit opens every copied video for {diamonds[0]} together. Play runs them in order.</p>
       ) : null}
       <div className="btn-row" style={{ marginTop: 20, flexWrap: 'wrap' }}>
         {onEdit

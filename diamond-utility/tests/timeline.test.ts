@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyTransition,
+  clipAtTime,
   clipPlayDurationMs,
+  clipStartMs,
   createExtra,
   moveClip,
   projectDurationMs,
@@ -32,6 +34,9 @@ describe('timeline', () => {
     expect(project.clips[0].filter).toBe('none')
     expect(project.clips[0].mediaUrl).toBeUndefined()
     expect(project.clips[0].effect).toBe('none')
+    expect(project.clips[0].transition).toBe('none')
+    expect(project.clips[0].fadeInMs).toBe(0)
+    expect(timelineDurationMs(project.clips)).toBe(16000)
     expect(project.clips[0].grade.transparency).toBe(1)
     expect(project.clips.map((clip) => clip.label)).toEqual([
       '260602-362-1.mp4',
@@ -54,6 +59,15 @@ describe('timeline', () => {
     expect(timelineDurationMs(withFade)).toBe(4000 + 4000 - 500)
     const hardCut = project.clips.map((clip) => applyTransition(clip, 'none'))
     expect(timelineDurationMs(hardCut)).toBe(8000)
+  })
+
+  it('plays into the next clip from its start when clips are back to back', () => {
+    const project = projectFromCopiedFiles([file('A'), file('B')], '/out', 'A')
+    const end = clipStartMs(project.clips, 0) + clipPlayDurationMs(project.clips[0])
+    const hit = clipAtTime(project.clips, end)
+    expect(hit?.index).toBe(1)
+    expect(hit?.localMs).toBe(0)
+    expect(hit?.startMs).toBe(end)
   })
 
   it('splits a clip at the playhead and can reorder', () => {

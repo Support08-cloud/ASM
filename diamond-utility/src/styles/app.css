@@ -1650,6 +1650,11 @@
 
 .nle-rail button.is-on,
 .nle-tile.is-on,
+.nle-bin-card.is-live {
+  outline: 2px solid #c6691d;
+  outline-offset: 1px;
+}
+
 .nle-bin-card.is-on,
 .btn.ghost.is-on {
   color: #fefefe;

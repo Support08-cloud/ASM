@@ -14,8 +14,6 @@ interface PreviewStageProps {
   extras: ExtraClip[]
   transitionOpacity: number
   onDuration: (clipId: string, durationMs: number) => void
-  onSourceTime: (sourceMs: number) => void
-  onClipBoundary: () => void
 }
 
 export function PreviewStage({
@@ -27,13 +25,19 @@ export function PreviewStage({
   extras,
   transitionOpacity,
   onDuration,
-  onSourceTime,
-  onClipBoundary,
 }: PreviewStageProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
   const playingRef = useRef(playing)
   playingRef.current = playing
+  const localRef = useRef(localMs)
+  localRef.current = localMs
+  const clipRef = useRef(clip)
+  clipRef.current = clip
+  const playheadRef = useRef(playheadMs)
+  playheadRef.current = playheadMs
+  const extrasRef = useRef(extras)
+  extrasRef.current = extras
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const src = clip ? toVideoSrc(clip) : undefined
   const titles = extras.filter((extra) => extra.kind === 'text')
@@ -43,28 +47,29 @@ export function PreviewStage({
 
   useEffect(() => {
     const video = videoRef.current
-    if (!video || !clip || !src) return
-    setStatus('loading')
+    const current = clipRef.current
+    if (!video || !current || !src) return
     if (video.dataset.src !== src) {
       video.dataset.src = src
       video.src = src
+      setStatus('loading')
     }
-    const start = Math.max(0, sourceTimeMs(clip, playingRef.current ? 0 : localMs) / 1000)
+    const start = Math.max(0, sourceTimeMs(current, localRef.current) / 1000)
     const apply = () => {
-      video.playbackRate = Math.max(0.25, clip.speed)
-      video.volume = clip.muted ? 0 : Math.min(1, Math.max(0, clip.volume * masterVolume))
+      video.playbackRate = playbackRateFor(current.speed)
+      video.volume = current.muted ? 0 : Math.min(1, Math.max(0, current.volume * masterVolume))
       video.muted = video.volume === 0
       if (Math.abs(video.currentTime - start) > 0.08) video.currentTime = start
-      if (playingRef.current) void video.play().catch(() => undefined)
+      if (playingRef.current) void video.play().catch(() => setStatus('error'))
     }
     if (video.readyState >= 1) apply()
     else video.addEventListener('loadedmetadata', apply, { once: true })
-  }, [clip?.id, src])
+  }, [clip?.id, src, masterVolume])
 
   useEffect(() => {
     const video = videoRef.current
     if (!video || !clip) return
-    video.playbackRate = Math.max(0.25, clip.speed)
+    video.playbackRate = playbackRateFor(clip.speed)
     video.volume = clip.muted ? 0 : Math.min(1, Math.max(0, clip.volume * masterVolume))
     video.muted = video.volume === 0
   }, [clip?.speed, clip?.volume, clip?.muted, masterVolume])
@@ -104,14 +109,30 @@ export function PreviewStage({
   useEffect(() => {
     const audio = audioRef.current
     if (!audio || !music) return
-    const t = Math.max(0, (playheadMs - music.startMs) / 1000)
-    if (playing) {
-      void audio.play().catch(() => undefined)
-      return
-    }
+    const t = Math.max(0, (playheadRef.current - music.startMs) / 1000)
     if (Number.isFinite(t) && Math.abs(audio.currentTime - t) > 0.12) audio.currentTime = t
-    audio.pause()
-  }, [playing, playheadMs, music?.id, music?.startMs])
+    if (playing) void audio.play().catch(() => undefined)
+    else audio.pause()
+  }, [playing, music?.id, music?.startMs])
+
+  useEffect(() => {
+    if (!playing) return
+    const timer = window.setInterval(() => {
+      const video = videoRef.current
+      const current = clipRef.current
+      if (!video || !current || video.readyState < 1) return
+      const target = Math.max(0, sourceTimeMs(current, localRef.current) / 1000)
+      if (Number.isFinite(video.duration) && target >= video.duration - 0.05) return
+      if (Math.abs(video.currentTime - target) > 0.45) video.currentTime = target
+      if (video.paused) void video.play().catch(() => undefined)
+      const audio = audioRef.current
+      const track = extrasRef.current.find((extra) => extra.kind === 'audio')
+      if (!audio || !track || !audio.src) return
+      const musicAt = Math.max(0, (playheadRef.current - track.startMs) / 1000)
+      if (Number.isFinite(musicAt) && Math.abs(audio.currentTime - musicAt) > 0.45) audio.currentTime = musicAt
+    }, 400)
+    return () => window.clearInterval(timer)
+  }, [playing, clip?.id])
 
   const effectClass = clip && clip.effect !== 'none' ? ` is-fx-${clip.effect}` : ''
 
@@ -135,13 +156,6 @@ export function PreviewStage({
           }}
           onCanPlay={() => setStatus('ready')}
           onError={() => setStatus('error')}
-          onTimeUpdate={(event) => {
-            if (!playing) return
-            const sourceMs = event.currentTarget.currentTime * 1000
-            onSourceTime(sourceMs)
-            if (sourceMs >= clip.outMs - 30) onClipBoundary()
-          }}
-          onEnded={onClipBoundary}
         />
       ) : (
         <div className="stage-label">{clip?.error ?? clip?.label ?? 'Add a clip'}</div>
@@ -167,6 +181,10 @@ export function PreviewStage({
       <audio ref={audioRef} preload="auto" />
     </div>
   )
+}
+
+function playbackRateFor(speed: number): number {
+  return Math.min(16, Math.max(0.25, speed))
 }
 
 function fadeOpacityFor(clip: EditorClip | undefined, localMs: number, play: number): number {

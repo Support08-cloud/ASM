@@ -62,9 +62,10 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   const mediaInputRef = useRef<HTMLInputElement>(null)
   const musicInputRef = useRef<HTMLInputElement>(null)
   const timelineRef = useRef<HTMLDivElement>(null)
-  const boundaryLock = useRef(false)
   const projectRef = useRef(project)
   projectRef.current = project
+  const playClockRef = useRef(project.playheadMs)
+  if (!playing) playClockRef.current = project.playheadMs
 
   const duration = useMemo(() => projectDurationMs(project), [project])
   const selected = project.clips.find((clip) => clip.id === project.selectedClipId) ?? null
@@ -232,12 +233,47 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   }, [project.clips, thumbs])
 
   useEffect(() => {
+    if (!playing) return
+    playClockRef.current = projectRef.current.playheadMs
+    let frame = 0
+    let last = performance.now()
+    const tick = (now: number) => {
+      const dt = Math.min(80, Math.max(0, now - last))
+      last = now
+      const end = projectDurationMs(projectRef.current)
+      const next = Math.min(end, playClockRef.current + dt)
+      playClockRef.current = next
+      setProject((current) => (current.playheadMs === next ? current : { ...current, playheadMs: next }))
+      if (next >= end) {
+        setPlaying(false)
+        return
+      }
+      frame = window.requestAnimationFrame(tick)
+    }
+    frame = window.requestAnimationFrame(tick)
+    return () => window.cancelAnimationFrame(frame)
+  }, [playing])
+
+  const togglePlay = () => {
+    if (playing) {
+      setPlaying(false)
+      return
+    }
+    setProject((current) => {
+      const end = projectDurationMs(current)
+      if (current.playheadMs >= end - 40) return { ...current, playheadMs: 0 }
+      return current
+    })
+    setPlaying(true)
+  }
+
+  useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const tag = (event.target as HTMLElement)?.tagName
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
       if (event.code === 'Space') {
         event.preventDefault()
-        setPlaying((value) => !value)
+        togglePlay()
       }
       if (event.key.toLowerCase() === 's' && !isModKey(event)) splitAtPlayhead()
       if (event.key === 'Delete' || event.key === 'Backspace') deleteSelected()
@@ -262,6 +298,9 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
         <div>
           <div className="eyebrow">Edit · Vision360</div>
           <h2 style={{ margin: '4px 0 0' }}>{project.diamondName}</h2>
+          <p className="card-sub" style={{ margin: '4px 0 0' }}>
+            {project.clips.length} video{project.clips.length === 1 ? '' : 's'} on one timeline. Play runs them in order.
+          </p>
         </div>
         <div className="btn-row">
           <button type="button" className="btn ghost" onClick={onClose}>
@@ -291,7 +330,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
               <button
                 key={clip.id}
                 type="button"
-                className={`nle-bin-card${clip.id === project.selectedClipId ? ' is-on' : ''}`}
+                className={`nle-bin-card${clip.id === project.selectedClipId ? ' is-on' : ''}${hit?.clip.id === clip.id ? ' is-live' : ''}`}
                 onClick={() =>
                   setProject((current) => ({
                     ...current,
@@ -325,35 +364,6 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
                 clips: current.clips.map((clip) => (clip.id === id && !clip.durationProbed ? applyDuration(clip, durationMs) : clip)),
               }))
             }}
-            onSourceTime={(sourceMs) => {
-              setProject((current) => {
-                const now = clipAtTime(current.clips, current.playheadMs)
-                if (!now) return current
-                const local = (sourceMs - now.clip.inMs) / Math.max(now.clip.speed, 0.01)
-                return { ...current, playheadMs: now.startMs + local }
-              })
-            }}
-            onClipBoundary={() => {
-              if (boundaryLock.current) return
-              boundaryLock.current = true
-              window.setTimeout(() => {
-                boundaryLock.current = false
-              }, 80)
-              setProject((current) => {
-                const now = clipAtTime(current.clips, current.playheadMs)
-                if (!now) return current
-                const nextIndex = now.index + 1
-                if (nextIndex >= current.clips.length) {
-                  setPlaying(false)
-                  return { ...current, playheadMs: projectDurationMs(current) }
-                }
-                return {
-                  ...current,
-                  playheadMs: clipStartMs(current.clips, nextIndex),
-                  selectedClipId: current.clips[nextIndex].id,
-                }
-              })
-            }}
           />
           <TransportBar
             playing={playing}
@@ -361,7 +371,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
             durationMs={duration}
             canUndo={past.length > 0}
             canRedo={future.length > 0}
-            onPlay={() => setPlaying((value) => !value)}
+            onPlay={togglePlay}
             onUndo={undo}
             onRedo={redo}
             onSplit={splitAtPlayhead}
