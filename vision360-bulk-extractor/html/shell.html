@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vision 360° Bulk Data Extractor</title>
+  <style>
+    :root {
+      --orange: #C6691D;
+      --orange-hover: #8E4A12;
+      --charcoal: #2B2A29;
+      --white: #FEFEFE;
+      --cloud: #EBECEC;
+      --cream: #FFF6E0;
+      --muted: #7A7A79;
+      --line: #C8C9C9;
+      --danger: #C62828;
+      --success: #2E7D32;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Verdana, sans-serif;
+      font-size: 15px;
+      color: var(--charcoal);
+      background: var(--cloud);
+    }
+    header {
+      background: var(--charcoal);
+      color: white;
+      padding: 20px 32px;
+    }
+    header h1 { margin: 0; font-size: 24px; }
+    header p { margin: 6px 0 0; color: var(--cloud); }
+    main { max-width: 1100px; margin: 0 auto; padding: 24px 32px 48px; }
+    section {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    h2 {
+      margin: 0 0 12px;
+      color: var(--orange);
+      font-size: 14px;
+      letter-spacing: 0.04em;
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+    button, .file-button {
+      border: 0;
+      border-radius: 4px;
+      padding: 10px 16px;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      background: var(--orange);
+      color: white;
+    }
+    button.secondary, .file-button.secondary {
+      background: var(--white);
+      color: var(--charcoal);
+      border: 1px solid var(--line);
+      font-weight: 600;
+    }
+    button:hover { background: var(--orange-hover); }
+    button.secondary:hover, .file-button.secondary:hover { background: #FBEEDF; }
+    .file-button input { display: none; }
+    .meta { color: var(--muted); margin: 4px 0; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; background: var(--cream); padding: 8px; }
+    td { padding: 8px; border-top: 1px solid var(--cloud); }
+    .preview { height: 220px; overflow: auto; border: 1px solid var(--line); }
+    input[type="search"] {
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 0 8px;
+    }
+    progress { width: 100%; height: 8px; accent-color: var(--orange); }
+    .error { color: var(--danger); font-weight: 600; }
+    footer { background: var(--charcoal); color: var(--cloud); }
+    footer .stripe { height: 4px; background: var(--orange); }
+    footer p { margin: 0; padding: 10px 32px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>VISION 360°</h1>
+    <p>Bulk Data Extractor. Select one Excel or HTML file, then the source folder.</p>
+  </header>
+  <main>
+    <section>
+      <h2>LIST FILE</h2>
+      <p>Select the file once. An Excel workbook (.xlsx) or an HTML table (.html) with a NAME ID column is enough.</p>
+      <div class="row">
+        <label class="file-button">SELECT FILE<input id="list-file" type="file" accept=".xlsx,.html,.htm"></label>
+      </div>
+      <strong id="file-name">No file selected</strong>
+      <p class="meta" id="summary">The NAME ID values appear in the preview as soon as the file is selected.</p>
+    </section>
+    <section>
+      <h2>SOURCE FOLDER</h2>
+      <p>Choose the folder that contains the diamond files and folders. Nothing in this folder is changed.</p>
+      <div class="row">
+        <label class="file-button secondary">SELECT SOURCE FOLDER<input id="source-folder" type="file" webkitdirectory directory multiple></label>
+      </div>
+      <label><input id="skip-existing" type="radio" name="conflict" checked> Skip files that already exist in a direct folder copy</label>
+    </section>
+    <section>
+      <h2>DATA PREVIEW</h2>
+      <p class="meta" id="visible">Showing 0</p>
+      <input id="filter" type="search" placeholder="Search NAME ID">
+      <div class="preview">
+        <table>
+          <thead><tr><th>NAME ID</th></tr></thead>
+          <tbody id="preview"></tbody>
+        </table>
+      </div>
+    </section>
+    <section>
+      <h2>PROCESSING</h2>
+      <div class="row">
+        <button id="start" type="button">START PROCESSING</button>
+        <button id="cancel" class="secondary" type="button">CANCEL</button>
+      </div>
+      <progress id="progress" max="100" value="0"></progress>
+      <p id="error" class="error"></p>
+      <p id="result"></p>
+    </section>
+  </main>
+  <footer>
+    <div class="stripe"></div>
+    <p id="status">Select an Excel or HTML file to begin.</p>
+  </footer>
+  <script>
+/*NAME_ID_JS*/
+  </script>
+  <script>
+/*APP_JS*/
+  </script>
+</body>
+</html>

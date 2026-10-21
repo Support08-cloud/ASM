@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <RootNamespace>Vision360.BulkExtractor</RootNamespace>
+    <AssemblyName>Vision360.BulkDataExtractor</AssemblyName>
+    <Product>Vision360 Bulk Data Extractor</Product>
+    <Version>1.0.0</Version>
+    <Company>Vision360</Company>
+    <Description>Copy files and folders that match NAME IDs from an Excel list.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vision360.BulkExtractor.Core\Vision360.BulkExtractor.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\v360-logo.png" />
+  </ItemGroup>
+
+</Project>

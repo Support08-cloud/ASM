@@ -1,0 +1,38 @@
+name: Bulk Data Extractor
+
+on:
+  push:
+    paths:
+      - 'vision360-bulk-extractor/**'
+      - '.github/workflows/bulk-extractor.yml'
+  pull_request:
+    paths:
+      - 'vision360-bulk-extractor/**'
+      - '.github/workflows/bulk-extractor.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Test
+        run: dotnet test vision360-bulk-extractor/tests/Vision360.BulkExtractor.Tests/Vision360.BulkExtractor.Tests.csproj -c Release
+      - name: Build Windows app
+        run: dotnet build vision360-bulk-extractor/src/Vision360.BulkExtractor.App/Vision360.BulkExtractor.App.csproj -c Release
+
+  publish-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Publish
+        run: dotnet publish vision360-bulk-extractor/src/Vision360.BulkExtractor.App/Vision360.BulkExtractor.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Vision360-Bulk-Data-Extractor-win-x64
+          path: vision360-bulk-extractor/src/Vision360.BulkExtractor.App/bin/Release/net8.0-windows/win-x64/publish/Vision360.BulkDataExtractor.exe

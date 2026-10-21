@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vision 360° Bulk Data Extractor</title>
+  <style>
+    :root {
+      --orange: #C6691D;
+      --orange-hover: #8E4A12;
+      --charcoal: #2B2A29;
+      --white: #FEFEFE;
+      --cloud: #EBECEC;
+      --cream: #FFF6E0;
+      --muted: #7A7A79;
+      --line: #C8C9C9;
+      --danger: #C62828;
+      --success: #2E7D32;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Verdana, sans-serif;
+      font-size: 15px;
+      color: var(--charcoal);
+      background: var(--cloud);
+    }
+    header {
+      background: var(--charcoal);
+      color: white;
+      padding: 20px 32px;
+    }
+    header h1 { margin: 0; font-size: 24px; }
+    header p { margin: 6px 0 0; color: var(--cloud); }
+    main { max-width: 1100px; margin: 0 auto; padding: 24px 32px 48px; }
+    section {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    h2 {
+      margin: 0 0 12px;
+      color: var(--orange);
+      font-size: 14px;
+      letter-spacing: 0.04em;
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+    button, .file-button {
+      border: 0;
+      border-radius: 4px;
+      padding: 10px 16px;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      background: var(--orange);
+      color: white;
+    }
+    button.secondary, .file-button.secondary {
+      background: var(--white);
+      color: var(--charcoal);
+      border: 1px solid var(--line);
+      font-weight: 600;
+    }
+    button:hover { background: var(--orange-hover); }
+    button.secondary:hover, .file-button.secondary:hover { background: #FBEEDF; }
+    .file-button input { display: none; }
+    .meta { color: var(--muted); margin: 4px 0; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; background: var(--cream); padding: 8px; }
+    td { padding: 8px; border-top: 1px solid var(--cloud); }
+    .preview { height: 220px; overflow: auto; border: 1px solid var(--line); }
+    input[type="search"] {
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 0 8px;
+    }
+    progress { width: 100%; height: 8px; accent-color: var(--orange); }
+    .error { color: var(--danger); font-weight: 600; }
+    footer { background: var(--charcoal); color: var(--cloud); }
+    footer .stripe { height: 4px; background: var(--orange); }
+    footer p { margin: 0; padding: 10px 32px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>VISION 360°</h1>
+    <p>Bulk Data Extractor. Select one Excel or HTML file, then the source folder.</p>
+  </header>
+  <main>
+    <section>
+      <h2>LIST FILE</h2>
+      <p>Select the file once. An Excel workbook (.xlsx) or an HTML table (.html) with a NAME ID column is enough.</p>
+      <div class="row">
+        <label class="file-button">SELECT FILE<input id="list-file" type="file" accept=".xlsx,.html,.htm"></label>
+      </div>
+      <strong id="file-name">No file selected</strong>
+      <p class="meta" id="summary">The NAME ID values appear in the preview as soon as the file is selected.</p>
+    </section>
+    <section>
+      <h2>SOURCE FOLDER</h2>
+      <p>Choose the folder that contains the diamond files and folders. Nothing in this folder is changed.</p>
+      <div class="row">
+        <label class="file-button secondary">SELECT SOURCE FOLDER<input id="source-folder" type="file" webkitdirectory directory multiple></label>
+      </div>
+      <label><input id="skip-existing" type="radio" name="conflict" checked> Skip files that already exist in a direct folder copy</label>
+    </section>
+    <section>
+      <h2>DATA PREVIEW</h2>
+      <p class="meta" id="visible">Showing 0</p>
+      <input id="filter" type="search" placeholder="Search NAME ID">
+      <div class="preview">
+        <table>
+          <thead><tr><th>NAME ID</th></tr></thead>
+          <tbody id="preview"></tbody>
+        </table>
+      </div>
+    </section>
+    <section>
+      <h2>PROCESSING</h2>
+      <div class="row">
+        <button id="start" type="button">START PROCESSING</button>
+        <button id="cancel" class="secondary" type="button">CANCEL</button>
+      </div>
+      <progress id="progress" max="100" value="0"></progress>
+      <p id="error" class="error"></p>
+      <p id="result"></p>
+    </section>
+  </main>
+  <footer>
+    <div class="stripe"></div>
+    <p id="status">Select an Excel or HTML file to begin.</p>
+  </footer>
+  <script>
+const V360Names = {
+  parseHtml(html) {
+    const rows = extractRows(html);
+    return idsFromRows(rows, "the HTML file");
+  },
+
+  async parseXlsx(buffer, inflateRaw) {
+    const entries = await readZip(buffer, inflateRaw);
+    const sharedKey = Object.keys(entries).find((name) => name.toLowerCase().endsWith("sharedstrings.xml"));
+    const strings = sharedKey ? sharedStrings(decodeXmlBytes(entries[sharedKey])) : [];
+    const sheets = Object.keys(entries)
+      .filter((name) => /xl\/worksheets\/sheet\d+\.xml$/i.test(name))
+      .sort();
+    if (sheets.length === 0) {
+      throw new Error("The workbook has no worksheets. The first row must contain a NAME ID column.");
+    }
+
+    for (const sheetName of sheets) {
+      const rows = sheetRows(decodeXmlBytes(entries[sheetName]), strings);
+      const parsed = tryIdsFromRowMap(rows);
+      if (parsed) {
+        return parsed;
+      }
+    }
+
+    throw new Error("The required column NAME ID is missing. Keep the header as NAME ID and put one ID on each row below it.");
+  },
+
+  async buildZip(files, deflateRaw) {
+    const locals = [];
+    const centrals = [];
+    let offset = 0;
+    const encoder = new TextEncoder();
+    for (const file of files) {
+      const nameBytes = encoder.encode(file.path.replace(/\\/g, "/"));
+      const raw = file.bytes instanceof Uint8Array ? file.bytes : new Uint8Array(file.bytes);
+      const compressed = deflateRaw ? await deflateRaw(raw) : raw;
+      const method = deflateRaw ? 8 : 0;
+      const crc = crc32(raw);
+      const local = new Uint8Array(30 + nameBytes.length + compressed.length);
+      const view = new DataView(local.buffer);
+      view.setUint32(0, 0x04034b50, true);
+      view.setUint16(4, 20, true);
+      view.setUint16(8, method, true);
+      view.setUint32(14, crc, true);
+      view.setUint32(18, compressed.length, true);
+      view.setUint32(22, raw.length, true);
+      view.setUint16(26, nameBytes.length, true);
+      local.set(nameBytes, 30);
+      local.set(compressed, 30 + nameBytes.length);
+      locals.push(local);
+
+      const central = new Uint8Array(46 + nameBytes.length);
+      const centralView = new DataView(central.buffer);
+      centralView.setUint32(0, 0x02014b50, true);
+      centralView.setUint16(4, 20, true);
+      centralView.setUint16(6, 20, true);
+      centralView.setUint16(10, method, true);
+      centralView.setUint32(16, crc, true);
+      centralView.setUint32(20, compressed.length, true);
+      centralView.setUint32(24, raw.length, true);
+      centralView.setUint16(28, nameBytes.length, true);
+      centralView.setUint32(42, offset, true);
+      central.set(nameBytes, 46);
+      centrals.push(central);
+      offset += local.length;
+    }
+
+    const centralSize = centrals.reduce((sum, item) => sum + item.length, 0);
+    const eocd = new Uint8Array(22);
+    const endView = new DataView(eocd.buffer);
+    endView.setUint32(0, 0x06054b50, true);
+    endView.setUint16(8, files.length, true);
+    endView.setUint16(10, files.length, true);
+    endView.setUint32(12, centralSize, true);
+    endView.setUint32(16, offset, true);
+    const total = offset + centralSize + eocd.length;
+    const zip = new Uint8Array(total);
+    let cursor = 0;
+    for (const local of locals) {
+      zip.set(local, cursor);
+      cursor += local.length;
+    }
+    for (const central of centrals) {
+      zip.set(central, cursor);
+      cursor += central.length;
+    }
+    zip.set(eocd, cursor);
+    return zip;
+  },
+
+  planCopies(relativePaths, ids) {
+    const idMap = new Map();
+    const ordered = [];
+    for (const raw of ids) {
+      const id = String(raw).trim();
+      const key = id.toLowerCase();
+      if (!id || idMap.has(key)) {
+        continue;
+      }
+      idMap.set(key, id);
+      ordered.push(id);
+    }
+
+    const roots = [];
+    const seenRoot = new Set();
+    const addRoot = (id, rootPath, kind, leaf) => {
+      const key = kind + ":" + rootPath.toLowerCase();
+      if (seenRoot.has(key)) {
+        return;
+      }
+      seenRoot.add(key);
+      roots.push({ id, rootPath, kind, leaf });
+    };
+
+    for (const rel of relativePaths) {
+      const parts = String(rel).split("/").filter(Boolean);
+      if (parts.length === 0) {
+        continue;
+      }
+      for (let index = 0; index < parts.length - 1; index += 1) {
+        const id = idMap.get(parts[index].toLowerCase());
+        if (id) {
+          addRoot(id, parts.slice(0, index + 1).join("/"), "folder", parts[index]);
+        }
+      }
+      const fileName = parts[parts.length - 1];
+      const fileId = lookupFile(fileName, idMap);
+      if (fileId) {
+        addRoot(fileId, parts.join("/"), "file", fileName);
+      }
+    }
+
+    const used = new Set();
+    const plannedRoots = roots.map((root) => {
+      let dest = root.leaf;
+      if (used.has(dest.toLowerCase())) {
+        const parent = root.rootPath.split("/").slice(0, -1).join("/");
+        const nested = parent ? parent + "/" + root.leaf : "";
+        dest = nested && !used.has(nested.toLowerCase()) ? nested : nextFree(root.leaf, used);
+      }
+      used.add(dest.toLowerCase());
+      return { ...root, dest };
+    });
+
+    const copies = [];
+    for (const rel of relativePaths) {
+      for (const root of plannedRoots) {
+        if (root.kind === "file" && rel === root.rootPath) {
+          copies.push({ source: rel, dest: root.dest });
+        } else if (root.kind === "folder" && (rel === root.rootPath || rel.startsWith(root.rootPath + "/"))) {
+          const rest = rel.slice(root.rootPath.length + 1);
+          copies.push({ source: rel, dest: rest ? root.dest + "/" + rest : root.dest });
+        }
+      }
+    }
+
+    const matched = new Set(plannedRoots.map((root) => root.id.toLowerCase()));
+    return {
+      copies,
+      missing: ordered.filter((id) => !matched.has(id.toLowerCase())),
+    };
+  },
+};
+
+function nextFree(leaf, used) {
+  for (let number = 2; number < 10000; number += 1) {
+    const candidate = leaf + " (" + number + ")";
+    if (!used.has(candidate.toLowerCase())) {
+      return candidate;
+    }
+  }
+  return leaf + " (extra)";
+}
+
+function lookupFile(fileName, idMap) {
+  const exact = idMap.get(fileName.toLowerCase());
+  if (exact) {
+    return exact;
+  }
+  const dot = fileName.lastIndexOf(".");
+  if (dot > 0) {
+    const stem = fileName.slice(0, dot);
+    return idMap.get(stem.toLowerCase()) || null;
+  }
+  return null;
+}
+
+function idsFromRows(rows, sourceLabel) {
+  let headerRow = -1;
+  let headerColumn = -1;
+  const scanUntil = Math.min(rows.length, 30);
+  for (let rowIndex = 0; rowIndex < scanUntil; rowIndex += 1) {
+    const column = rows[rowIndex].findIndex((cell) => isNameId(cell));
+    if (column >= 0) {
+      headerRow = rowIndex;
+      headerColumn = column;
+      break;
+    }
+  }
+  if (headerRow < 0) {
+    throw new Error("The required column NAME ID is missing from " + sourceLabel + ". Keep the header as NAME ID and put one ID on each row below it.");
+  }
+
+  const seen = new Set();
+  const ids = [];
+  let duplicates = 0;
+  let emptyRows = 0;
+  for (let rowIndex = headerRow + 1; rowIndex < rows.length; rowIndex += 1) {
+    const text = (rows[rowIndex][headerColumn] || "").trim();
+    if (!text) {
+      emptyRows += 1;
+      continue;
+    }
+    const key = text.toLowerCase();
+    if (seen.has(key)) {
+      duplicates += 1;
+      continue;
+    }
+    seen.add(key);
+    ids.push(text);
+  }
+  return { ids, duplicates, emptyRows };
+}
+
+function tryIdsFromRowMap(rowMap) {
+  const rowNumbers = [...rowMap.keys()].sort((left, right) => left - right);
+  const limited = rowNumbers.filter((number) => number <= 30);
+  for (const headerRow of limited) {
+    const cells = rowMap.get(headerRow);
+    let headerColumn = "";
+    for (const [column, text] of cells) {
+      if (isNameId(text)) {
+        headerColumn = column;
+        break;
+      }
+    }
+    if (!headerColumn) {
+      continue;
+    }
+    const seen = new Set();
+    const ids = [];
+    let duplicates = 0;
+    let emptyRows = 0;
+    for (const rowNumber of rowNumbers) {
+      if (rowNumber <= headerRow) {
+        continue;
+      }
+      const text = (rowMap.get(rowNumber).get(headerColumn) || "").trim();
+      if (!text) {
+        emptyRows += 1;
+        continue;
+      }
+      const key = text.toLowerCase();
+      if (seen.has(key)) {
+        duplicates += 1;
+        continue;
+      }
+      seen.add(key);
+      ids.push(text);
+    }
+    return { ids, duplicates, emptyRows };
+  }
+  return null;
+}
+
+function isNameId(text) {
+  const normalized = String(text || "").trim().split(/\s+/).filter(Boolean).join(" ");
+  return normalized.toLowerCase() === "name id";
+}
+
+function extractRows(html) {
+  const rows = [];
+  const rowPattern = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
+  let rowMatch;
+  while ((rowMatch = rowPattern.exec(html))) {
+    const cells = [];
+    const cellPattern = /<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi;
+    let cellMatch;
+    while ((cellMatch = cellPattern.exec(rowMatch[1]))) {
+      cells.push(cellText(cellMatch[1]));
+    }
+    if (cells.length > 0) {
+      rows.push(cells);
+    }
+  }
+  return rows;
+}
+
+function cellText(value) {
+  return decodeXml(value.replace(/<br\s*\/?>/gi, " ").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+}
+
+function decodeXml(text) {
+  return text
+    .replace(/&#(\d+);/g, (_, number) => String.fromCodePoint(Number(number)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, number) => String.fromCodePoint(parseInt(number, 16)))
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+function decodeXmlBytes(bytes) {
+  return new TextDecoder().decode(bytes);
+}
+
+function sharedStrings(xml) {
+  return xml.split(/<(?:[\w]+:)?si\b[^>]*>/i).slice(1).map((block) => {
+    const end = block.search(/<\/(?:[\w]+:)?si>/i);
+    const body = end >= 0 ? block.slice(0, end) : block;
+    return [...body.matchAll(/<(?:[\w]+:)?t\b[^>]*>([\s\S]*?)<\/(?:[\w]+:)?t>/gi)].map((match) => decodeXml(match[1])).join("");
+  });
+}
+
+function sheetRows(xml, strings) {
+  const rows = new Map();
+  const pattern = /<(?:[\w]+:)?c\b([^>]*)>([\s\S]*?)<\/(?:[\w]+:)?c>/gi;
+  let match;
+  while ((match = pattern.exec(xml))) {
+    const attrs = match[1];
+    const inner = match[2];
+    const ref = /r="([A-Z]+)(\d+)"/i.exec(attrs);
+    if (!ref) {
+      continue;
+    }
+    const type = (/t="([^"]+)"/i.exec(attrs) || [])[1] || "";
+    let text = "";
+    if (type === "s") {
+      const value = /<(?:[\w]+:)?v>([\s\S]*?)<\/(?:[\w]+:)?v>/i.exec(inner);
+      text = strings[Number(value ? value[1] : NaN)] || "";
+    } else if (type === "inlineStr") {
+      text = [...inner.matchAll(/<(?:[\w]+:)?t\b[^>]*>([\s\S]*?)<\/(?:[\w]+:)?t>/gi)].map((item) => decodeXml(item[1])).join("");
+    } else if (type === "str") {
+      const value = /<(?:[\w]+:)?v>([\s\S]*?)<\/(?:[\w]+:)?v>/i.exec(inner);
+      text = value ? decodeXml(value[1]) : "";
+    } else {
+      const value = /<(?:[\w]+:)?v>([\s\S]*?)<\/(?:[\w]+:)?v>/i.exec(inner);
+      if (value) {
+        const number = Number(value[1]);
+        text = Number.isFinite(number) && number >= 0 && Math.abs(number - Math.round(number)) < 1e-6
+          ? String(Math.round(number))
+          : value[1];
+      }
+    }
+    if (!rows.has(Number(ref[2]))) {
+      rows.set(Number(ref[2]), new Map());
+    }
+    rows.get(Number(ref[2])).set(ref[1].toUpperCase(), text.trim());
+  }
+  return rows;
+}
+
+async function readZip(buffer, inflateRaw) {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let eocd = -1;
+  for (let index = bytes.length - 22; index >= 0; index -= 1) {
+    if (view.getUint32(index, true) === 0x06054b50) {
+      eocd = index;
+      break;
+    }
+  }
+  if (eocd < 0) {
+    throw new Error("Could not read this file as an .xlsx workbook.");
+  }
+  const count = view.getUint16(eocd + 10, true);
+  let cursor = view.getUint32(eocd + 16, true);
+  const entries = {};
+  for (let index = 0; index < count; index += 1) {
+    if (view.getUint32(cursor, true) !== 0x02014b50) {
+      throw new Error("Could not read this file as an .xlsx workbook.");
+    }
+    const method = view.getUint16(cursor + 10, true);
+    const compressedSize = view.getUint32(cursor + 20, true);
+    const nameLength = view.getUint16(cursor + 28, true);
+    const extraLength = view.getUint16(cursor + 30, true);
+    const commentLength = view.getUint16(cursor + 32, true);
+    const localOffset = view.getUint32(cursor + 42, true);
+    const name = new TextDecoder().decode(bytes.subarray(cursor + 46, cursor + 46 + nameLength));
+    const localNameLength = view.getUint16(localOffset + 26, true);
+    const localExtraLength = view.getUint16(localOffset + 28, true);
+    const dataStart = localOffset + 30 + localNameLength + localExtraLength;
+    const compressed = bytes.subarray(dataStart, dataStart + compressedSize);
+    if (method === 0) {
+      entries[name] = compressed;
+    } else if (method === 8) {
+      entries[name] = await inflateRaw(compressed);
+    } else {
+      throw new Error("Could not read this file as an .xlsx workbook.");
+    }
+    cursor += 46 + nameLength + extraLength + commentLength;
+  }
+  return entries;
+}
+
+function crc32(bytes) {
+  let crc = -1;
+  for (const value of bytes) {
+    crc ^= value;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+    }
+  }
+  return (crc ^ -1) >>> 0;
+}
+
+globalThis.V360Names = V360Names;
+
+  </script>
+  <script>
+const listInput = document.querySelector("#list-file");
+const sourceInput = document.querySelector("#source-folder");
+const startButton = document.querySelector("#start");
+const statusText = document.querySelector("#status");
+const errorText = document.querySelector("#error");
+const summaryText = document.querySelector("#summary");
+const fileNameText = document.querySelector("#file-name");
+const previewBody = document.querySelector("#preview");
+const filterInput = document.querySelector("#filter");
+const progress = document.querySelector("#progress");
+const resultText = document.querySelector("#result");
+const skipInput = document.querySelector("#skip-existing");
+
+let imported = null;
+let sourceEntries = [];
+let busy = false;
+let cancelRequested = false;
+
+listInput.addEventListener("change", () => {
+  const file = listInput.files && listInput.files[0];
+  if (!file) {
+    return;
+  }
+  loadList(file);
+});
+
+sourceInput.addEventListener("change", () => {
+  sourceEntries = [...sourceInput.files].map((file) => {
+    const parts = (file.webkitRelativePath || file.name).split("/");
+    return { rel: parts.slice(1).join("/"), file };
+  }).filter((entry) => entry.rel);
+  setStatus(sourceEntries.length + " file(s) found in the source folder.");
+  errorText.textContent = "";
+});
+
+filterInput.addEventListener("input", renderPreview);
+startButton.addEventListener("click", start);
+document.querySelector("#cancel").addEventListener("click", () => {
+  cancelRequested = true;
+  setStatus("Cancelling…");
+});
+
+async function loadList(file) {
+  errorText.textContent = "";
+  setStatus("Reading " + file.name + "…");
+  try {
+    const lower = file.name.toLowerCase();
+    if (lower.endsWith(".html") || lower.endsWith(".htm")) {
+      imported = V360Names.parseHtml(await file.text());
+    } else if (lower.endsWith(".xlsx")) {
+      imported = await V360Names.parseXlsx(await file.arrayBuffer(), inflateRaw);
+    } else {
+      throw new Error("Select an Excel workbook (.xlsx) or an HTML file (.html) with a NAME ID column.");
+    }
+    imported.fileName = file.name;
+    fileNameText.textContent = file.name;
+    summaryText.textContent = imported.ids.length + " NAME ID value(s) loaded. "
+      + imported.duplicates + " duplicate(s) skipped, " + imported.emptyRows + " empty row(s).";
+    renderPreview();
+    setStatus(imported.ids.length
+      ? "Loaded " + imported.ids.length + " ID(s) from " + file.name + ". Choose the source folder, then start."
+      : "The file has a NAME ID column, but no ID values were found.");
+    if (imported.ids.length === 0) {
+      errorText.textContent = "Add at least one NAME ID below the header.";
+    }
+  } catch (error) {
+    imported = null;
+    fileNameText.textContent = file.name;
+    summaryText.textContent = "The file was not imported.";
+    previewBody.innerHTML = "";
+    errorText.textContent = error.message || "The file could not be read.";
+    setStatus("The file was not imported.");
+  }
+}
+
+function renderPreview() {
+  const filter = filterInput.value.trim().toLowerCase();
+  const ids = imported ? imported.ids.filter((id) => !filter || id.toLowerCase().includes(filter)) : [];
+  previewBody.innerHTML = ids.map((id) => "<tr><td>" + escapeHtml(id) + "</td></tr>").join("");
+  document.querySelector("#visible").textContent = "Showing " + ids.length;
+}
+
+async function start() {
+  if (busy) {
+    return;
+  }
+  errorText.textContent = "";
+  resultText.textContent = "";
+  if (!imported || imported.ids.length === 0) {
+    errorText.textContent = "Select an Excel or HTML file with at least one NAME ID before processing.";
+    setStatus("Fix the items above before processing.");
+    return;
+  }
+  if (sourceEntries.length === 0) {
+    errorText.textContent = "Select the source folder that contains the files and folders.";
+    setStatus("Fix the items above before processing.");
+    return;
+  }
+
+  const plan = V360Names.planCopies(sourceEntries.map((entry) => entry.rel), imported.ids);
+  if (plan.copies.length === 0) {
+    errorText.textContent = "No matching files or folders were found. Nothing was processed.";
+    resultText.textContent = "Missing IDs: " + (plan.missing.join(", ") || "none");
+    setStatus("No matching data found.");
+    return;
+  }
+
+  busy = true;
+  cancelRequested = false;
+  progress.value = 0;
+  const bySource = new Map(sourceEntries.map((entry) => [entry.rel, entry.file]));
+  const started = performance.now();
+  try {
+    if (window.isSecureContext && window.showDirectoryPicker) {
+      const destination = await window.showDirectoryPicker({ mode: "readwrite" });
+      await copyIntoFolder(destination, plan.copies, bySource);
+      finish(plan, started, "Copied into the selected destination folder.");
+    } else {
+      await downloadZip(plan.copies, bySource);
+      finish(plan, started, "Downloaded Vision360-Extracted.zip. Unzip it into the destination folder.");
+    }
+  } catch (error) {
+    if (cancelRequested || (error && error.name === "AbortError")) {
+      setStatus(error && error.name === "AbortError" ? "Destination folder was not selected." : "Processing cancelled.");
+      return;
+    }
+    try {
+      await downloadZip(plan.copies, bySource);
+      finish(plan, started, "Downloaded Vision360-Extracted.zip. Unzip it into the destination folder.");
+    } catch (zipError) {
+      errorText.textContent = zipError.message || "Processing failed.";
+      setStatus("Processing failed.");
+    }
+  } finally {
+    busy = false;
+  }
+}
+
+async function copyIntoFolder(root, copies, bySource) {
+  let done = 0;
+  for (const copy of copies) {
+    if (cancelRequested) {
+      throw new Error("Cancelled.");
+    }
+    const file = bySource.get(copy.source);
+    await writeFile(root, copy.dest, file, skipInput.checked);
+    done += 1;
+    progress.value = Math.round(100 * done / copies.length);
+    setStatus("Processing " + copy.dest);
+  }
+}
+
+async function writeFile(root, relativePath, file, skipExisting) {
+  const parts = relativePath.split("/");
+  let directory = root;
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    directory = await directory.getDirectoryHandle(parts[index], { create: true });
+  }
+  const name = parts[parts.length - 1];
+  if (skipExisting) {
+    try {
+      await directory.getFileHandle(name);
+      return;
+    } catch {
+      // The file is not in the destination yet.
+    }
+  }
+  const handle = await directory.getFileHandle(name, { create: true });
+  const writable = await handle.createWritable();
+  await writable.write(file);
+  await writable.close();
+}
+
+async function downloadZip(copies, bySource) {
+  const files = [];
+  let done = 0;
+  for (const copy of copies) {
+    if (cancelRequested) {
+      throw new Error("Cancelled.");
+    }
+    const bytes = new Uint8Array(await bySource.get(copy.source).arrayBuffer());
+    files.push({ path: copy.dest, bytes });
+    done += 1;
+    progress.value = Math.round(100 * done / copies.length);
+    setStatus("Packing " + copy.dest);
+  }
+  const zip = await V360Names.buildZip(files, deflateRaw);
+  const blob = new Blob([zip], { type: "application/zip" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "Vision360-Extracted.zip";
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function finish(plan, started, message) {
+  const seconds = Math.max(1, Math.round((performance.now() - started) / 1000));
+  resultText.textContent = message
+    + " Files prepared: " + plan.copies.length
+    + ". Missing IDs: " + (plan.missing.length ? plan.missing.join(", ") : "none")
+    + ". Time: " + seconds + "s.";
+  setStatus(message);
+  progress.value = 100;
+}
+
+async function inflateRaw(bytes) {
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function deflateRaw(bytes) {
+  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+function setStatus(message) {
+  statusText.textContent = message;
+}
+
+function escapeHtml(value) {
+  return value.replace(/[&<>]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[character]));
+}
+
+  </script>
+</body>
+</html>
