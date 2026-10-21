@@ -95,7 +95,7 @@
                             <Button Content="Start Copying" Style="{StaticResource PrimaryButton}" Command="{Binding StartCopyCommand}"/>
                             <Button Content="Cancel" Style="{StaticResource DangerButton}" Margin="0" Command="{Binding CancelCommand}"/>
                         </StackPanel>
-                        <ProgressBar Height="8" Minimum="0" Maximum="100" Value="{Binding ProgressValue}" IsIndeterminate="{Binding IsProgressIndeterminate}"/>
+                        <ProgressBar Height="8" Minimum="0" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}" IsIndeterminate="{Binding IsProgressIndeterminate, Mode=OneWay}"/>
                         <TextBlock Margin="0,10,0,0" Text="{Binding StatusText}" TextWrapping="Wrap"/>
                         <UniformGrid Columns="4" Margin="0,12,0,0">
                             <StackPanel>
