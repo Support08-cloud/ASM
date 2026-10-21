@@ -6,6 +6,8 @@ The ready-to-run program is [dist/Vision360.BulkDataExtractor.exe](dist/Vision36
 
 Select the Excel file once. The NAME ID list loads into the preview immediately. There is no second upload.
 
+The same processing also runs in the browser from [dist/Vision360-Bulk-Data-Extractor.html](dist/Vision360-Bulk-Data-Extractor.html). Open that file in Microsoft Edge or Chrome, select an Excel or HTML list, select the source folder, and start processing. A blank list is [dist/NAME-ID-template.html](dist/NAME-ID-template.html).
+
 ```text
 Download template → fill NAME ID → upload → choose source and destination → Start Copying
 ```

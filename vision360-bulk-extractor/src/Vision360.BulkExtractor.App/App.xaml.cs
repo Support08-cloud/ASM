@@ -19,7 +19,7 @@ public partial class App : Application
         {
             DataContext = new MainViewModel(
                 new ExcelTemplateWriter(),
-                new ExcelNameIdReader(),
+                new NameIdFileReader(),
                 new SourceMatcher(),
                 new BulkCopyEngine(),
                 new CopyPlanner(),

@@ -41,8 +41,8 @@ public sealed class WpfUserDialogs : IUserDialogs
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Upload Excel file",
-            Filter = "Excel workbook (*.xlsx)|*.xlsx",
+            Title = "Select Excel or HTML file",
+            Filter = "Excel or HTML (*.xlsx;*.html;*.htm)|*.xlsx;*.html;*.htm|Excel workbook (*.xlsx)|*.xlsx|HTML file (*.html;*.htm)|*.html;*.htm",
             CheckFileExists = true,
             Multiselect = false,
         };

@@ -22,7 +22,7 @@ public enum ResultTone
 public sealed class MainViewModel : ObservableObject
 {
     private readonly ExcelTemplateWriter _templateWriter;
-    private readonly ExcelNameIdReader _reader;
+    private readonly NameIdFileReader _reader;
     private readonly SourceMatcher _matcher;
     private readonly BulkCopyEngine _engine;
     private readonly CopyPlanner _planner;
@@ -44,7 +44,7 @@ public sealed class MainViewModel : ObservableObject
     private string _excelFileName = "No Excel file selected";
     private string _excelPath = "";
     private string _filterText = "";
-    private string _statusText = "Select an Excel file to begin.";
+    private string _statusText = "Select an Excel or HTML file to begin.";
     private string _errorText = "";
     private string _currentId = "—";
     private string _bytesCopiedText = "0 bytes";
@@ -73,7 +73,7 @@ public sealed class MainViewModel : ObservableObject
 
     public MainViewModel(
         ExcelTemplateWriter templateWriter,
-        ExcelNameIdReader reader,
+        NameIdFileReader reader,
         SourceMatcher matcher,
         BulkCopyEngine engine,
         CopyPlanner planner,
@@ -299,7 +299,7 @@ public sealed class MainViewModel : ObservableObject
     public string ImportSummary =>
         _hasImport
             ? $"{ValidIdCount} valid ID(s), {DuplicateCount} duplicate(s) skipped, {EmptyRowCount} empty row(s)"
-            : "Select an Excel file once. The NAME ID values appear in the preview immediately.";
+            : "Select an Excel or HTML file once. The NAME ID values appear in the preview immediately.";
 
     private void DownloadTemplate()
     {

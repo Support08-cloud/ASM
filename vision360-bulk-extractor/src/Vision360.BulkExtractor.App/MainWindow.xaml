@@ -21,7 +21,7 @@
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="Bulk Data Extractor" Foreground="White" FontSize="24" FontWeight="Bold"/>
                     <TextBlock Margin="0,4,0,0" Foreground="#EBECEC" FontSize="14" TextWrapping="Wrap"
-                               Text="Select one Excel file. The NAME ID list loads into the preview, then choose the folders and start copying."/>
+                               Text="Select one Excel or HTML file. The NAME ID list loads into the preview, then choose the folders and start copying."/>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -32,9 +32,9 @@
                     <StackPanel>
                         <TextBlock Style="{StaticResource SectionLabel}" Text="EXCEL FILE"/>
                         <TextBlock Margin="0,0,0,16" Foreground="{StaticResource SecondaryText}" TextWrapping="Wrap"
-                                   Text="Select the Excel file once from your computer. The same file is used for the preview and for copying."/>
+                                   Text="Select the file once. Excel (.xlsx) and HTML (.html) both work. The same file is used for the preview and for copying."/>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                            <Button Content="SELECT EXCEL FILE" Style="{StaticResource PrimaryButton}" Command="{Binding UploadExcelCommand}"/>
+                            <Button Content="SELECT FILE" Style="{StaticResource PrimaryButton}" Command="{Binding UploadExcelCommand}"/>
                             <Button Content="DOWNLOAD TEMPLATE" Style="{StaticResource SecondaryButton}" Command="{Binding DownloadTemplateCommand}"/>
                             <Button Content="CLEAR LIST" Style="{StaticResource SecondaryButton}" Margin="0" Command="{Binding ClearListCommand}"/>
                         </StackPanel>
