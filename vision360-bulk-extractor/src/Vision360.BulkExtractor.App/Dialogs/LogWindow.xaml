@@ -1,0 +1,15 @@
+<Window x:Class="Vision360.BulkExtractor.Dialogs.LogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Copy log"
+        Height="520"
+        Width="760"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+    <DockPanel Margin="16">
+        <TextBlock x:Name="PathText" DockPanel.Dock="Top" Margin="0,0,0,8" TextWrapping="Wrap" Foreground="{StaticResource Muted}"/>
+        <Button DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="0,12,0,0" Content="Close" Style="{StaticResource SecondaryButton}" IsCancel="True" IsDefault="True"/>
+        <TextBox x:Name="LogText" IsReadOnly="True" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                 HorizontalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12" TextWrapping="NoWrap"/>
+    </DockPanel>
+</Window>
