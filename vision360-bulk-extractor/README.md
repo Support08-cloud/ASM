@@ -2,6 +2,8 @@
 
 Windows desktop app that copies files and folders from a source directory when their names match IDs in an Excel file.
 
+The ready-to-run program is [dist/Vision360.BulkDataExtractor.exe](dist/Vision360.BulkDataExtractor.exe). It needs the .NET 8 Desktop Runtime. Download that file, copy it to the Windows PC, and double-click it.
+
 ```text
 Download template → fill NAME ID → upload → choose source and destination → Start Copying
 ```
