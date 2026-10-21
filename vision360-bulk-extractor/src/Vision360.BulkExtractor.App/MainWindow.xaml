@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:Vision360.BulkExtractor.ViewModels"
-        Title="Vision360 Bulk Data Extractor"
+        Title="Vision 360° Bulk Data Extractor"
         Width="1120"
         Height="860"
         MinWidth="960"
@@ -15,72 +15,76 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="24,16">
-            <StackPanel>
-                <TextBlock Text="Vision360 Bulk Data Extractor" FontSize="22" FontWeight="SemiBold"/>
-                <TextBlock Margin="0,4,0,0" Foreground="{StaticResource Muted}" TextWrapping="Wrap"
-                           Text="Copy files and folders whose names match the NAME ID column in an Excel file. Source data is never changed."/>
-            </StackPanel>
+        <Border Grid.Row="0" Background="{StaticResource Charcoal}" Padding="24,16">
+            <DockPanel LastChildFill="True">
+                <Image DockPanel.Dock="Left" Source="/Assets/v360-logo.png" Height="64" Margin="0,0,20,0" Stretch="Uniform" HorizontalAlignment="Left"/>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Bulk Data Extractor" Foreground="White" FontSize="24" FontWeight="Bold"/>
+                    <TextBlock Margin="0,4,0,0" Foreground="#EBECEC" FontSize="14" TextWrapping="Wrap"
+                               Text="Select one Excel file. The NAME ID list loads into the preview, then choose the folders and start copying."/>
+                </StackPanel>
+            </DockPanel>
         </Border>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,16,24,8">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="32,24,32,8">
             <StackPanel MaxWidth="1100" HorizontalAlignment="Stretch">
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <TextBlock Style="{StaticResource SectionLabel}" Text="EXCEL FILE"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                            <Button Content="Download Excel Template" Style="{StaticResource SecondaryButton}" Command="{Binding DownloadTemplateCommand}"/>
-                            <Button Content="Upload Excel File" Style="{StaticResource PrimaryButton}" Command="{Binding UploadExcelCommand}"/>
-                            <Button Content="Upload Another File" Style="{StaticResource SecondaryButton}" Command="{Binding UploadExcelCommand}"/>
-                            <Button Content="Clear List" Style="{StaticResource SecondaryButton}" Margin="0" Command="{Binding ClearListCommand}"/>
+                        <TextBlock Margin="0,0,0,16" Foreground="{StaticResource SecondaryText}" TextWrapping="Wrap"
+                                   Text="Select the Excel file once from your computer. The same file is used for the preview and for copying."/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                            <Button Content="SELECT EXCEL FILE" Style="{StaticResource PrimaryButton}" Command="{Binding UploadExcelCommand}"/>
+                            <Button Content="DOWNLOAD TEMPLATE" Style="{StaticResource SecondaryButton}" Command="{Binding DownloadTemplateCommand}"/>
+                            <Button Content="CLEAR LIST" Style="{StaticResource SecondaryButton}" Margin="0" Command="{Binding ClearListCommand}"/>
                         </StackPanel>
-                        <TextBlock FontWeight="SemiBold" Text="{Binding ExcelFileName}"/>
-                        <TextBlock Margin="0,4,0,0" Foreground="{StaticResource Muted}" Text="{Binding ImportSummary}"/>
+                        <TextBlock FontWeight="SemiBold" FontSize="16" Text="{Binding ExcelFileName}"/>
+                        <TextBlock Margin="0,4,0,0" Foreground="{StaticResource Muted}" Text="{Binding ExcelPath}" TextWrapping="Wrap"/>
+                        <TextBlock Margin="0,4,0,0" Foreground="{StaticResource SecondaryText}" Text="{Binding ImportSummary}"/>
                     </StackPanel>
                 </Border>
 
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <TextBlock Style="{StaticResource SectionLabel}" Text="FOLDER SELECTION"/>
-                        <TextBlock Style="{StaticResource FieldLabel}" Text="Source Folder"/>
-                        <Grid Margin="0,0,0,12">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="Source folder"/>
+                        <Grid Margin="0,0,0,16">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBox Style="{StaticResource PathBox}" Text="{Binding SourcePath, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsIdle}"/>
-                            <Button Grid.Column="1" Content="Browse" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0" Command="{Binding BrowseSourceCommand}"/>
+                            <Button Grid.Column="1" Content="BROWSE" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0" Command="{Binding BrowseSourceCommand}"/>
                         </Grid>
-                        <TextBlock Style="{StaticResource FieldLabel}" Text="Destination Folder"/>
-                        <Grid Margin="0,0,0,12">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="Destination folder"/>
+                        <Grid Margin="0,0,0,16">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBox Style="{StaticResource PathBox}" Text="{Binding DestinationPath, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsIdle}"/>
-                            <Button Grid.Column="1" Content="Browse" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0" Command="{Binding BrowseDestinationCommand}"/>
+                            <Button Grid.Column="1" Content="BROWSE" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0" Command="{Binding BrowseDestinationCommand}"/>
                         </Grid>
                         <TextBlock Style="{StaticResource FieldLabel}" Text="If a destination file already exists"/>
-                        <RadioButton Content="Skip existing files" GroupName="Conflict" IsChecked="True" Margin="0,0,0,6" IsEnabled="{Binding IsIdle}"/>
-                        <RadioButton Content="Overwrite existing files" GroupName="Conflict" IsChecked="{Binding OverwriteExisting}" IsEnabled="{Binding IsIdle}"/>
+                        <RadioButton Content="Skip existing files" GroupName="Conflict" IsChecked="True" Margin="0,0,0,8" IsEnabled="{Binding IsIdle}" Foreground="{StaticResource Ink}"/>
+                        <RadioButton Content="Overwrite existing files" GroupName="Conflict" IsChecked="{Binding OverwriteExisting}" IsEnabled="{Binding IsIdle}" Foreground="{StaticResource Ink}"/>
                     </StackPanel>
                 </Border>
 
                 <Border Style="{StaticResource Card}">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionLabel}" Text="DATA PREVIEW"/>
-                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8" LastChildFill="False">
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12" LastChildFill="False">
                             <TextBlock VerticalAlignment="Center" Foreground="{StaticResource Muted}"
                                        Text="{Binding VisibleCount, StringFormat=Showing {0}}"/>
                             <TextBlock Margin="16,0,8,0" VerticalAlignment="Center" Text="Search"/>
-                            <TextBox Width="240" Height="32" Padding="8,4" VerticalContentAlignment="Center"
+                            <TextBox Style="{StaticResource PathBox}" Width="240" Height="36"
                                      ToolTip="Filter the imported NAME ID list"
                                      Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"/>
                         </DockPanel>
                         <DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True"
-                                  HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False"
-                                  GridLinesVisibility="Horizontal" EnableRowVirtualization="True" Height="220"
-                                  BorderThickness="1" BorderBrush="{StaticResource Line}">
+                                  CanUserAddRows="False" CanUserDeleteRows="False"
+                                  EnableRowVirtualization="True" Height="220">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="NAME ID" Binding="{Binding NameId, Mode=OneWay}" Width="*"/>
                             </DataGrid.Columns>
@@ -91,31 +95,31 @@
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <TextBlock Style="{StaticResource SectionLabel}" Text="PROCESSING"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                            <Button Content="Start Copying" Style="{StaticResource PrimaryButton}" Command="{Binding StartCopyCommand}"/>
-                            <Button Content="Cancel" Style="{StaticResource DangerButton}" Margin="0" Command="{Binding CancelCommand}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                            <Button Content="START COPYING" Style="{StaticResource PrimaryButton}" Command="{Binding StartCopyCommand}"/>
+                            <Button Content="CANCEL" Style="{StaticResource DangerButton}" Margin="0" Command="{Binding CancelCommand}"/>
                         </StackPanel>
-                        <ProgressBar Height="8" Minimum="0" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}" IsIndeterminate="{Binding IsProgressIndeterminate, Mode=OneWay}"/>
-                        <TextBlock Margin="0,10,0,0" Text="{Binding StatusText}" TextWrapping="Wrap"/>
-                        <UniformGrid Columns="4" Margin="0,12,0,0">
+                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}" IsIndeterminate="{Binding IsProgressIndeterminate, Mode=OneWay}"/>
+                        <TextBlock Margin="0,12,0,0" Text="{Binding StatusText}" TextWrapping="Wrap"/>
+                        <UniformGrid Columns="4" Margin="0,16,0,0">
                             <StackPanel>
-                                <TextBlock Foreground="{StaticResource Muted}" Text="Current ID"/>
+                                <TextBlock Foreground="{StaticResource Muted}" FontSize="13" Text="Current ID"/>
                                 <TextBlock FontWeight="SemiBold" Text="{Binding CurrentId}"/>
                             </StackPanel>
                             <StackPanel>
-                                <TextBlock Foreground="{StaticResource Muted}" Text="Completed"/>
+                                <TextBlock Foreground="{StaticResource Muted}" FontSize="13" Text="Completed"/>
                                 <TextBlock FontWeight="SemiBold" Text="{Binding CompletedIds}"/>
                             </StackPanel>
                             <StackPanel>
-                                <TextBlock Foreground="{StaticResource Muted}" Text="Missing"/>
+                                <TextBlock Foreground="{StaticResource Muted}" FontSize="13" Text="Missing"/>
                                 <TextBlock FontWeight="SemiBold" Text="{Binding MissingIds}"/>
                             </StackPanel>
                             <StackPanel>
-                                <TextBlock Foreground="{StaticResource Muted}" Text="Failed"/>
+                                <TextBlock Foreground="{StaticResource Muted}" FontSize="13" Text="Failed"/>
                                 <TextBlock FontWeight="SemiBold" Text="{Binding FailedIds}"/>
                             </StackPanel>
                         </UniformGrid>
-                        <TextBlock Margin="0,8,0,0" Foreground="{StaticResource Muted}">
+                        <TextBlock Margin="0,12,0,0" Foreground="{StaticResource SecondaryText}">
                             <Run Text="Files copied:"/>
                             <Run Text="{Binding FilesCopied, Mode=OneWay}"/>
                             <Run Text="  Skipped:"/>
@@ -123,44 +127,51 @@
                             <Run Text="  Data:"/>
                             <Run Text="{Binding BytesCopiedText, Mode=OneWay}"/>
                         </TextBlock>
-                        <TextBlock Margin="0,8,0,0" Foreground="{StaticResource Danger}" Text="{Binding ErrorText}" TextWrapping="Wrap"/>
+                        <TextBlock Margin="0,12,0,0" Foreground="{StaticResource Danger}" FontWeight="SemiBold" Text="{Binding ErrorText}" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
 
                 <Border Style="{StaticResource Card}" Margin="0">
                     <StackPanel>
                         <TextBlock Style="{StaticResource SectionLabel}" Text="RESULTS"/>
-                        <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding ResultHeadline}">
+                        <TextBlock FontSize="20" FontWeight="Bold" Text="{Binding ResultHeadline}">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="{StaticResource Ink}"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding ResultTone}" Value="{x:Static vm:ResultTone.Success}">
-                                            <Setter Property="Foreground" Value="#1F7A4D"/>
+                                            <Setter Property="Foreground" Value="{StaticResource Success}"/>
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding ResultTone}" Value="{x:Static vm:ResultTone.Warning}">
-                                            <Setter Property="Foreground" Value="#9A6B12"/>
+                                            <Setter Property="Foreground" Value="{StaticResource Warning}"/>
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding ResultTone}" Value="{x:Static vm:ResultTone.Error}">
-                                            <Setter Property="Foreground" Value="#B42318"/>
+                                            <Setter Property="Foreground" Value="{StaticResource Danger}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
                         <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding ResultDetail}"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
                             <TextBlock VerticalAlignment="Center" Margin="0,0,16,0" Foreground="{StaticResource Muted}" Text="{Binding ElapsedText, StringFormat=Time {0}}"/>
-                            <Button Content="View Log" Style="{StaticResource SecondaryButton}" Command="{Binding ViewLogCommand}"/>
-                            <Button Content="Copy Results" Style="{StaticResource SecondaryButton}" Margin="0" Command="{Binding CopyResultsCommand}"/>
+                            <Button Content="VIEW LOG" Style="{StaticResource SecondaryButton}" Command="{Binding ViewLogCommand}"/>
+                            <Button Content="COPY RESULTS" Style="{StaticResource SecondaryButton}" Margin="0" Command="{Binding CopyResultsCommand}"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
             </StackPanel>
         </ScrollViewer>
 
-        <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="24,8">
-            <TextBlock Foreground="{StaticResource Muted}" Text="{Binding StatusText}"/>
-        </Border>
+        <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="4"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Border Grid.Row="0" Background="{StaticResource Accent}"/>
+            <Border Grid.Row="1" Background="{StaticResource Charcoal}" Padding="24,10">
+                <TextBlock Foreground="#EBECEC" Text="{Binding StatusText}" TextWrapping="Wrap"/>
+            </Border>
+        </Grid>
     </Grid>
 </Window>

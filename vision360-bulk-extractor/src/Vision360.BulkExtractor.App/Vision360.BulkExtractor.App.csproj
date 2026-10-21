@@ -20,4 +20,8 @@
     <ProjectReference Include="..\Vision360.BulkExtractor.Core\Vision360.BulkExtractor.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Resource Include="Assets\v360-logo.png" />
+  </ItemGroup>
+
 </Project>

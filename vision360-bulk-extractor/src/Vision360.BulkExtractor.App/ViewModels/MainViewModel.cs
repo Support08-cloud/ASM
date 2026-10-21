@@ -41,9 +41,10 @@ public sealed class MainViewModel : ObservableObject
 
     private string _sourcePath = "";
     private string _destinationPath = "";
-    private string _excelFileName = "No Excel file uploaded";
+    private string _excelFileName = "No Excel file selected";
+    private string _excelPath = "";
     private string _filterText = "";
-    private string _statusText = "Upload an Excel file to begin.";
+    private string _statusText = "Select an Excel file to begin.";
     private string _errorText = "";
     private string _currentId = "—";
     private string _bytesCopiedText = "0 bytes";
@@ -132,6 +133,12 @@ public sealed class MainViewModel : ObservableObject
     {
         get => _excelFileName;
         private set => SetProperty(ref _excelFileName, value);
+    }
+
+    public string ExcelPath
+    {
+        get => _excelPath;
+        private set => SetProperty(ref _excelPath, value);
     }
 
     public string FilterText
@@ -292,7 +299,7 @@ public sealed class MainViewModel : ObservableObject
     public string ImportSummary =>
         _hasImport
             ? $"{ValidIdCount} valid ID(s), {DuplicateCount} duplicate(s) skipped, {EmptyRowCount} empty row(s)"
-            : "Download the template, fill in NAME ID, then upload the file.";
+            : "Select an Excel file once. The NAME ID values appear in the preview immediately.";
 
     private void DownloadTemplate()
     {
@@ -329,13 +336,14 @@ public sealed class MainViewModel : ObservableObject
             _hasImport = true;
             _importError = null;
             ExcelFileName = imported.FileName;
+            ExcelPath = path;
             DuplicateCount = imported.DuplicateCount;
             EmptyRowCount = imported.EmptyRowCount;
             FilterText = "";
             RefreshRows();
             ClearRunState();
             ErrorText = imported.Warning ?? "";
-            StatusText = imported.Warning ?? $"Loaded {imported.ValidIdCount} ID(s) from {imported.FileName}. Copying has not started.";
+            StatusText = imported.Warning ?? $"Loaded {imported.ValidIdCount} ID(s) from {imported.FileName}. Review the preview, then start copying.";
             OnPropertyChanged(nameof(ValidIdCount));
             OnPropertyChanged(nameof(ImportSummary));
             RaiseCommands();
@@ -352,6 +360,7 @@ public sealed class MainViewModel : ObservableObject
         _hasImport = false;
         _importError = message;
         ExcelFileName = Path.GetFileName(path);
+        ExcelPath = path;
         DuplicateCount = 0;
         EmptyRowCount = 0;
         RefreshRows();
@@ -367,7 +376,8 @@ public sealed class MainViewModel : ObservableObject
         _ids = [];
         _hasImport = false;
         _importError = null;
-        ExcelFileName = "No Excel file uploaded";
+        ExcelFileName = "No Excel file selected";
+        ExcelPath = "";
         DuplicateCount = 0;
         EmptyRowCount = 0;
         FilterText = "";
