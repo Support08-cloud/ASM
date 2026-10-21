@@ -82,7 +82,7 @@
                                   GridLinesVisibility="Horizontal" EnableRowVirtualization="True" Height="220"
                                   BorderThickness="1" BorderBrush="{StaticResource Line}">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="NAME ID" Binding="{Binding NameId}" Width="*"/>
+                                <DataGridTextColumn Header="NAME ID" Binding="{Binding NameId, Mode=OneWay}" Width="*"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </DockPanel>

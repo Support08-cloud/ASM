@@ -33,27 +33,52 @@ public sealed class ExcelNameIdReader
                 throw new ExcelFormatException("The workbook has no worksheets. The first row must contain a NAME ID column.");
             }
 
-            var sheet = workbook.Worksheet(1);
-            var headerRow = sheet.FirstRowUsed();
-            if (headerRow is null)
+            foreach (var sheet in workbook.Worksheets)
             {
-                throw new ExcelFormatException("The worksheet is empty. The first row must contain a NAME ID column.");
+                if (TryReadSheet(sheet, fileName, out var result))
+                {
+                    return result;
+                }
             }
 
-            var column = FindNameIdColumn(headerRow);
+            throw new ExcelFormatException(
+                "The required column NAME ID is missing. Use the template, keep the header as NAME ID, and put one ID on each row below it.");
+        }
+    }
+
+    public ExcelImportResult ReadFile(string path)
+    {
+        // ReadWrite lets the import succeed while the workbook is still open in Excel.
+        using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        using var buffer = new MemoryStream();
+        file.CopyTo(buffer);
+        buffer.Position = 0;
+        return Read(buffer, Path.GetFileName(path));
+    }
+
+    private static bool TryReadSheet(IXLWorksheet sheet, string fileName, out ExcelImportResult result)
+    {
+        result = new ExcelImportResult(fileName, [], 0, 0);
+        var lastRow = sheet.LastRowUsed()?.RowNumber() ?? 0;
+        if (lastRow == 0)
+        {
+            return false;
+        }
+
+        var scanUntil = Math.Min(lastRow, 30);
+        for (var headerRowNumber = 1; headerRowNumber <= scanUntil; headerRowNumber++)
+        {
+            var column = FindNameIdColumn(sheet.Row(headerRowNumber));
             if (column == 0)
             {
-                throw new ExcelFormatException(
-                    "The required column NAME ID is missing. Download the template and keep the header exactly as NAME ID.");
+                continue;
             }
 
-            var lastRow = sheet.LastRowUsed()?.RowNumber() ?? headerRow.RowNumber();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var ids = new List<string>();
             var duplicates = 0;
             var emptyRows = 0;
-
-            for (var rowNumber = headerRow.RowNumber() + 1; rowNumber <= lastRow; rowNumber++)
+            for (var rowNumber = headerRowNumber + 1; rowNumber <= lastRow; rowNumber++)
             {
                 var text = ReadId(sheet.Cell(rowNumber, column));
                 if (text.Length == 0)
@@ -71,27 +96,30 @@ public sealed class ExcelNameIdReader
                 ids.Add(text);
             }
 
-            return new ExcelImportResult(fileName, ids, duplicates, emptyRows);
+            result = new ExcelImportResult(fileName, ids, duplicates, emptyRows);
+            return true;
         }
-    }
 
-    public ExcelImportResult ReadFile(string path)
-    {
-        using var stream = File.OpenRead(path);
-        return Read(stream, Path.GetFileName(path));
+        return false;
     }
 
     private static int FindNameIdColumn(IXLRow headerRow)
     {
         foreach (var cell in headerRow.CellsUsed())
         {
-            if (string.Equals(ReadId(cell), ColumnHeader, StringComparison.Ordinal))
+            if (IsNameIdHeader(ReadId(cell)))
             {
                 return cell.Address.ColumnNumber;
             }
         }
 
         return 0;
+    }
+
+    private static bool IsNameIdHeader(string text)
+    {
+        var normalized = string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        return string.Equals(normalized, ColumnHeader, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ReadId(IXLCell cell)

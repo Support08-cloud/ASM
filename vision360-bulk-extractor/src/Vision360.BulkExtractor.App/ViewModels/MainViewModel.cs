@@ -54,6 +54,7 @@ public sealed class MainViewModel : ObservableObject
     private string? _logFilePath;
     private string? _resultsText;
     private bool _hasImport;
+    private string? _importError;
     private bool _isBusy;
     private bool _overwriteExisting;
     private bool _progressIndeterminate;
@@ -326,6 +327,7 @@ public sealed class MainViewModel : ObservableObject
             var imported = _reader.ReadFile(path);
             _ids = imported.Ids.ToList();
             _hasImport = true;
+            _importError = null;
             ExcelFileName = imported.FileName;
             DuplicateCount = imported.DuplicateCount;
             EmptyRowCount = imported.EmptyRowCount;
@@ -338,22 +340,33 @@ public sealed class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(ImportSummary));
             RaiseCommands();
         }
-        catch (ExcelFormatException exception)
+        catch (Exception exception)
         {
-            ErrorText = exception.Message;
-            StatusText = "The Excel file was not imported.";
+            RememberFailedImport(path, exception.Message);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            ErrorText = "Could not open the Excel file.";
-            StatusText = "The Excel file was not imported.";
-        }
+    }
+
+    private void RememberFailedImport(string path, string message)
+    {
+        _ids = [];
+        _hasImport = false;
+        _importError = message;
+        ExcelFileName = Path.GetFileName(path);
+        DuplicateCount = 0;
+        EmptyRowCount = 0;
+        RefreshRows();
+        OnPropertyChanged(nameof(ValidIdCount));
+        OnPropertyChanged(nameof(ImportSummary));
+        ErrorText = message;
+        StatusText = "The Excel file was not imported.";
+        RaiseCommands();
     }
 
     private void ClearList()
     {
         _ids = [];
         _hasImport = false;
+        _importError = null;
         ExcelFileName = "No Excel file uploaded";
         DuplicateCount = 0;
         EmptyRowCount = 0;
@@ -392,7 +405,7 @@ public sealed class MainViewModel : ObservableObject
         var validation = OperationValidator.Validate(new OperationInput(_hasImport, _ids.Count, SourcePath, DestinationPath));
         if (!validation.CanStart)
         {
-            ErrorText = string.Join(Environment.NewLine, validation.Errors);
+            ErrorText = string.Join(Environment.NewLine, DescribeValidation(validation.Errors));
             StatusText = "Fix the items above before copying.";
             return;
         }
@@ -510,6 +523,20 @@ public sealed class MainViewModel : ObservableObject
             _cancellation.Dispose();
             _cancellation = null;
             RaiseCommands();
+        }
+    }
+
+    private IEnumerable<string> DescribeValidation(IReadOnlyList<string> errors)
+    {
+        foreach (var error in errors)
+        {
+            if (!_hasImport && !string.IsNullOrWhiteSpace(_importError) && error.StartsWith("Upload an Excel file", StringComparison.Ordinal))
+            {
+                yield return _importError;
+                continue;
+            }
+
+            yield return error;
         }
     }
 

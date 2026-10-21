@@ -112,9 +112,24 @@ public class ExcelTests
     }
 
     [Fact]
+    public void HeaderMatchIgnoresCaseAndATitleRowAboveIt()
+    {
+        using var stream = Workbook(sheet =>
+        {
+            sheet.Cell(1, 1).Value = "Diamond list";
+            sheet.Cell(3, 1).Value = "Name ID";
+            sheet.Cell(4, 1).Value = "10001";
+        });
+
+        var result = _reader.Read(stream, "ids.xlsx");
+
+        Assert.Equal(["10001"], result.Ids);
+    }
+
+    [Fact]
     public void MissingColumnExplainsThatNameIdIsRequired()
     {
-        using var stream = Workbook(sheet => sheet.Cell(1, 1).Value = "Name ID");
+        using var stream = Workbook(sheet => sheet.Cell(1, 1).Value = "Stone ID");
 
         var error = Assert.Throws<ExcelFormatException>(() => _reader.Read(stream, "bad.xlsx"));
 
