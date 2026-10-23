@@ -36,7 +36,8 @@ export function cssFilterForClip(clip: EditorClip): string {
 export function cssTransformForClip(clip: EditorClip): string {
   const t = clip.transform
   const flips = `${t.flipH ? ' scaleX(-1)' : ''}${t.flipV ? ' scaleY(-1)' : ''}`
-  return `translate(${t.x * 40}%, ${t.y * 40}%) scale(${Math.max(0.2, t.scale)})${flips}`
+  const rotate = t.rotate ?? 0
+  return `translate(${t.x * 40}%, ${t.y * 40}%) scale(${Math.max(0.2, t.scale)})${flips} rotate(${rotate}deg)`
 }
 
 export interface TransitionLayerStyle {
@@ -72,17 +73,26 @@ export function cssClipPathForClip(clip: EditorClip): string | undefined {
   return `inset(${p}% ${p}% ${p}% ${p}%)`
 }
 
-export function videoFiltersForClip(clip: EditorClip, playSec: number): string[] {
+export function videoFiltersForClip(
+  clip: EditorClip,
+  playSec: number,
+  canvas: { width: number; height: number } = { width: 1920, height: 1080 },
+): string[] {
   const crop = Math.min(0.4, Math.max(0, clip.transform.crop))
   const cropExpr =
     crop > 0.005
       ? `crop=iw*(${(1 - crop * 2).toFixed(3)}):ih*(${(1 - crop * 2).toFixed(3)}):iw*${crop.toFixed(3)}:ih*${crop.toFixed(3)}`
       : ''
   const scale = Math.max(0.2, clip.transform.scale)
-  const ox = Math.round((clip.transform.x + 0.5) * 1920 - 960 * scale)
-  const oy = Math.round((clip.transform.y + 0.5) * 1080 - 540 * scale)
-  const sized = `scale=${Math.round(1920 * scale)}:${Math.round(1080 * scale)}:force_original_aspect_ratio=decrease`
-  const pad = `pad=1920:1080:${ox}:${oy}:black`
+  const width = canvas.width
+  const height = canvas.height
+  const degrees = clip.transform.rotate ?? 0
+  const radians = ((degrees * Math.PI) / 180).toFixed(5)
+  const rotate = Math.abs(degrees) > 0.4 ? `rotate=${radians}:ow=rotw(${radians}):oh=roth(${radians}):c=black` : ''
+  const ox = Math.round((clip.transform.x + 0.5) * width - (width / 2) * scale)
+  const oy = Math.round((clip.transform.y + 0.5) * height - (height / 2) * scale)
+  const sized = `scale=${Math.round(width * scale)}:${Math.round(height * scale)}:force_original_aspect_ratio=decrease`
+  const pad = `pad=${width}:${height}:${ox}:${oy}:black`
   const fadeIn = clip.fadeInMs > 40 ? `fade=t=in:st=0:d=${(clip.fadeInMs / 1000).toFixed(3)}` : ''
   const fadeOut =
     clip.fadeOutMs > 40
@@ -96,12 +106,13 @@ export function videoFiltersForClip(clip: EditorClip, playSec: number): string[]
     cropExpr,
     clip.transform.flipH ? 'hflip' : '',
     clip.transform.flipV ? 'vflip' : '',
+    rotate,
     sized,
     pad,
     namedEqFilter(clip.filter),
     gradeEqFilter(clip),
     alpha,
-    effectFilter(clip.effect, playSec),
+    effectFilter(clip.effect, playSec, width, height),
     `setpts=PTS/${Math.max(clip.speed, 0.01)}`,
     fadeIn,
     fadeOut,
@@ -160,13 +171,13 @@ function effectCss(id: EffectId): string {
   return ''
 }
 
-function effectFilter(id: EffectId, playSec: number): string {
+function effectFilter(id: EffectId, playSec: number, width: number, height: number): string {
   if (id === 'flash') return 'eq=brightness=0.18'
   if (id === 'pulse') return 'eq=contrast=1.12:brightness=0.04'
   if (id === 'blur') return 'gblur=sigma=6'
   if (id === 'vignette') return 'vignette=angle=PI/4'
   if (id === 'grain') return 'noise=alls=10:allf=t'
-  if (id === 'slowzoom') return `zoompan=z='min(zoom+0.0008,1.18)':d=${Math.max(1, Math.round(playSec * 30))}:s=1920x1080:fps=30`
-  if (id === 'spin') return 'rotate=0.08*sin(2*PI*t/4):ow=1920:oh=1080:c=black'
+  if (id === 'slowzoom') return `zoompan=z='min(zoom+0.0008,1.18)':d=${Math.max(1, Math.round(playSec * 30))}:s=${width}x${height}:fps=30`
+  if (id === 'spin') return `rotate=0.08*sin(2*PI*t/4):ow=${width}:oh=${height}:c=black`
   return ''
 }

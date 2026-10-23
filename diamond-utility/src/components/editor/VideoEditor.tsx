@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
+  ASPECTS,
   MAX_TIMELINE_CLIPS,
   TRANSITION_OPTIONS,
+  canvasForAspect,
+  type AspectId,
   type EditorClip,
   type EditorProject,
   type ExtraClip,
@@ -23,11 +26,13 @@ import {
   transitionOverlapMs,
   createClipFromFile,
   createExtra,
+  duplicateClip,
   extrasAtTime,
   moveClip,
   moveExtra,
   projectDurationMs,
   setSpeed,
+  snapTrim,
   splitClip,
   trimClip,
   trimExtra,
@@ -57,6 +62,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   const [past, setPast] = useState<Snapshot[]>([])
   const [future, setFuture] = useState<Snapshot[]>([])
   const [thumbs, setThumbs] = useState<Record<string, string[]>>({})
+  const [menu, setMenu] = useState<{ x: number; y: number; clipId: string } | null>(null)
   const [preparing, setPreparing] = useState<{ current: number; total: number; message: string } | null>({
     current: 0,
     total: initial.clips.length,
@@ -355,6 +361,16 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
     setPlaying(true)
   }
 
+  const duplicateSelected = () => {
+    const current = projectRef.current
+    const id = current.selectedClipId
+    if (!id) return
+    const clips = duplicateClip(current.clips, id)
+    if (clips === current.clips) return
+    const index = current.clips.findIndex((clip) => clip.id === id)
+    commit({ clips, selectedClipId: clips[index + 1]?.id ?? id, selectedExtraId: null })
+  }
+
   const toggleMute = () => {
     const current = projectRef.current
     const clip = current.clips.find((item) => item.id === current.selectedClipId)
@@ -370,8 +386,8 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
     }))
   }
 
-  const actionsRef = useRef({ togglePlay, splitAtPlayhead, deleteSelected, undo, redo, toggleMute, stepPlayhead })
-  actionsRef.current = { togglePlay, splitAtPlayhead, deleteSelected, undo, redo, toggleMute, stepPlayhead }
+  const actionsRef = useRef({ togglePlay, splitAtPlayhead, deleteSelected, undo, redo, toggleMute, stepPlayhead, duplicateSelected })
+  actionsRef.current = { togglePlay, splitAtPlayhead, deleteSelected, undo, redo, toggleMute, stepPlayhead, duplicateSelected }
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -384,12 +400,13 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
       }
       if (event.key === 'ArrowLeft') {
         event.preventDefault()
-        actions.stepPlayhead(event.shiftKey ? -1000 : -100)
+        actions.stepPlayhead(event.altKey ? -33 : event.shiftKey ? -1000 : -100)
       }
       if (event.key === 'ArrowRight') {
         event.preventDefault()
-        actions.stepPlayhead(event.shiftKey ? 1000 : 100)
+        actions.stepPlayhead(event.altKey ? 33 : event.shiftKey ? 1000 : 100)
       }
+      if (event.key.toLowerCase() === 'd' && !isModKey(event)) actions.duplicateSelected()
       if (event.key.toLowerCase() === 'm' && !isModKey(event)) actions.toggleMute()
       if (event.key.toLowerCase() === 's' && !isModKey(event)) actions.splitAtPlayhead()
       if (event.key === 'Delete' || event.key === 'Backspace') {
@@ -433,6 +450,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
       ? project.clips.find((clip) => clip.error)?.error || 'Wait until every video is ready, then export'
       : undefined
 
+  const frame = canvasForAspect(project.aspect)
   const overlap = hit?.overlapMs ?? 0
   const transitionMs = hit?.clip.transitionMs || 1
   const transitionProgress = overlap > 0 && hit?.clip.transition !== 'none' ? Math.min(1, overlap / transitionMs) : 0
@@ -441,45 +459,71 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   return (
     <div className="nle-shell">
       <header className="nle-top">
-        <div>
-          <div className="eyebrow">Edit · Vision360</div>
-          <h2 style={{ margin: '4px 0 0' }}>{project.diamondName}</h2>
-          <p className="card-sub" style={{ margin: '4px 0 0' }}>
-            {project.clips.length} video{project.clips.length === 1 ? '' : 's'} on one timeline. Play runs them in order.
-          </p>
-        </div>
-        <div className="btn-row">
+        <div className="nle-brand">
           <button type="button" className="btn ghost" onClick={onClose}>
             Back
           </button>
-          <div>
-            <button
-              type="button"
-              className="btn primary"
-              onClick={() => onExport(project)}
-              disabled={Boolean(exporting || preparing || exportBlocked)}
-              title={exportTitle}
-            >
-              Export
-            </button>
-            {exportTitle ? <p className="card-sub" style={{ margin: '4px 0 0' }}>{exportTitle}</p> : null}
-          </div>
+          <strong>{project.diamondName}</strong>
+          <span className="card-sub">{project.clips.length} clips</span>
         </div>
+        <div className="btn-row">
+          <button type="button" className="btn ghost" onClick={undo} disabled={past.length === 0} title="Undo (Ctrl+Z)">
+            Undo
+          </button>
+          <button type="button" className="btn ghost" onClick={redo} disabled={future.length === 0} title="Redo (Ctrl+Shift+Z)">
+            Redo
+          </button>
+          <button type="button" className="btn ghost" onClick={splitAtPlayhead} disabled={!hit || !canSplitAt(hit.clip, hit.localMs)} title="Split at playhead (S)">
+            Split
+          </button>
+          <button type="button" className="btn ghost" onClick={duplicateSelected} disabled={!selected} title="Duplicate clip (D)">
+            Duplicate
+          </button>
+          <button type="button" className="btn ghost" onClick={deleteSelected} disabled={!selectedExtra && !(selected && project.clips.length > 1)} title="Delete">
+            Delete
+          </button>
+        </div>
+        <div className="btn-row">
+          <label className="nle-aspect">
+            <span>Frame</span>
+            <select
+              value={project.aspect ?? '16:9'}
+              onChange={(event) => commit({ aspect: event.target.value as AspectId })}
+              title="Preview and export frame"
+            >
+              {ASPECTS.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => onExport(project)}
+            disabled={Boolean(exporting || preparing || exportBlocked)}
+            title={exportTitle || 'Export MP4'}
+          >
+            Export
+          </button>
+        </div>
+        {exportTitle ? <p className="nle-notice">{exportTitle}</p> : null}
       </header>
 
       <div className="nle-body">
-        <nav className="nle-rail" aria-label="Library">
-          <button type="button" className="is-on">Media</button>
-          <button type="button" onClick={addText}>Text</button>
-          <button type="button" onClick={() => selectCut(Math.max(0, (hit?.index ?? 1) - 1))}>
-            Fade
-          </button>
-        </nav>
-
         <aside className="nle-bin">
-          <button type="button" className="btn primary" onClick={() => void addMedia()}>
-            Import media
-          </button>
+          <div className="nle-bin-tools">
+            <button type="button" className="btn primary" onClick={() => void addMedia()}>
+              Import
+            </button>
+            <button type="button" className="btn ghost" onClick={addText} title="Add a title at the playhead">
+              Text
+            </button>
+            <button type="button" className="btn ghost" onClick={() => void addMusic()} title="Add an audio file">
+              Audio
+            </button>
+          </div>
           <div className="nle-bin-grid">
             {project.clips.map((clip, index) => (
               <button
@@ -505,6 +549,8 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
         </aside>
 
         <section className="nle-center">
+          <div className="nle-preview">
+            <div className="nle-frame" style={{ '--aw': frame.width, '--ah': frame.height } as CSSProperties}>
           <PreviewStage
             clip={hit?.clip}
             localMs={hit?.localMs ?? 0}
@@ -530,6 +576,8 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
               }))
             }}
           />
+            </div>
+          </div>
           <TransportBar
             playing={playing}
             playheadMs={project.playheadMs}
@@ -611,7 +659,9 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           onTrimClip={(id, edge, delta) => {
             if (gestureRef.current) gestureDirtyRef.current = true
             setProject((current) => {
-              const clips = current.clips.map((clip) => (clip.id === id ? trimClip(clip, edge, delta) : clip))
+              const trimmed = current.clips.map((clip) => (clip.id === id ? trimClip(clip, edge, delta) : clip))
+              const index = trimmed.findIndex((clip) => clip.id === id)
+              const clips = trimmed.map((clip, clipIndex) => (clipIndex === index ? snapTrim(trimmed, index, edge, current.playheadMs) : clip))
               const end = projectDurationMs({ ...current, clips })
               return { ...current, clips, playheadMs: Math.min(current.playheadMs, end) }
             })
@@ -631,6 +681,10 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
               extraClips: current.extraClips.map((extra) => (extra.id === id ? moveExtra(extra, delta) : extra)),
             }))
           }}
+          onClipMenu={(clipId, x, y) => {
+            setMenu({ clipId, x, y })
+            setProject((current) => ({ ...current, selectedClipId: clipId, selectedExtraId: null, selectedTransitionIndex: null }))
+          }}
           onAddText={addText}
           onAddAudio={() => void addMusic()}
           onZoom={(pixelsPerSecond) => setProject((current) => ({ ...current, pixelsPerSecond }))}
@@ -644,6 +698,44 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           }}
         />
       </div>
+
+      {menu ? (
+        <div className="nle-menu" style={{ left: menu.x, top: menu.y }} onMouseLeave={() => setMenu(null)}>
+          <button
+            type="button"
+            onClick={() => {
+              const current = projectRef.current
+              const index = current.clips.findIndex((clip) => clip.id === menu.clipId)
+              const clip = current.clips[index]
+              if (!clip) return
+              const start = clipStartMs(current.clips, index)
+              const span = clipPlayDurationMs(clip)
+              const inside = current.playheadMs >= start && current.playheadMs <= start + span
+              const local = inside ? current.playheadMs - start : span / 2
+              const parts = splitClip(clip, local)
+              if (!parts) return
+              const clips = [...current.clips]
+              clips.splice(index, 1, ...parts)
+              commit({ clips, selectedClipId: parts[1].id, playheadMs: start + local, selectedExtraId: null })
+              setMenu(null)
+            }}
+          >
+            Split
+          </button>
+          <button type="button" onClick={() => { duplicateSelected(); setMenu(null) }}>Duplicate</button>
+          <button type="button" onClick={() => { deleteSelected(); setMenu(null) }}>Delete</button>
+          <button
+            type="button"
+            onClick={() => {
+              const clip = project.clips.find((item) => item.id === menu.clipId)
+              if (clip) updateClip(clip.id, { muted: !clip.muted })
+              setMenu(null)
+            }}
+          >
+            Mute
+          </button>
+        </div>
+      ) : null}
 
       {project.selectedTransitionIndex != null && project.clips[project.selectedTransitionIndex] ? (
         <div className="nle-transition-bar">

@@ -8,6 +8,7 @@ import {
   clipPlayDurationMs,
   clipStartMs,
   createExtra,
+  duplicateClip,
   mediaFilesForEdit,
   moveClip,
   projectDurationMs,
@@ -114,6 +115,16 @@ describe('timeline', () => {
       [{ ...file('260602-362-1'), outputPath: 'D:/out/260602-362/260602-362-1.mp4' }],
       'D:/out',
     )).toBe('D:/out/260602-362')
+  })
+
+  it('duplicates a clip without sharing its settings', () => {
+    const project = projectFromCopiedFiles([file('260602-362-1'), file('260602-362-2')], 'D:/out', '260602-362')
+    const next = duplicateClip(project.clips, project.clips[0].id)
+    expect(next).toHaveLength(3)
+    expect(next[1].id).not.toBe(next[0].id)
+    expect(next[1].label).toContain('copy')
+    next[1].transform.scale = 2
+    expect(next[0].transform.scale).toBe(1)
   })
 
   it('maps a click on the second clip to that point on the timeline', () => {

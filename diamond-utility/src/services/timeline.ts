@@ -146,6 +146,51 @@ export function splitClip(clip: EditorClip, localMs: number): [EditorClip, Edito
   return [left, right]
 }
 
+export function duplicateClip(clips: EditorClip[], id: string): EditorClip[] {
+  if (clips.length >= MAX_TIMELINE_CLIPS) return clips
+  const index = clips.findIndex((clip) => clip.id === id)
+  if (index < 0) return clips
+  const source = clips[index]
+  const copy: EditorClip = {
+    ...source,
+    id: uid('clip'),
+    label: `${source.label} copy`,
+    grade: { ...source.grade },
+    transform: { ...source.transform },
+    transition: 'none',
+    transitionMs: 0,
+  }
+  const next = [...clips]
+  next.splice(index + 1, 0, copy)
+  return next
+}
+
+const SNAP_MS = 120
+
+export function snapTrim(clips: EditorClip[], index: number, edge: 'in' | 'out', playheadMs: number): EditorClip {
+  const clip = clips[index]
+  if (!clip) return clips[0]
+  const start = clipStartMs(clips, index)
+  const edgeAt = edge === 'in' ? start : start + clipPlayDurationMs(clip)
+  const points = [0, playheadMs]
+  clips.forEach((_, other) => {
+    if (other === index) return
+    const otherStart = clipStartMs(clips, other)
+    points.push(otherStart, otherStart + clipPlayDurationMs(clips[other]))
+  })
+  let nearest = edgeAt
+  let best = SNAP_MS + 1
+  for (const point of points) {
+    const distance = Math.abs(point - edgeAt)
+    if (distance < best) {
+      best = distance
+      nearest = point
+    }
+  }
+  if (best > SNAP_MS) return clip
+  return trimClip(clip, edge, (nearest - edgeAt) * clip.speed)
+}
+
 export function moveClip(clips: EditorClip[], from: number, to: number): EditorClip[] {
   if (from === to || from < 0 || to < 0 || from >= clips.length || to >= clips.length) return clips
   const next = [...clips]
@@ -226,6 +271,7 @@ export function projectFromCopiedFiles(
     playheadMs: 0,
     pixelsPerSecond: 80,
     masterVolume: 1,
+    aspect: '16:9',
   }
 }
 

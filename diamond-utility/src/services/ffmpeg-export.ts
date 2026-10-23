@@ -1,4 +1,4 @@
-import type { EditorClip, EditorProject, ExtraClip } from '../models/editor'
+import { canvasForAspect, type EditorClip, type EditorProject, type ExtraClip } from '../models/editor'
 import { atempoChain, proxyOutputPath, videoFiltersForClip } from './edit-graph'
 import { ffmpegInputPath } from './media-url'
 import { clipPlayDurationMs, exportFileName, projectDurationMs, transitionOverlapMs } from './timeline'
@@ -23,12 +23,13 @@ export function buildExportPlan(project: EditorProject, options: ExportPlanOptio
   const outputPath = joinPath(project.outputDir, exportFileName(project.diamondName))
   const steps: FfmpegStep[] = []
   const master = clamp(project.masterVolume, 0, 1)
+  const canvas = canvasForAspect(project.aspect)
 
   project.clips.forEach((clip, index) => {
     const trimmed = joinPath(project.outputDir, `.edit-cache/${index}-${safe(clip.id)}.mp4`)
     steps.push({
       label: `Prepare ${clip.label}`,
-      args: buildPrepareArgs(clip, trimmed, master),
+      args: buildPrepareArgs(clip, trimmed, master, canvas),
     })
   })
 
@@ -67,7 +68,12 @@ export function buildExportPlan(project: EditorProject, options: ExportPlanOptio
   return { outputPath, steps, clipCount: project.clips.length, durationMs: projectDurationMs(project) }
 }
 
-export function buildPrepareArgs(clip: EditorClip, output: string, masterVolume: number): string[] {
+export function buildPrepareArgs(
+  clip: EditorClip,
+  output: string,
+  masterVolume: number,
+  canvas: { width: number; height: number } = { width: 1920, height: 1080 },
+): string[] {
   const playSec = clipPlayDurationMs(clip) / 1000
   const inSec = (clip.inMs / 1000).toFixed(3)
   const outSec = (clip.outMs / 1000).toFixed(3)
@@ -75,7 +81,7 @@ export function buildPrepareArgs(clip: EditorClip, output: string, masterVolume:
   const videoFilters = [
     `trim=start=${inSec}:end=${outSec}`,
     'setpts=PTS-STARTPTS',
-    ...videoFiltersForClip(clip, playSec),
+    ...videoFiltersForClip(clip, playSec, canvas),
   ]
   const volume = clip.muted ? 0 : clamp(clip.volume * masterVolume, 0, 4)
   const tempo = atempoChain(clip.speed)

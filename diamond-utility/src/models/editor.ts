@@ -54,6 +54,7 @@ export interface ClipTransform {
   x: number
   y: number
   scale: number
+  rotate: number
   crop: number
   flipH: boolean
   flipV: boolean
@@ -120,6 +121,7 @@ export interface EditorProject {
   playheadMs: number
   pixelsPerSecond: number
   masterVolume: number
+  aspect: AspectId
 }
 
 export const DEFAULT_GRADE: ClipGrade = {
@@ -134,9 +136,24 @@ export const DEFAULT_TRANSFORM: ClipTransform = {
   x: 0,
   y: 0,
   scale: 1,
+  rotate: 0,
   crop: 0,
   flipH: false,
   flipV: false,
+}
+
+export const ASPECTS = [
+  { id: '16:9', label: '16:9', width: 1920, height: 1080 },
+  { id: '9:16', label: '9:16', width: 1080, height: 1920 },
+  { id: '1:1', label: '1:1', width: 1080, height: 1080 },
+  { id: '4:3', label: '4:3', width: 1440, height: 1080 },
+] as const
+
+export type AspectId = (typeof ASPECTS)[number]['id']
+
+export function canvasForAspect(id: AspectId | undefined): { width: number; height: number } {
+  const match = ASPECTS.find((item) => item.id === id)
+  return match ?? { width: 1920, height: 1080 }
 }
 
 export const CLIP_COLORS = ['#c6691d', '#072c50', '#34434d', '#0c2939', '#a85616', '#011843'] as const

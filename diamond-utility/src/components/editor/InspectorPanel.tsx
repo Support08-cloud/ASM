@@ -311,6 +311,18 @@ export function InspectorPanel({
               />
             </label>
             <label className="field">
+              <span>Rotate {Math.round(selected.transform.rotate ?? 0)}°</span>
+              <LiveRange
+                min={-180}
+                max={180}
+                step={1}
+                value={selected.transform.rotate ?? 0}
+                onLive={(rotate) => liveClip({ transform: { ...selected.transform, rotate } })}
+                onGestureStart={onGestureStart}
+                onGestureEnd={onGestureEnd}
+              />
+            </label>
+            <label className="field">
               <span>Crop</span>
               <LiveRange
                 min={0}

@@ -18,6 +18,7 @@ interface TimelineBoardProps {
   onMoveExtra: (id: string, deltaMs: number) => void
   onGestureStart?: () => void
   onGestureEnd?: () => void
+  onClipMenu?: (id: string, x: number, y: number) => void
   onAddText: () => void
   onAddAudio: () => void
   onZoom: (pixelsPerSecond: number) => void
@@ -45,6 +46,7 @@ export function TimelineBoard({
   onMoveExtra,
   onGestureStart,
   onGestureEnd,
+  onClipMenu,
   onAddText,
   onAddAudio,
   onZoom,
@@ -184,6 +186,11 @@ export function TimelineBoard({
                         const rect = event.currentTarget.getBoundingClientRect()
                         const ratio = (event.clientX - rect.left) / Math.max(rect.width, 1)
                         onSelectClip(clip.id, timeInsideClip(project.clips, index, ratio))
+                      }}
+                      onContextMenu={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        onClipMenu?.(clip.id, event.clientX, event.clientY)
                       }}
                       onDragOver={(event) => event.preventDefault()}
                       onDrop={(event) => {
