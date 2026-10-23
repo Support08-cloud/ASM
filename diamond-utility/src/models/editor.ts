@@ -107,6 +107,9 @@ export interface ExtraClip {
   volume: number
   text?: string
   color: string
+  /** 0–1 across the frame. Omitted titles stay centered near the bottom. */
+  x?: number
+  y?: number
 }
 
 export interface EditorProject {

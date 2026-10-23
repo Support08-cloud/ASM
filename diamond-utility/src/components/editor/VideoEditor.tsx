@@ -37,10 +37,11 @@ import {
   trimClip,
   trimExtra,
 } from '../../services/timeline'
-import { formatTimecode, isModKey } from '../../utils/format'
+import { isModKey } from '../../utils/format'
 import { InspectorPanel } from './InspectorPanel'
 import { PreviewStage } from './PreviewStage'
 import { TimelineBoard } from './TimelineBoard'
+import { ToolDock } from './ToolDock'
 import { TransportBar } from './TransportBar'
 
 interface VideoEditorProps {
@@ -63,6 +64,9 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   const [future, setFuture] = useState<Snapshot[]>([])
   const [thumbs, setThumbs] = useState<Record<string, string[]>>({})
   const [menu, setMenu] = useState<{ x: number; y: number; clipId: string } | null>(null)
+  const [previewMode, setPreviewMode] = useState<'fit' | '100' | '50'>('fit')
+  const audioGainRef = useRef(0.8)
+  const previewRef = useRef<HTMLDivElement>(null)
   const [preparing, setPreparing] = useState<{ current: number; total: number; message: string } | null>({
     current: 0,
     total: initial.clips.length,
@@ -465,6 +469,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           </button>
           <strong>{project.diamondName}</strong>
           <span className="card-sub">{project.clips.length} clips</span>
+          <span className="edit-state">{past.length > 0 ? 'Edited' : 'Ready'}</span>
         </div>
         <div className="btn-row">
           <button type="button" className="btn ghost" onClick={undo} disabled={past.length === 0} title="Undo (Ctrl+Z)">
@@ -512,45 +517,31 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
       </header>
 
       <div className="nle-body">
-        <aside className="nle-bin">
-          <div className="nle-bin-tools">
-            <button type="button" className="btn primary" onClick={() => void addMedia()}>
-              Import
-            </button>
-            <button type="button" className="btn ghost" onClick={addText} title="Add a title at the playhead">
-              Text
-            </button>
-            <button type="button" className="btn ghost" onClick={() => void addMusic()} title="Add an audio file">
-              Audio
-            </button>
-          </div>
-          <div className="nle-bin-grid">
-            {project.clips.map((clip, index) => (
-              <button
-                key={clip.id}
-                type="button"
-                className={`nle-bin-card${clip.id === project.selectedClipId ? ' is-on' : ''}${hit?.clip.id === clip.id ? ' is-live' : ''}`}
-                onClick={() =>
-                  setProject((current) => ({
-                    ...current,
-                    selectedClipId: clip.id,
-                    selectedExtraId: null,
-                    selectedTransitionIndex: null,
-                    playheadMs: clipStartMs(current.clips, index),
-                  }))
-                }
-              >
-                {thumbs[clip.id]?.[0] ? <img src={thumbs[clip.id][0]} alt="" /> : <span className="nle-bin-swatch" style={{ background: clip.color }} />}
-                <strong>{clip.label.replace('.mp4', '')}</strong>
-                <span>{formatTimecode(clipPlayDurationMs(clip))}</span>
-              </button>
-            ))}
-          </div>
-        </aside>
+        <ToolDock
+          project={project}
+          liveClipId={hit?.clip.id}
+          thumbs={thumbs}
+          onImport={() => void addMedia()}
+          onAddText={addText}
+          onAddAudio={() => void addMusic()}
+          onSelectClip={(id, index) =>
+            setProject((current) => ({
+              ...current,
+              selectedClipId: id,
+              selectedExtraId: null,
+              selectedTransitionIndex: null,
+              playheadMs: clipStartMs(current.clips, index),
+            }))
+          }
+          onSelectExtra={(id) => setProject((current) => ({ ...current, selectedExtraId: id, selectedClipId: null, selectedTransitionIndex: null }))}
+          onEffect={(effect) => selected && updateClip(selected.id, { effect })}
+          onFilter={(filter) => selected && updateClip(selected.id, { filter })}
+          onTransition={(transition) => selected && updateClip(selected.id, { transition })}
+        />
 
         <section className="nle-center">
-          <div className="nle-preview">
-            <div className="nle-frame" style={{ '--aw': frame.width, '--ah': frame.height } as CSSProperties}>
+          <div className="nle-preview" ref={previewRef}>
+            <div className={`nle-frame is-${previewMode}`} style={{ '--aw': frame.width, '--ah': frame.height } as CSSProperties}>
           <PreviewStage
             clip={hit?.clip}
             localMs={hit?.localMs ?? 0}
@@ -568,6 +559,12 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
                   }
                 : null
             }
+            interactive={Boolean(!playing && selected && hit?.clip.id === selected.id)}
+            moveTitles={!playing}
+            onTransform={(transform) => selected && updateClip(selected.id, { transform }, true)}
+            onPlaceTitle={(id, x, y) => updateExtra(id, { x, y }, true)}
+            onGestureStart={beginGesture}
+            onGestureEnd={endGesture}
             onDuration={(id, durationMs) => {
               if (!Number.isFinite(durationMs) || durationMs <= 0) return
               setProject((current) => ({
@@ -577,6 +574,28 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
             }}
           />
             </div>
+          </div>
+          <div className="nle-preview-tools">
+            <button type="button" className={previewMode === 'fit' ? 'is-on' : undefined} onClick={() => setPreviewMode('fit')}>
+              Fit
+            </button>
+            <button type="button" className={previewMode === '100' ? 'is-on' : undefined} onClick={() => setPreviewMode('100')}>
+              100%
+            </button>
+            <button type="button" className={previewMode === '50' ? 'is-on' : undefined} onClick={() => setPreviewMode('50')}>
+              50%
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const node = previewRef.current
+                if (!node) return
+                if (document.fullscreenElement) void document.exitFullscreen()
+                else void node.requestFullscreen()
+              }}
+            >
+              Full screen
+            </button>
           </div>
           <TransportBar
             playing={playing}
@@ -684,6 +703,24 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           onClipMenu={(clipId, x, y) => {
             setMenu({ clipId, x, y })
             setProject((current) => ({ ...current, selectedClipId: clipId, selectedExtraId: null, selectedTransitionIndex: null }))
+          }}
+          onMuteLane={(lane) => {
+            if (lane === 'video') {
+              const mute = !projectRef.current.clips.every((clip) => clip.muted)
+              commit({ clips: projectRef.current.clips.map((clip) => ({ ...clip, muted: mute })) })
+            }
+            if (lane === 'audio') {
+              const tracks = projectRef.current.extraClips.filter((extra) => extra.kind === 'audio')
+              if (tracks.length === 0) return
+              const silent = tracks.every((extra) => extra.volume === 0)
+              const restore = audioGainRef.current > 0 ? audioGainRef.current : 0.8
+              if (!silent) audioGainRef.current = tracks.find((extra) => extra.volume > 0)?.volume ?? restore
+              commit({
+                extraClips: projectRef.current.extraClips.map((extra) =>
+                  extra.kind === 'audio' ? { ...extra, volume: silent ? restore : 0 } : extra,
+                ),
+              })
+            }
           }}
           onAddText={addText}
           onAddAudio={() => void addMusic()}

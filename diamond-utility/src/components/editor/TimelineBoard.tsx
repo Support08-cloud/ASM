@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useRef, useMemo, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import type { EditorProject, ExtraClip } from '../../models/editor'
 import { clipPlayDurationMs, clipStartMs, timeInsideClip } from '../../services/timeline'
 import { formatTimecode } from '../../utils/format'
@@ -19,6 +19,7 @@ interface TimelineBoardProps {
   onGestureStart?: () => void
   onGestureEnd?: () => void
   onClipMenu?: (id: string, x: number, y: number) => void
+  onMuteLane?: (lane: 'video' | 'audio') => void
   onAddText: () => void
   onAddAudio: () => void
   onZoom: (pixelsPerSecond: number) => void
@@ -47,12 +48,18 @@ export function TimelineBoard({
   onGestureStart,
   onGestureEnd,
   onClipMenu,
+  onMuteLane,
   onAddText,
   onAddAudio,
   onZoom,
   onFit,
 }: TimelineBoardProps) {
   const trackRef = useRef<HTMLDivElement>(null)
+  const [locked, setLocked] = useState({ text: false, video: false, audio: false })
+  const videoMuted = project.clips.length > 0 && project.clips.every((clip) => clip.muted)
+  const audioMuted =
+    project.extraClips.some((extra) => extra.kind === 'audio') &&
+    project.extraClips.filter((extra) => extra.kind === 'audio').every((extra) => extra.volume === 0)
   const width = Math.max(720, (duration / 1000) * project.pixelsPerSecond)
   const playX = (project.playheadMs / Math.max(duration, 1)) * width
   const ticks = useMemo(() => rulerTicks(duration, project.pixelsPerSecond), [duration, project.pixelsPerSecond])
@@ -114,16 +121,36 @@ export function TimelineBoard({
           {LANES.map((lane) => (
             <div key={lane.id} className="lane-label">
               <span>{lane.label}</span>
-              {lane.id === 'text' ? (
-                <button type="button" className="lane-add" onClick={onAddText} title="Add text">
-                  +
+              <span className="lane-tools">
+                <button
+                  type="button"
+                  className={`lane-add${locked[lane.id] ? ' is-on' : ''}`}
+                  title={locked[lane.id] ? 'Unlock track' : 'Lock track'}
+                  onClick={() => setLocked((current) => ({ ...current, [lane.id]: !current[lane.id] }))}
+                >
+                  {locked[lane.id] ? 'Unlock' : 'Lock'}
                 </button>
-              ) : null}
-              {lane.id === 'audio' ? (
-                <button type="button" className="lane-add" onClick={onAddAudio} title="Add audio">
-                  +
-                </button>
-              ) : null}
+                {lane.id === 'video' || lane.id === 'audio' ? (
+                  <button
+                    type="button"
+                    className={`lane-add${(lane.id === 'video' ? videoMuted : audioMuted) ? ' is-on' : ''}`}
+                    title={lane.id === 'video' ? (videoMuted ? 'Unmute video' : 'Mute video') : audioMuted ? 'Unmute audio' : 'Mute audio'}
+                    onClick={() => onMuteLane?.(lane.id === 'audio' ? 'audio' : 'video')}
+                  >
+                    M
+                  </button>
+                ) : null}
+                {lane.id === 'text' ? (
+                  <button type="button" className="lane-add" onClick={onAddText} title="Add text">
+                    +
+                  </button>
+                ) : null}
+                {lane.id === 'audio' ? (
+                  <button type="button" className="lane-add" onClick={onAddAudio} title="Add audio">
+                    +
+                  </button>
+                ) : null}
+              </span>
             </div>
           ))}
         </div>
@@ -160,6 +187,7 @@ export function TimelineBoard({
                     width={width}
                     selected={extra.id === project.selectedExtraId}
                     pixelsPerSecond={project.pixelsPerSecond}
+                    locked={locked.text}
                     onSelect={onSelectExtra}
                     onTrim={onTrimExtra}
                     onMove={onMoveExtra}
@@ -205,13 +233,20 @@ export function TimelineBoard({
                       </span>
                       <span
                         className="tl-handle"
-                        onMouseDown={(event) => startDrag(event, (delta) => onTrimClip(clip.id, 'in', delta), project.pixelsPerSecond, onGestureStart, onGestureEnd)}
+                        onMouseDown={(event) => {
+                          if (locked.video) return
+                          startDrag(event, (delta) => onTrimClip(clip.id, 'in', delta), project.pixelsPerSecond, onGestureStart, onGestureEnd)
+                        }}
                       />
                       <span
                         className="tl-name"
-                        draggable
+                        draggable={!locked.video}
                         title="Drag to reorder"
                         onDragStart={(event) => {
+                          if (locked.video) {
+                            event.preventDefault()
+                            return
+                          }
                           event.dataTransfer.setData('text/plain', String(index))
                           event.stopPropagation()
                         }}
@@ -222,7 +257,10 @@ export function TimelineBoard({
                       {clip.muted ? <span className="tl-mute">M</span> : null}
                       <span
                         className="tl-handle is-end"
-                        onMouseDown={(event) => startDrag(event, (delta) => onTrimClip(clip.id, 'out', delta), project.pixelsPerSecond, onGestureStart, onGestureEnd)}
+                        onMouseDown={(event) => {
+                          if (locked.video) return
+                          startDrag(event, (delta) => onTrimClip(clip.id, 'out', delta), project.pixelsPerSecond, onGestureStart, onGestureEnd)
+                        }}
                       />
                     </button>
                     {index < project.clips.length - 1 ? (
@@ -256,6 +294,7 @@ export function TimelineBoard({
                     width={width}
                     selected={extra.id === project.selectedExtraId}
                     pixelsPerSecond={project.pixelsPerSecond}
+                    locked={locked.audio}
                     onSelect={onSelectExtra}
                     onTrim={onTrimExtra}
                     onMove={onMoveExtra}
@@ -289,6 +328,7 @@ function ExtraBlock({
   width,
   selected,
   pixelsPerSecond,
+  locked,
   onSelect,
   onTrim,
   onMove,
@@ -300,6 +340,7 @@ function ExtraBlock({
   width: number
   selected: boolean
   pixelsPerSecond: number
+  locked?: boolean
   onSelect: (id: string) => void
   onTrim: (id: string, edge: 'in' | 'out', deltaMs: number) => void
   onMove: (id: string, deltaMs: number) => void
@@ -318,13 +359,13 @@ function ExtraBlock({
         onSelect(extra.id)
       }}
       onMouseDown={(event) => {
-        if ((event.target as HTMLElement).classList.contains('tl-handle')) return
+        if (locked || (event.target as HTMLElement).classList.contains('tl-handle')) return
         startDrag(event, (delta) => onMove(extra.id, delta), pixelsPerSecond, onGestureStart, onGestureEnd)
       }}
     >
-      <span className="tl-handle" onMouseDown={(event) => startDrag(event, (delta) => onTrim(extra.id, 'in', delta), pixelsPerSecond, onGestureStart, onGestureEnd)} />
+      <span className="tl-handle" onMouseDown={(event) => { if (!locked) startDrag(event, (delta) => onTrim(extra.id, 'in', delta), pixelsPerSecond, onGestureStart, onGestureEnd) }} />
       <span className="tl-name">{extra.label}</span>
-      <span className="tl-handle is-end" onMouseDown={(event) => startDrag(event, (delta) => onTrim(extra.id, 'out', delta), pixelsPerSecond, onGestureStart, onGestureEnd)} />
+      <span className="tl-handle is-end" onMouseDown={(event) => { if (!locked) startDrag(event, (delta) => onTrim(extra.id, 'out', delta), pixelsPerSecond, onGestureStart, onGestureEnd) }} />
     </button>
   )
 }

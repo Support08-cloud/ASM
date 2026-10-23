@@ -70,8 +70,32 @@ describe('ffmpeg export plan', () => {
     expect(prepare).toContain('gamma_r=1.12')
     const finish = plan.steps.at(-1)?.args.join(' ') ?? ''
     expect(finish).toContain('drawtext')
+    expect(finish).toContain('x=(w-text_w)/2')
+    expect(finish).toContain('y=h-140')
     expect(finish).toContain('amix')
     expect(plan.outputPath).toBe('D:/Output_Testing/260602-362/260602-362-edit.mp4')
+  })
+
+  it('places a dragged title with the same frame fractions the preview uses', () => {
+    const project = projectFromCopiedFiles(['260602-362-1'].map(file), 'D:/Output_Testing/260602-362', '260602-362')
+    project.clips[0].transition = 'none'
+    project.extraClips = [
+      {
+        id: 'tx-2',
+        kind: 'text',
+        label: 'Title',
+        startMs: 0,
+        durationMs: 2000,
+        text: 'Placed',
+        volume: 1,
+        color: '#0c2939',
+        x: 0.25,
+        y: 0.4,
+      },
+    ]
+    const finish = buildExportPlan(project).steps.at(-1)?.args.join(' ') ?? ''
+    expect(finish).toContain('x=(w-text_w)*0.250')
+    expect(finish).toContain('y=(h-text_h)*0.400')
   })
 
   it('writes concat paths with forward slashes so Windows ffmpeg does not treat them as escapes', () => {

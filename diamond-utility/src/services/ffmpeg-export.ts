@@ -298,7 +298,9 @@ function drawTextFilter(extra: ExtraClip, fontFile?: string): string {
   const text = escapeDrawtext(extra.text || 'Title')
   const enable = enableBetween(extra)
   const font = fontFile ? `:fontfile=${escapePath(fontFile)}` : ''
-  return `drawtext=text='${text}'${font}:fontsize=54:fontcolor=white:borderw=2:bordercolor=black@0.6:x=(w-text_w)/2:y=h-140:${enable}`
+  const x = extra.x == null ? '(w-text_w)/2' : `(w-text_w)*${clamp(extra.x, 0, 1).toFixed(3)}`
+  const y = extra.y == null ? 'h-140' : `(h-text_h)*${clamp(extra.y, 0, 1).toFixed(3)}`
+  return `drawtext=text='${text}'${font}:fontsize=54:fontcolor=white:borderw=2:bordercolor=black@0.6:x=${x}:y=${y}:${enable}`
 }
 
 function enableBetween(extra: ExtraClip): string {

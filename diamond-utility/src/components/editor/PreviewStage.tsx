@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import type { EditorClip, ExtraClip } from '../../models/editor'
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
+import type { ClipTransform, EditorClip, ExtraClip } from '../../models/editor'
 import { cssClipPathForClip, cssFilterForClip, cssTransformForClip, type TransitionLayerStyle } from '../../services/edit-graph'
 import { toVideoSrc } from '../../services/media-url'
 import { clipPlayDurationMs, sourceTimeMs } from '../../services/timeline'
@@ -19,6 +19,12 @@ interface PreviewStageProps {
   extras: ExtraClip[]
   outgoingStyle?: TransitionLayerStyle
   incoming?: IncomingPreview | null
+  interactive?: boolean
+  moveTitles?: boolean
+  onTransform?: (transform: ClipTransform) => void
+  onPlaceTitle?: (id: string, x: number, y: number) => void
+  onGestureStart?: () => void
+  onGestureEnd?: () => void
   onDuration: (clipId: string, durationMs: number) => void
 }
 
@@ -31,6 +37,12 @@ export function PreviewStage({
   extras,
   outgoingStyle,
   incoming,
+  interactive = false,
+  moveTitles = false,
+  onTransform,
+  onPlaceTitle,
+  onGestureStart,
+  onGestureEnd,
   onDuration,
 }: PreviewStageProps) {
   const audioRef = useRef<HTMLAudioElement>(null)
@@ -131,10 +143,39 @@ export function PreviewStage({
         <div className="stage-status is-error">{clip?.error || 'This video could not be played.'}</div>
       ) : null}
       {titles.map((title) => (
-        <div key={title.id} className="stage-title">
+        <div
+          key={title.id}
+          className={`stage-title${title.x != null || title.y != null ? ' is-placed' : ''}${moveTitles ? ' is-movable' : ''}`}
+          style={
+            title.x != null || title.y != null
+              ? { left: `${(title.x ?? 0.5) * 100}%`, top: `${(title.y ?? 0.82) * 100}%`, bottom: 'auto', transform: 'translate(-50%, -50%)' }
+              : undefined
+          }
+          onPointerDown={moveTitles ? (event) => dragPoint(event, (x, y) => onPlaceTitle?.(title.id, x, y), onGestureStart, onGestureEnd) : undefined}
+        >
           {title.text || 'Title'}
         </div>
       ))}
+      {interactive && clip && !playing ? (
+        <div
+          className="stage-handles"
+          style={{ transform: cssTransformForClip(clip) }}
+          onPointerDown={(event) => dragMove(event, clip.transform, onTransform, onGestureStart, onGestureEnd)}
+        >
+          <div className="stage-handle-box">
+            <span className="stage-handle-label">Drag to move</span>
+            <button
+              type="button"
+              className="stage-scale"
+              aria-label="Scale clip"
+              onPointerDown={(event) => {
+                event.stopPropagation()
+                dragScale(event, clip.transform, onTransform, onGestureStart, onGestureEnd)
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
       {clip?.effect === 'vignette' ? <div className="stage-vignette" /> : null}
       {clip?.effect === 'grain' ? <div className="stage-grain" /> : null}
       {clip ? (
@@ -253,6 +294,83 @@ function SyncedVideo({
       onError={() => onStatus?.('error')}
     />
   )
+}
+
+function dragPoint(
+  event: ReactPointerEvent,
+  apply: (x: number, y: number) => void,
+  onStart?: () => void,
+  onEnd?: () => void,
+) {
+  const frame = event.currentTarget.parentElement?.getBoundingClientRect()
+  if (!frame) return
+  event.preventDefault()
+  event.stopPropagation()
+  onStart?.()
+  const move = (next: PointerEvent) => {
+    const x = Math.min(1, Math.max(0, (next.clientX - frame.left) / frame.width))
+    const y = Math.min(1, Math.max(0, (next.clientY - frame.top) / frame.height))
+    apply(x, y)
+  }
+  const up = () => {
+    window.removeEventListener('pointermove', move)
+    window.removeEventListener('pointerup', up)
+    onEnd?.()
+  }
+  window.addEventListener('pointermove', move)
+  window.addEventListener('pointerup', up)
+}
+
+function dragMove(
+  event: ReactPointerEvent,
+  origin: ClipTransform,
+  apply: ((transform: ClipTransform) => void) | undefined,
+  onStart?: () => void,
+  onEnd?: () => void,
+) {
+  if ((event.target as HTMLElement).closest('.stage-scale')) return
+  const frame = event.currentTarget.parentElement?.getBoundingClientRect()
+  if (!frame || !apply) return
+  event.preventDefault()
+  onStart?.()
+  const startX = event.clientX
+  const startY = event.clientY
+  const move = (next: PointerEvent) => {
+    const x = Math.min(1, Math.max(-1, origin.x + (next.clientX - startX) / frame.width / 0.4))
+    const y = Math.min(1, Math.max(-1, origin.y + (next.clientY - startY) / frame.height / 0.4))
+    apply({ ...origin, x, y })
+  }
+  const up = () => {
+    window.removeEventListener('pointermove', move)
+    window.removeEventListener('pointerup', up)
+    onEnd?.()
+  }
+  window.addEventListener('pointermove', move)
+  window.addEventListener('pointerup', up)
+}
+
+function dragScale(
+  event: ReactPointerEvent,
+  origin: ClipTransform,
+  apply: ((transform: ClipTransform) => void) | undefined,
+  onStart?: () => void,
+  onEnd?: () => void,
+) {
+  if (!apply) return
+  event.preventDefault()
+  onStart?.()
+  const startY = event.clientY
+  const move = (next: PointerEvent) => {
+    const scale = Math.min(2.4, Math.max(0.4, origin.scale + (startY - next.clientY) / 220))
+    apply({ ...origin, scale })
+  }
+  const up = () => {
+    window.removeEventListener('pointermove', move)
+    window.removeEventListener('pointerup', up)
+    onEnd?.()
+  }
+  window.addEventListener('pointermove', move)
+  window.addEventListener('pointerup', up)
 }
 
 function playbackRateFor(speed: number): number {
