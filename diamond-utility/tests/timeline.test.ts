@@ -15,6 +15,7 @@ import {
   setVolume,
   splitClip,
   timelineDurationMs,
+  timeInsideClip,
   trimClip,
 } from '../src/services/timeline'
 import type { ProcessFileResult } from '../src/models/processing'
@@ -113,6 +114,12 @@ describe('timeline', () => {
       [{ ...file('260602-362-1'), outputPath: 'D:/out/260602-362/260602-362-1.mp4' }],
       'D:/out',
     )).toBe('D:/out/260602-362')
+  })
+
+  it('maps a click on the second clip to that point on the timeline', () => {
+    const project = projectFromCopiedFiles([file('260602-362-1'), file('260602-362-2')], 'D:/out', '260602-362')
+    expect(timeInsideClip(project.clips, 1, 0.5)).toBe(6000)
+    expect(timeInsideClip(project.clips, 0, 0)).toBe(0)
   })
 
   it('ignores a duration the player could not measure', () => {

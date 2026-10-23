@@ -81,6 +81,14 @@ export function clipAtTime(clips: EditorClip[], timeMs: number): TimelineHit | n
   return { index: clips.length - 1, clip: last, localMs: clipPlayDurationMs(last), startMs: cursor, overlapMs: 0 }
 }
 
+export function timeInsideClip(clips: EditorClip[], index: number, ratio: number): number {
+  const clip = clips[index]
+  if (!clip) return 0
+  const span = clipPlayDurationMs(clip)
+  const clamped = Math.min(1, Math.max(0, ratio))
+  return clipStartMs(clips, index) + clamped * span
+}
+
 export function clipStartMs(clips: EditorClip[], index: number): number {
   let cursor = 0
   for (let i = 0; i < index; i += 1) {
@@ -123,11 +131,16 @@ export function applyDuration(clip: EditorClip, durationMs: number): EditorClip 
   }
 }
 
-export function splitClip(clip: EditorClip, localMs: number): [EditorClip, EditorClip] | null {
+export function canSplitAt(clip: EditorClip, localMs: number): boolean {
   const play = clipPlayDurationMs(clip)
-  if (localMs <= MIN_CLIP_MS / clip.speed || play - localMs <= MIN_CLIP_MS / clip.speed) return null
+  if (localMs <= MIN_CLIP_MS / clip.speed || play - localMs <= MIN_CLIP_MS / clip.speed) return false
   const at = sourceTimeMs(clip, localMs)
-  if (at <= clip.inMs + MIN_CLIP_MS || at >= clip.outMs - MIN_CLIP_MS) return null
+  return at > clip.inMs + MIN_CLIP_MS && at < clip.outMs - MIN_CLIP_MS
+}
+
+export function splitClip(clip: EditorClip, localMs: number): [EditorClip, EditorClip] | null {
+  if (!canSplitAt(clip, localMs)) return null
+  const at = sourceTimeMs(clip, localMs)
   const left: EditorClip = { ...clip, id: uid('clip'), outMs: at, transition: 'none' }
   const right: EditorClip = { ...clip, id: uid('clip'), inMs: at }
   return [left, right]

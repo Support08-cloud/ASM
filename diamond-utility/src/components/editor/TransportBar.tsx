@@ -6,10 +6,14 @@ interface TransportBarProps {
   durationMs: number
   canUndo: boolean
   canRedo: boolean
+  canSplit?: boolean
+  canDelete?: boolean
   onPlay: () => void
   onUndo: () => void
   onRedo: () => void
   onSplit: () => void
+  onDelete: () => void
+  onSeek: (playheadMs: number) => void
   onStep: (deltaMs: number) => void
 }
 
@@ -19,17 +23,24 @@ export function TransportBar({
   durationMs,
   canUndo,
   canRedo,
+  canSplit = true,
+  canDelete = true,
   onPlay,
   onUndo,
   onRedo,
   onSplit,
+  onDelete,
+  onSeek,
   onStep,
 }: TransportBarProps) {
   return (
     <div className="nle-transport">
       <div className="btn-row">
-        <button type="button" className="btn ghost" onClick={onSplit} title="Split at playhead">
+        <button type="button" className="btn ghost" onClick={onSplit} title="Split at playhead (S)" disabled={!canSplit}>
           Split
+        </button>
+        <button type="button" className="btn ghost" onClick={onDelete} title="Delete selected clip" disabled={!canDelete}>
+          Delete
         </button>
         <button type="button" className="btn ghost" onClick={onUndo} disabled={!canUndo}>
           Undo
@@ -45,6 +56,16 @@ export function TransportBar({
         <button type="button" className="btn primary" onClick={onPlay}>
           {playing ? 'Pause' : 'Play'}
         </button>
+        <input
+          className="nle-scrub"
+          type="range"
+          min={0}
+          max={Math.max(durationMs, 1)}
+          step={10}
+          value={Math.min(playheadMs, Math.max(durationMs, 1))}
+          aria-label="Playhead"
+          onChange={(event) => onSeek(Number(event.target.value))}
+        />
         <button type="button" className="btn ghost" onClick={() => onStep(1000)} title="Forward 1s">
           +1s
         </button>

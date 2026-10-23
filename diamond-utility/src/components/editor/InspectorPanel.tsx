@@ -6,9 +6,12 @@ import {
   INSPECTOR_TABS,
   SPEED_MAX,
   SPEED_MIN,
+  SPEED_OPTIONS,
+  TRANSITION_OPTIONS,
   type EditorClip,
   type ExtraClip,
   type InspectorTab,
+  type TransitionId,
 } from '../../models/editor'
 
 interface InspectorPanelProps {
@@ -80,6 +83,18 @@ export function InspectorPanel({
               onGestureStart={onGestureStart}
               onGestureEnd={onGestureEnd}
             />
+            <div className="btn-row">
+              {SPEED_OPTIONS.map((speed) => (
+                <button
+                  key={speed}
+                  type="button"
+                  className={`btn ghost${selected.speed === speed ? ' is-on' : ''}`}
+                  onClick={() => onClip({ speed })}
+                >
+                  {speed}×
+                </button>
+              ))}
+            </div>
           </label>
         ) : null}
         {selected && tab === 'audio' ? (
@@ -140,6 +155,34 @@ export function InspectorPanel({
                 onGestureEnd={onGestureEnd}
               />
             </label>
+            <p className="card-sub">The transition plays into the next video on the timeline.</p>
+            <label className="field">
+              <span>Transition to next</span>
+              <select
+                value={selected.transition}
+                onChange={(event) => onClip({ transition: event.target.value as TransitionId })}
+              >
+                {TRANSITION_OPTIONS.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {selected.transition !== 'none' ? (
+              <label className="field">
+                <span>Transition length ({Math.round(selected.transitionMs)} ms)</span>
+                <LiveRange
+                  min={100}
+                  max={2000}
+                  step={50}
+                  value={selected.transitionMs}
+                  onLive={(transitionMs) => liveClip({ transitionMs })}
+                  onGestureStart={onGestureStart}
+                  onGestureEnd={onGestureEnd}
+                />
+              </label>
+            ) : null}
           </>
         ) : null}
         {selected && tab === 'filters' ? (
@@ -231,6 +274,30 @@ export function InspectorPanel({
         {selected ? (
           <div className="nle-transform">
             <div className="eyebrow">Canvas</div>
+            <label className="field">
+              <span>Horizontal {selected.transform.x.toFixed(2)}</span>
+              <LiveRange
+                min={-1}
+                max={1}
+                step={0.05}
+                value={selected.transform.x}
+                onLive={(x) => liveClip({ transform: { ...selected.transform, x } })}
+                onGestureStart={onGestureStart}
+                onGestureEnd={onGestureEnd}
+              />
+            </label>
+            <label className="field">
+              <span>Vertical {selected.transform.y.toFixed(2)}</span>
+              <LiveRange
+                min={-1}
+                max={1}
+                step={0.05}
+                value={selected.transform.y}
+                onLive={(y) => liveClip({ transform: { ...selected.transform, y } })}
+                onGestureStart={onGestureStart}
+                onGestureEnd={onGestureEnd}
+              />
+            </label>
             <label className="field">
               <span>Scale {selected.transform.scale.toFixed(2)}</span>
               <LiveRange

@@ -8,6 +8,7 @@ import {
   type InspectorTab,
   type TransitionId,
 } from '../../models/editor'
+import { transitionLayerStyle } from '../../services/edit-graph'
 import { toVideoSrc } from '../../services/media-url'
 import { mergePreparedProject, prepareClip, prepareEditorProject } from '../../services/prepare-media'
 import { isRealDiskPath } from '../../services/sample-media'
@@ -15,9 +16,11 @@ import { captureFilmstrip } from '../../services/thumbnails'
 import {
   applyDuration,
   applyTransition,
+  canSplitAt,
   clipAtTime,
   clipPlayDurationMs,
   clipStartMs,
+  transitionOverlapMs,
   createClipFromFile,
   createExtra,
   extrasAtTime,
@@ -170,20 +173,44 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   }
 
   const updateClip = (id: string, patch: Partial<EditorClip>, live = false) => {
-    const apply = (current: EditorProject): EditorProject => ({
-      ...current,
-      clips: current.clips.map((clip) => {
+    const apply = (current: EditorProject): EditorProject => {
+      const index = current.clips.findIndex((clip) => clip.id === id)
+      const clips = current.clips.map((clip) => {
         if (clip.id !== id) return clip
         const next = { ...clip, ...patch }
+        if (patch.transition != null && patch.transitionMs == null) {
+          const ms = patch.transition === 'none' ? 0 : patch.transition === clip.transition ? clip.transitionMs : undefined
+          return applyTransition(next, patch.transition, ms)
+        }
         return patch.speed != null ? setSpeed(next, patch.speed) : next
-      }),
-    })
+      })
+      const nextProject = { ...current, clips }
+      const end = projectDurationMs(nextProject)
+      const playheadMs = Math.min(current.playheadMs, end)
+      if (patch.transition == null || index < 0) return { ...nextProject, playheadMs }
+      const clip = clips[index]
+      const start = clipStartMs(clips, index)
+      const overlap = transitionOverlapMs(clip, clips[index + 1])
+      const at = start + Math.max(0, clipPlayDurationMs(clip) - Math.max(overlap, 240) / 2)
+      return {
+        ...nextProject,
+        playheadMs: Math.min(end, at),
+        selectedTransitionIndex: index,
+        inspectorTab: 'fade',
+      }
+    }
     if (live && gestureRef.current) {
       gestureDirtyRef.current = true
       setProject(apply)
       return
     }
-    commit({ clips: apply(projectRef.current).clips })
+    const next = apply(projectRef.current)
+    commit({
+      clips: next.clips,
+      playheadMs: next.playheadMs,
+      selectedTransitionIndex: next.selectedTransitionIndex,
+      inspectorTab: next.inspectorTab,
+    })
   }
 
   const updateExtra = (id: string, patch: Partial<ExtraClip>, live = false) => {
@@ -299,7 +326,12 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
       const end = projectDurationMs(projectRef.current)
       const next = Math.min(end, playClockRef.current + dt)
       playClockRef.current = next
-      setProject((current) => (current.playheadMs === next ? current : { ...current, playheadMs: next }))
+      setProject((current) => {
+        const at = clipAtTime(current.clips, next)
+        const follow = !gestureRef.current && current.selectedExtraId == null && at ? at.clip.id : current.selectedClipId
+        if (current.playheadMs === next && current.selectedClipId === follow) return current
+        return { ...current, playheadMs: next, selectedClipId: follow }
+      })
       if (next >= end) {
         setPlaying(false)
         return
@@ -323,8 +355,23 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
     setPlaying(true)
   }
 
-  const actionsRef = useRef({ togglePlay, splitAtPlayhead, deleteSelected, undo, redo })
-  actionsRef.current = { togglePlay, splitAtPlayhead, deleteSelected, undo, redo }
+  const toggleMute = () => {
+    const current = projectRef.current
+    const clip = current.clips.find((item) => item.id === current.selectedClipId)
+    if (!clip) return
+    updateClip(clip.id, { muted: !clip.muted })
+  }
+
+  const stepPlayhead = (delta: number) => {
+    setPlaying(false)
+    setProject((current) => ({
+      ...current,
+      playheadMs: Math.max(0, Math.min(projectDurationMs(current), current.playheadMs + delta)),
+    }))
+  }
+
+  const actionsRef = useRef({ togglePlay, splitAtPlayhead, deleteSelected, undo, redo, toggleMute, stepPlayhead })
+  actionsRef.current = { togglePlay, splitAtPlayhead, deleteSelected, undo, redo, toggleMute, stepPlayhead }
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -335,17 +382,47 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
         event.preventDefault()
         actions.togglePlay()
       }
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault()
+        actions.stepPlayhead(event.shiftKey ? -1000 : -100)
+      }
+      if (event.key === 'ArrowRight') {
+        event.preventDefault()
+        actions.stepPlayhead(event.shiftKey ? 1000 : 100)
+      }
+      if (event.key.toLowerCase() === 'm' && !isModKey(event)) actions.toggleMute()
       if (event.key.toLowerCase() === 's' && !isModKey(event)) actions.splitAtPlayhead()
-      if (event.key === 'Delete' || event.key === 'Backspace') actions.deleteSelected()
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault()
+        actions.deleteSelected()
+      }
       if (isModKey(event) && event.key.toLowerCase() === 'z') {
         event.preventDefault()
         if (event.shiftKey) actions.redo()
         else actions.undo()
       }
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
   }, [])
+
+  const selectCut = (index: number) => {
+    setPlaying(false)
+    setProject((current) => {
+      const clip = current.clips[index]
+      const start = clipStartMs(current.clips, index)
+      const overlapMs = clip ? transitionOverlapMs(clip, current.clips[index + 1]) : 0
+      const at = start + Math.max(0, (clip ? clipPlayDurationMs(clip) : 0) - Math.max(overlapMs, 240) / 2)
+      return {
+        ...current,
+        selectedTransitionIndex: index,
+        selectedClipId: clip?.id ?? null,
+        selectedExtraId: null,
+        inspectorTab: 'fade',
+        playheadMs: at,
+      }
+    })
+  }
 
   const exportBlocked = project.clips.some(
     (clip) => clip.ready === false || Boolean(clip.error) || (Boolean(window.desktop?.runFfmpeg) && !clip.durationProbed),
@@ -358,8 +435,8 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
 
   const overlap = hit?.overlapMs ?? 0
   const transitionMs = hit?.clip.transitionMs || 1
-  const transitionOpacity =
-    overlap > 0 && hit?.clip.transition !== 'none' ? Math.max(0.35, 1 - overlap / transitionMs) : 1
+  const transitionProgress = overlap > 0 && hit?.clip.transition !== 'none' ? Math.min(1, overlap / transitionMs) : 0
+  const incomingClip = hit && transitionProgress > 0 ? project.clips[hit.index + 1] : undefined
 
   return (
     <div className="nle-shell">
@@ -375,15 +452,18 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           <button type="button" className="btn ghost" onClick={onClose}>
             Back
           </button>
-          <button
-            type="button"
-            className="btn primary"
-            onClick={() => onExport(project)}
-            disabled={Boolean(exporting || preparing || exportBlocked)}
-            title={exportTitle}
-          >
-            Export
-          </button>
+          <div>
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => onExport(project)}
+              disabled={Boolean(exporting || preparing || exportBlocked)}
+              title={exportTitle}
+            >
+              Export
+            </button>
+            {exportTitle ? <p className="card-sub" style={{ margin: '4px 0 0' }}>{exportTitle}</p> : null}
+          </div>
         </div>
       </header>
 
@@ -391,7 +471,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
         <nav className="nle-rail" aria-label="Library">
           <button type="button" className="is-on">Media</button>
           <button type="button" onClick={addText}>Text</button>
-          <button type="button" onClick={() => commit({ selectedTransitionIndex: Math.max(0, (hit?.index ?? 1) - 1), inspectorTab: 'fade' })}>
+          <button type="button" onClick={() => selectCut(Math.max(0, (hit?.index ?? 1) - 1))}>
             Fade
           </button>
         </nav>
@@ -432,7 +512,16 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
             playing={playing}
             masterVolume={project.masterVolume}
             extras={activeExtras}
-            transitionOpacity={transitionOpacity}
+            outgoingStyle={incomingClip && hit ? transitionLayerStyle(hit.clip.transition, 'out', transitionProgress) : undefined}
+            incoming={
+              incomingClip && hit
+                ? {
+                    clip: incomingClip,
+                    localMs: overlap,
+                    layerStyle: transitionLayerStyle(hit.clip.transition, 'in', transitionProgress),
+                  }
+                : null
+            }
             onDuration={(id, durationMs) => {
               if (!Number.isFinite(durationMs) || durationMs <= 0) return
               setProject((current) => ({
@@ -447,17 +536,18 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
             durationMs={duration}
             canUndo={past.length > 0}
             canRedo={future.length > 0}
+            canSplit={Boolean(hit && canSplitAt(hit.clip, hit.localMs))}
+            canDelete={Boolean(selectedExtra || (selected && project.clips.length > 1))}
             onPlay={togglePlay}
             onUndo={undo}
             onRedo={redo}
             onSplit={splitAtPlayhead}
-            onStep={(delta) => {
+            onDelete={deleteSelected}
+            onSeek={(playheadMs) => {
               setPlaying(false)
-              setProject((current) => ({
-                ...current,
-                playheadMs: Math.max(0, Math.min(projectDurationMs(current), current.playheadMs + delta)),
-              }))
+              setProject((current) => ({ ...current, playheadMs }))
             }}
+            onStep={stepPlayhead}
           />
         </section>
 
@@ -489,33 +579,42 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           project={project}
           duration={duration}
           thumbs={thumbs}
+          playing={playing}
           onSeek={(playheadMs) => {
             setPlaying(false)
-            setProject((current) => ({ ...current, playheadMs }))
+            setProject((current) => {
+              const at = clipAtTime(current.clips, playheadMs)
+              return {
+                ...current,
+                playheadMs,
+                selectedClipId: at?.clip.id ?? current.selectedClipId,
+                selectedExtraId: null,
+              }
+            })
           }}
-          onSelectClip={(id) =>
-            setProject((current) => ({ ...current, selectedClipId: id, selectedExtraId: null, selectedTransitionIndex: null }))
-          }
+          onSelectClip={(id, playheadMs) => {
+            setPlaying(false)
+            setProject((current) => ({
+              ...current,
+              selectedClipId: id,
+              selectedExtraId: null,
+              selectedTransitionIndex: null,
+              playheadMs,
+            }))
+          }}
           onSelectExtra={(id) =>
             setProject((current) => ({ ...current, selectedExtraId: id, selectedClipId: null, selectedTransitionIndex: null }))
           }
-          onSelectTransition={(index) =>
-            setProject((current) => ({
-              ...current,
-              selectedTransitionIndex: index,
-              selectedClipId: current.clips[index]?.id ?? null,
-              selectedExtraId: null,
-              inspectorTab: 'fade',
-            }))
-          }
+          onSelectTransition={selectCut}
           onGestureStart={beginGesture}
           onGestureEnd={endGesture}
           onTrimClip={(id, edge, delta) => {
             if (gestureRef.current) gestureDirtyRef.current = true
-            setProject((current) => ({
-              ...current,
-              clips: current.clips.map((clip) => (clip.id === id ? trimClip(clip, edge, delta) : clip)),
-            }))
+            setProject((current) => {
+              const clips = current.clips.map((clip) => (clip.id === id ? trimClip(clip, edge, delta) : clip))
+              const end = projectDurationMs({ ...current, clips })
+              return { ...current, clips, playheadMs: Math.min(current.playheadMs, end) }
+            })
           }}
           onTrimExtra={(id, edge, delta) => {
             if (gestureRef.current) gestureDirtyRef.current = true
@@ -616,8 +715,20 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           const file = event.target.files?.[0]
           event.target.value = ''
           if (!file) return
-          const extra = createExtra('audio', project.playheadMs, { label: file.name, mediaUrl: URL.createObjectURL(file) })
-          commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null })
+          const mediaUrl = URL.createObjectURL(file)
+          const audio = new Audio()
+          audio.preload = 'metadata'
+          audio.src = mediaUrl
+          const place = (durationMs: number) => {
+            const current = projectRef.current
+            const extra = createExtra('audio', current.playheadMs, { label: file.name, mediaUrl, durationMs })
+            commit({ extraClips: [...current.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null, inspectorTab: 'audio' })
+          }
+          audio.onloadedmetadata = () => {
+            const durationMs = Number.isFinite(audio.duration) && audio.duration > 0 ? Math.round(audio.duration * 1000) : 12000
+            place(durationMs)
+          }
+          audio.onerror = () => place(12000)
         }}
       />
     </div>

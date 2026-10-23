@@ -1,14 +1,15 @@
-import { useMemo, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useRef, useMemo, type MouseEvent as ReactMouseEvent } from 'react'
 import type { EditorProject, ExtraClip } from '../../models/editor'
-import { clipPlayDurationMs, clipStartMs } from '../../services/timeline'
+import { clipPlayDurationMs, clipStartMs, timeInsideClip } from '../../services/timeline'
 import { formatTimecode } from '../../utils/format'
 
 interface TimelineBoardProps {
   project: EditorProject
   duration: number
   thumbs: Record<string, string[]>
+  playing?: boolean
   onSeek: (playheadMs: number) => void
-  onSelectClip: (id: string) => void
+  onSelectClip: (id: string, playheadMs: number) => void
   onSelectExtra: (id: string) => void
   onSelectTransition: (index: number) => void
   onTrimClip: (id: string, edge: 'in' | 'out', deltaMs: number) => void
@@ -33,6 +34,7 @@ export function TimelineBoard({
   project,
   duration,
   thumbs,
+  playing = false,
   onSeek,
   onSelectClip,
   onSelectExtra,
@@ -48,6 +50,7 @@ export function TimelineBoard({
   onZoom,
   onFit,
 }: TimelineBoardProps) {
+  const trackRef = useRef<HTMLDivElement>(null)
   const width = Math.max(720, (duration / 1000) * project.pixelsPerSecond)
   const playX = (project.playheadMs / Math.max(duration, 1)) * width
   const ticks = useMemo(() => rulerTicks(duration, project.pixelsPerSecond), [duration, project.pixelsPerSecond])
@@ -60,6 +63,31 @@ export function TimelineBoard({
     const x = clientX - innerLeft
     onSeek(Math.max(0, Math.min(duration, (x / width) * duration)))
   }
+
+  const startScrub = (event: ReactMouseEvent) => {
+    const lane = trackRef.current?.querySelector('.timeline-lanes')
+    if (!(lane instanceof HTMLElement)) return
+    event.preventDefault()
+    const left = () => lane.getBoundingClientRect().left
+    seekFromClientX(event.clientX, left())
+    const move = (next: MouseEvent) => seekFromClientX(next.clientX, left())
+    const up = () => {
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', up)
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
+
+  useEffect(() => {
+    if (!playing) return
+    const scroller = trackRef.current
+    if (!scroller) return
+    const pad = 48
+    if (playX < scroller.scrollLeft + pad || playX > scroller.scrollLeft + scroller.clientWidth - pad) {
+      scroller.scrollLeft = Math.max(0, playX - scroller.clientWidth * 0.35)
+    }
+  }, [playing, playX])
 
   return (
     <div className="nle-timeline">
@@ -83,19 +111,22 @@ export function TimelineBoard({
           <div className="ruler-spacer" />
           {LANES.map((lane) => (
             <div key={lane.id} className="lane-label">
-              {lane.label}
+              <span>{lane.label}</span>
+              {lane.id === 'text' ? (
+                <button type="button" className="lane-add" onClick={onAddText} title="Add text">
+                  +
+                </button>
+              ) : null}
+              {lane.id === 'audio' ? (
+                <button type="button" className="lane-add" onClick={onAddAudio} title="Add audio">
+                  +
+                </button>
+              ) : null}
             </div>
           ))}
         </div>
-        <div className="timeline-track">
-          <div
-            className="ruler"
-            onClick={(event) => {
-              const inner = event.currentTarget.querySelector('.ruler-inner')
-              if (!inner) return
-              seekFromClientX(event.clientX, inner.getBoundingClientRect().left)
-            }}
-          >
+        <div className="timeline-track" ref={trackRef}>
+          <div className="ruler" onMouseDown={startScrub}>
             <div className="ruler-inner" style={{ width }}>
               {ticks.map((tick) => (
                 <span key={tick.ms} className={`ruler-tick${tick.major ? ' is-major' : ''}`} style={{ left: tick.x }}>
@@ -107,9 +138,10 @@ export function TimelineBoard({
           <div
             className="timeline-lanes"
             style={{ width }}
-            onClick={(event) => {
-              if (event.target !== event.currentTarget && !(event.target as HTMLElement).classList.contains('tl-lane')) return
-              seekFromClientX(event.clientX, event.currentTarget.getBoundingClientRect().left)
+            onMouseDown={(event) => {
+              const target = event.target as HTMLElement
+              if (target.closest('.tl-clip, .tl-cut, .tl-add, .tl-handle, .tl-name')) return
+              startScrub(event)
             }}
           >
             <div className="tl-lane is-text">
@@ -145,15 +177,13 @@ export function TimelineBoard({
                   <div key={clip.id} className="tl-clip-wrap" style={{ left, width: clipWidth }}>
                     <button
                       type="button"
-                      draggable
                       className={`tl-clip${clip.id === project.selectedClipId ? ' is-on' : ''}`}
                       style={{ background: clip.color }}
                       onClick={(event) => {
                         event.stopPropagation()
-                        onSelectClip(clip.id)
-                      }}
-                      onDragStart={(event) => {
-                        event.dataTransfer.setData('text/plain', String(index))
+                        const rect = event.currentTarget.getBoundingClientRect()
+                        const ratio = (event.clientX - rect.left) / Math.max(rect.width, 1)
+                        onSelectClip(clip.id, timeInsideClip(project.clips, index, ratio))
                       }}
                       onDragOver={(event) => event.preventDefault()}
                       onDrop={(event) => {
@@ -170,7 +200,18 @@ export function TimelineBoard({
                         className="tl-handle"
                         onMouseDown={(event) => startDrag(event, (delta) => onTrimClip(clip.id, 'in', delta), project.pixelsPerSecond, onGestureStart, onGestureEnd)}
                       />
-                      <span className="tl-name">{clip.label.replace('.mp4', '')}</span>
+                      <span
+                        className="tl-name"
+                        draggable
+                        title="Drag to reorder"
+                        onDragStart={(event) => {
+                          event.dataTransfer.setData('text/plain', String(index))
+                          event.stopPropagation()
+                        }}
+                      >
+                        {clip.label.replace('.mp4', '')}
+                        {clip.speed !== 1 ? ` ${clip.speed.toFixed(1)}×` : ''}
+                      </span>
                       {clip.muted ? <span className="tl-mute">M</span> : null}
                       <span
                         className="tl-handle is-end"
@@ -217,7 +258,17 @@ export function TimelineBoard({
                 ))
               )}
             </div>
-            <div className="playhead" style={{ left: playX }} />
+            <div className="playhead" style={{ left: playX }}>
+              <button
+                type="button"
+                className="playhead-cap"
+                aria-label="Drag playhead"
+                onMouseDown={(event) => {
+                  event.stopPropagation()
+                  startScrub(event)
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>

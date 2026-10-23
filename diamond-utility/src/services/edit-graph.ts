@@ -1,4 +1,4 @@
-import type { EditorClip, EffectId, FilterId } from '../models/editor'
+import type { EditorClip, EffectId, FilterId, TransitionId } from '../models/editor'
 import { SPEED_MAX, SPEED_MIN } from '../models/editor'
 
 export function clampSpeed(speed: number): number {
@@ -37,6 +37,32 @@ export function cssTransformForClip(clip: EditorClip): string {
   const t = clip.transform
   const flips = `${t.flipH ? ' scaleX(-1)' : ''}${t.flipV ? ' scaleY(-1)' : ''}`
   return `translate(${t.x * 40}%, ${t.y * 40}%) scale(${Math.max(0.2, t.scale)})${flips}`
+}
+
+export interface TransitionLayerStyle {
+  opacity?: number
+  transform?: string
+  clipPath?: string
+}
+
+/** Preview-only motion for the cut between two clips. Export still uses ffmpeg xfade. */
+export function transitionLayerStyle(id: TransitionId, role: 'out' | 'in', progress: number): TransitionLayerStyle {
+  const t = Math.min(1, Math.max(0, progress))
+  if (id === 'fade') return { opacity: role === 'out' ? 1 - t : t }
+  if (id === 'fadeblack') {
+    if (role === 'out') return { opacity: t < 0.5 ? 1 - t * 2 : 0 }
+    return { opacity: t < 0.5 ? 0 : (t - 0.5) * 2 }
+  }
+  if (id === 'slideleft') {
+    return { transform: `translateX(${role === 'out' ? -t * 100 : (1 - t) * 100}%)` }
+  }
+  if (id === 'wipeleft') {
+    return role === 'in' ? { clipPath: `inset(0 0 0 ${(1 - t) * 100}%)` } : {}
+  }
+  if (id === 'circleopen') {
+    return role === 'in' ? { clipPath: `circle(${Math.max(0, t) * 75}% at 50% 50%)` } : {}
+  }
+  return role === 'out' ? {} : { opacity: 0 }
 }
 
 export function cssClipPathForClip(clip: EditorClip): string | undefined {

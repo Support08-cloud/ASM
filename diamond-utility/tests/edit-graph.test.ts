@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_GRADE, DEFAULT_TRANSFORM, type EditorClip } from '../src/models/editor'
-import { atempoChain, videoFiltersForClip } from '../src/services/edit-graph'
+import { atempoChain, transitionLayerStyle, videoFiltersForClip } from '../src/services/edit-graph'
 
 const clip = (patch: Partial<EditorClip> = {}): EditorClip => ({
   id: 'c1',
@@ -31,6 +31,13 @@ describe('edit graph', () => {
     expect(atempoChain(2)).toBe('atempo=2')
     expect(atempoChain(4)).toBe('atempo=2,atempo=2')
     expect(atempoChain(0.25)).toBe('atempo=0.5,atempo=0.5')
+  })
+
+  it('previews a crossfade as outgoing and incoming opacity', () => {
+    expect(transitionLayerStyle('fade', 'out', 0.25).opacity).toBeCloseTo(0.75)
+    expect(transitionLayerStyle('fade', 'in', 0.25).opacity).toBeCloseTo(0.25)
+    expect(transitionLayerStyle('slideleft', 'in', 0).transform).toBe('translateX(100%)')
+    expect(transitionLayerStyle('none', 'in', 1).opacity).toBe(0)
   })
 
   it('puts visual filters and speed in one ffmpeg chain', () => {
