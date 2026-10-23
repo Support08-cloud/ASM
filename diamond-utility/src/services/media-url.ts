@@ -25,8 +25,8 @@ export function ffmpegInputPath(clip: {
   mediaUrl?: string
   sourcePath: string
 }): string {
-  if (clip.absolutePath && isRealDiskPath(clip.absolutePath)) return clip.absolutePath
   if (clip.proxyPath && isRealDiskPath(clip.proxyPath)) return clip.proxyPath
+  if (clip.absolutePath && isRealDiskPath(clip.absolutePath)) return clip.absolutePath
   if (clip.mediaUrl && !clip.mediaUrl.startsWith('blob:')) return clip.mediaUrl
   return clip.absolutePath || clip.sourcePath
 }

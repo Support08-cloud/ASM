@@ -1,5 +1,7 @@
 import type { EditorClip, EditorProject } from '../models/editor'
-import { buildProxyArgs, proxyOutputPath } from './ffmpeg-export'
+import { proxyOutputPath } from './edit-graph'
+import { shortFfmpegError } from './ffmpeg-error'
+import { buildProxyArgs } from './ffmpeg-export'
 import { ffmpegInputPath } from './media-url'
 import { isRealDiskPath } from './sample-media'
 import { applyDuration } from './timeline'
@@ -113,11 +115,11 @@ export async function prepareClip(clip: EditorClip, outputDir: string): Promise<
       const proxyPath = proxyOutputPath(outputDir, clip.id)
       const existing = desktop.mediaInfo ? await desktop.mediaInfo(proxyPath).catch(() => null) : null
       if (!existing?.durationMs) {
-        await desktop.runFfmpeg(buildProxyArgs(input, proxyPath, next.hasAudio !== false))
+        await transcodeProxy(input, proxyPath, next.hasAudio !== false)
       }
       const proxyInfo = desktop.mediaInfo ? await desktop.mediaInfo(proxyPath).catch(() => null) : null
       if (!proxyInfo?.durationMs) {
-        return { ...next, error: 'Could not prepare this MP4 for playback', ready: false }
+        return { ...next, error: `${clip.label} could not be prepared for playback`, ready: false }
       }
       next = {
         ...next,
@@ -134,10 +136,48 @@ export async function prepareClip(clip: EditorClip, outputDir: string): Promise<
 
     return { ...next, ready: true, error: undefined }
   } catch (error) {
+    const raw = error instanceof Error ? error.message : 'Could not prepare this MP4'
     return {
       ...next,
       ready: false,
-      error: error instanceof Error ? error.message : 'Could not prepare this MP4',
+      error: `${clip.label}: ${shortFfmpegError(raw)}`,
     }
+  }
+}
+
+async function transcodeProxy(input: string, proxyPath: string, hasAudio: boolean): Promise<void> {
+  const desktop = window.desktop
+  if (!desktop?.runFfmpeg) return
+  try {
+    await desktop.runFfmpeg(buildProxyArgs(input, proxyPath, hasAudio))
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    if (!/moov atom not found|invalid data found/i.test(message)) throw error
+    for (const format of ['h264', 'hevc', 'mpegts']) {
+      try {
+        await desktop.runFfmpeg([
+          '-y',
+          '-f',
+          format,
+          '-i',
+          input,
+          '-vf',
+          'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p',
+          '-c:v',
+          'libx264',
+          '-preset',
+          'veryfast',
+          '-an',
+          '-movflags',
+          '+faststart',
+          proxyPath,
+        ])
+        const info = await desktop.mediaInfo?.(proxyPath).catch(() => null)
+        if (info?.durationMs) return
+      } catch {
+        // This format was not the file's real layout.
+      }
+    }
+    throw error
   }
 }

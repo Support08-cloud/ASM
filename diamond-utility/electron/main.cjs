@@ -1,5 +1,6 @@
 const { app, BrowserWindow, dialog, ipcMain, shell, protocol, net } = require('electron')
 const { spawn } = require('child_process')
+const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
 const { pathToFileURL } = require('url')
@@ -108,8 +109,9 @@ function parseMediaInfo(stderr) {
 }
 
 function mediaInfo(filePath) {
+  const staged = stageForFfmpeg(filePath)
   return new Promise((resolve, reject) => {
-    const child = spawn(ffmpegBinary(), ['-hide_banner', '-i', filePath], { windowsHide: true })
+    const child = spawn(ffmpegBinary(), ['-hide_banner', '-i', staged], { windowsHide: true })
     let stderr = ''
     child.stderr.on('data', (chunk) => {
       stderr += chunk.toString()
@@ -230,9 +232,51 @@ function ffmpegBinary() {
   return process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'
 }
 
+function stageForFfmpeg(filePath) {
+  if (typeof filePath !== 'string' || filePath.includes('=') || !fs.existsSync(filePath)) return filePath
+  let stat
+  try {
+    stat = fs.statSync(filePath)
+  } catch {
+    return filePath
+  }
+  if (!stat.isFile() || stat.size <= 0) return filePath
+  const root = path.join(app.getPath('temp'), 'diamond-utility')
+  if (filePath.toLowerCase().startsWith(root.toLowerCase())) return filePath
+  fs.mkdirSync(root, { recursive: true })
+  const id = crypto.createHash('sha1').update(filePath).digest('hex').slice(0, 10)
+  const dest = path.join(root, `${id}-${path.basename(filePath)}`)
+  try {
+    const current = fs.existsSync(dest) ? fs.statSync(dest) : null
+    if (!current || current.size !== stat.size || current.mtimeMs < stat.mtimeMs) fs.copyFileSync(filePath, dest)
+    return dest
+  } catch {
+    return filePath
+  }
+}
+
+function stageInputArgs(args) {
+  const next = [...args]
+  for (let index = 0; index < next.length - 1; index += 1) {
+    if (next[index] === '-i') next[index + 1] = stageForFfmpeg(next[index + 1])
+  }
+  return next
+}
+
+function ffmpegFailure(stderr, code) {
+  const lines = String(stderr)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.includes('--enable-') && !/^libav|^configuration:|^built with|^ffmpeg version/i.test(line))
+  const useful = lines.filter((line) => /error|invalid|moov|no such|failed|denied|not found/i.test(line))
+  const message = (useful.length > 0 ? useful : lines).slice(-3).join(' ')
+  return message.slice(0, 500) || `ffmpeg exited with code ${code}`
+}
+
 function runFfmpeg(args) {
+  const full = stageInputArgs(args[0] === '-hide_banner' ? args : ['-hide_banner', ...args])
   return new Promise((resolve, reject) => {
-    const child = spawn(ffmpegBinary(), args, { windowsHide: true })
+    const child = spawn(ffmpegBinary(), full, { windowsHide: true })
     let stderr = ''
     child.stderr.on('data', (chunk) => {
       stderr += chunk.toString()
@@ -240,7 +284,7 @@ function runFfmpeg(args) {
     child.on('error', (error) => reject(error))
     child.on('close', (code) => {
       if (code === 0) resolve()
-      else reject(new Error(stderr.trim().slice(-1000) || `ffmpeg exited with code ${code}`))
+      else reject(new Error(ffmpegFailure(stderr, code)))
     })
   })
 }
