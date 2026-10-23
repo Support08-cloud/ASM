@@ -318,7 +318,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       toast('info', 'Select the folders you want to edit and merge.')
       return
     }
-    if (current.phase === 'scanning' || current.phase === 'processing' || current.phase === 'exporting') return
+    if (current.phase === 'scanning' || current.phase === 'processing' || current.phase === 'exporting') {
+      toast('info', 'Wait for the current job to finish, then edit and merge.')
+      return
+    }
     const selected = withSelectedFolders(current.diamonds, current.selectedIds)
     const found = mediaFilesForEdit(selected, current.sourceKind === 'demo')
     if (found.length === 0) {
@@ -353,6 +356,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     }
     if (stateRef.current.selectedIds.length === 0) {
       toast('info', 'Select one or more variant folders to enable processing.')
+      return
+    }
+    if (stateRef.current.phase === 'confirming') return
+    if (stateRef.current.phase !== 'ready' && stateRef.current.phase !== 'completed') {
+      toast('info', 'Wait until the folder list is ready, then try Get MP4 again.')
       return
     }
     dispatch({ type: 'open-confirm' })

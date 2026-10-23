@@ -111,6 +111,7 @@ export function setVolume(clip: EditorClip, volume: number): EditorClip {
 }
 
 export function applyDuration(clip: EditorClip, durationMs: number): EditorClip {
+  if (!Number.isFinite(durationMs) || durationMs <= 0) return clip
   const next = Math.max(MIN_CLIP_MS, Math.round(durationMs))
   if (clip.durationProbed) return clip
   const outMs = clip.inMs === 0 && clip.outMs === clip.sourceDurationMs ? next : Math.min(clip.outMs, next)
@@ -258,6 +259,27 @@ export function outputDirFromFiles(files: ProcessFileResult[], fallback: string)
   const path = files.find((file) => file.outputPath)?.outputPath
   if (!path) return fallback
   return path.replace(/[/\\][^/\\]+$/, '')
+}
+
+/** Export directory for a timeline. Source videos stay where they are; the edit is written under the chosen output folder. */
+export function editOutputDir(files: ProcessFileResult[], resultOutputPath: string): string {
+  const root = resultOutputPath.replace(/[\\/]+$/, '')
+  const dirs = [
+    ...new Set(
+      files
+        .map((file) => file.outputPath.replace(/[/\\][^/\\]+$/, ''))
+        .filter(Boolean),
+    ),
+  ]
+  const norm = (value: string) => value.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()
+  const rootKey = norm(root)
+  const inside = dirs.length > 0 && dirs.every((dir) => {
+    const key = norm(dir)
+    return key === rootKey || key.startsWith(`${rootKey}/`)
+  })
+  if (inside && dirs.length === 1) return dirs[0]
+  if (inside) return outputDirFromFiles(files, root)
+  return root || outputDirFromFiles(files, root)
 }
 
 function fileName(path: string): string {

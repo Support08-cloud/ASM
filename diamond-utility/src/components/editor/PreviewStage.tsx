@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import watermark from '../../assets/brand/v360-wordmark-white.png'
 import type { EditorClip, ExtraClip } from '../../models/editor'
 import { cssClipPathForClip, cssFilterForClip, cssTransformForClip } from '../../services/edit-graph'
 import { toVideoSrc } from '../../services/media-url'
@@ -38,6 +37,8 @@ export function PreviewStage({
   playheadRef.current = playheadMs
   const extrasRef = useRef(extras)
   extrasRef.current = extras
+  const masterVolumeRef = useRef(masterVolume)
+  masterVolumeRef.current = masterVolume
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const src = clip ? toVideoSrc(clip) : undefined
   const titles = extras.filter((extra) => extra.kind === 'text')
@@ -57,14 +58,14 @@ export function PreviewStage({
     const start = Math.max(0, sourceTimeMs(current, localRef.current) / 1000)
     const apply = () => {
       video.playbackRate = playbackRateFor(current.speed)
-      video.volume = current.muted ? 0 : Math.min(1, Math.max(0, current.volume * masterVolume))
+      video.volume = current.muted ? 0 : Math.min(1, Math.max(0, current.volume * masterVolumeRef.current))
       video.muted = video.volume === 0
       if (Math.abs(video.currentTime - start) > 0.08) video.currentTime = start
       if (playingRef.current) void video.play().catch(() => setStatus('error'))
     }
     if (video.readyState >= 1) apply()
     else video.addEventListener('loadedmetadata', apply, { once: true })
-  }, [clip?.id, src, masterVolume])
+  }, [clip?.id, src])
 
   useEffect(() => {
     const video = videoRef.current
@@ -137,8 +138,9 @@ export function PreviewStage({
   const effectClass = clip && clip.effect !== 'none' ? ` is-fx-${clip.effect}` : ''
 
   return (
-    <div className={`nle-stage${effectClass}`}>
+    <div className="nle-stage">
       {src && clip ? (
+        <div className={`nle-fx${effectClass}`}>
         <video
           ref={videoRef}
           className="nle-video"
@@ -157,6 +159,7 @@ export function PreviewStage({
           onCanPlay={() => setStatus('ready')}
           onError={() => setStatus('error')}
         />
+        </div>
       ) : (
         <div className="stage-label">{clip?.error ?? clip?.label ?? 'Add a clip'}</div>
       )}
@@ -171,13 +174,6 @@ export function PreviewStage({
       ))}
       {clip?.effect === 'vignette' ? <div className="stage-vignette" /> : null}
       {clip?.effect === 'grain' ? <div className="stage-grain" /> : null}
-      <div className="nle-handles" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-        <span />
-      </div>
-      <img className="stage-mark" src={watermark} alt="Vision360" />
       <audio ref={audioRef} preload="auto" />
     </div>
   )

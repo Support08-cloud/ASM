@@ -5,7 +5,7 @@ import { EmptyState } from '../components/common/States'
 import { PageHeader } from '../components/navigation/PageHeader'
 import { ProcessingPanel } from '../components/processing/ProcessingPanel'
 import { VideoEditor } from '../components/editor/VideoEditor'
-import { outputDirFromFiles, projectFromCopiedFiles } from '../services/timeline'
+import { editOutputDir, projectFromCopiedFiles } from '../services/timeline'
 
 function folderOf(target: string): string {
   if (/\.(mp4|mov|m4v|mkv|webm)$/i.test(target)) return target.replace(/[/\\][^/\\]+$/, '') || target
@@ -27,7 +27,7 @@ export function OperationsPage() {
     const diamondName = state.editorDiamond || scoped[0].diamondName || 'diamond'
     return projectFromCopiedFiles(
       scoped,
-      state.editorOutputDir || outputDirFromFiles(scoped, editorSource.outputPath),
+      state.editorOutputDir || editOutputDir(scoped, editorSource.outputPath),
       diamondName,
     )
   }, [editorSource, state.editorDiamond, state.editorOutputDir])
@@ -80,7 +80,7 @@ export function OperationsPage() {
             body={
               readyDiamonds.length > 1
                 ? 'Choose one group. Edit opens every video from that group together, and Play runs them in order.'
-                : 'Edit opens every copied video for this group on one timeline. Play runs them in order.'
+                : 'Edit opens every video from this group on one timeline. Play runs them in order, and Export saves one file in the output folder.'
             }
             actionLabel={readyDiamonds.length === 1 ? 'Edit videos' : undefined}
             onAction={

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { groupDiamonds } from '../src/services/diamond-parser'
-import { extractMp4s } from '../src/services/mp4-processor'
+import { extractMp4s, plannedMp4Names } from '../src/services/mp4-processor'
 import { withSelectedFolders } from '../src/models/diamond'
 
 describe('extractMp4s', () => {
@@ -132,5 +132,19 @@ describe('extractMp4s', () => {
     expect(result.failed).toBe(1)
     expect(result.outcome).toBe('error')
     vi.useRealTimers()
+  })
+
+  it('names a second MP4 in the same folder instead of hiding it', () => {
+    const [diamond] = groupDiamonds([
+      {
+        folderName: 'yash-01',
+        relativePath: 'yash-01',
+        files: [
+          { name: '3D.mp4' },
+          { name: 'Top.mp4' },
+        ],
+      },
+    ])
+    expect(plannedMp4Names(diamond.folders[0])).toEqual(['yash-01.mp4', 'yash-01_2.mp4'])
   })
 })

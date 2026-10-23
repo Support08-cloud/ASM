@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { projectFromCopiedFiles } from '../src/services/timeline'
 import { applyTransition } from '../src/services/timeline'
-import { buildExportPlan } from '../src/services/ffmpeg-export'
+import { buildExportPlan, concatListContents } from '../src/services/ffmpeg-export'
 import type { ProcessFileResult } from '../src/models/processing'
 
 const file = (name: string): ProcessFileResult => ({
@@ -72,5 +72,15 @@ describe('ffmpeg export plan', () => {
     expect(finish).toContain('drawtext')
     expect(finish).toContain('amix')
     expect(plan.outputPath).toBe('D:/Output_Testing/260602-362/260602-362-edit.mp4')
+  })
+
+  it('writes concat paths with forward slashes so Windows ffmpeg does not treat them as escapes', () => {
+    const project = projectFromCopiedFiles(['260602-362-1', '260602-362-2'].map(file), 'D:\\Output\\260602-362', '260602-362')
+    const list = concatListContents(project.clips, 'D:\\Output\\260602-362')
+    expect(list).not.toContain('\\')
+    expect(list.split('\n')).toEqual([
+      `file 'D:/Output/260602-362/.edit-cache/0-${project.clips[0].id}.mp4'`,
+      `file 'D:/Output/260602-362/.edit-cache/1-${project.clips[1].id}.mp4'`,
+    ])
   })
 })

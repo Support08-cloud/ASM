@@ -15,6 +15,8 @@ interface TimelineBoardProps {
   onTrimExtra: (id: string, edge: 'in' | 'out', deltaMs: number) => void
   onMoveClip: (from: number, to: number) => void
   onMoveExtra: (id: string, deltaMs: number) => void
+  onGestureStart?: () => void
+  onGestureEnd?: () => void
   onAddText: () => void
   onAddAudio: () => void
   onZoom: (pixelsPerSecond: number) => void
@@ -39,6 +41,8 @@ export function TimelineBoard({
   onTrimExtra,
   onMoveClip,
   onMoveExtra,
+  onGestureStart,
+  onGestureEnd,
   onAddText,
   onAddAudio,
   onZoom,
@@ -125,6 +129,8 @@ export function TimelineBoard({
                     onSelect={onSelectExtra}
                     onTrim={onTrimExtra}
                     onMove={onMoveExtra}
+                    onGestureStart={onGestureStart}
+                    onGestureEnd={onGestureEnd}
                   />
                 ))
               )}
@@ -162,13 +168,13 @@ export function TimelineBoard({
                       </span>
                       <span
                         className="tl-handle"
-                        onMouseDown={(event) => startDrag(event, (delta) => onTrimClip(clip.id, 'in', delta), project.pixelsPerSecond)}
+                        onMouseDown={(event) => startDrag(event, (delta) => onTrimClip(clip.id, 'in', delta), project.pixelsPerSecond, onGestureStart, onGestureEnd)}
                       />
                       <span className="tl-name">{clip.label.replace('.mp4', '')}</span>
                       {clip.muted ? <span className="tl-mute">M</span> : null}
                       <span
                         className="tl-handle is-end"
-                        onMouseDown={(event) => startDrag(event, (delta) => onTrimClip(clip.id, 'out', delta), project.pixelsPerSecond)}
+                        onMouseDown={(event) => startDrag(event, (delta) => onTrimClip(clip.id, 'out', delta), project.pixelsPerSecond, onGestureStart, onGestureEnd)}
                       />
                     </button>
                     {index < project.clips.length - 1 ? (
@@ -205,6 +211,8 @@ export function TimelineBoard({
                     onSelect={onSelectExtra}
                     onTrim={onTrimExtra}
                     onMove={onMoveExtra}
+                    onGestureStart={onGestureStart}
+                    onGestureEnd={onGestureEnd}
                   />
                 ))
               )}
@@ -226,6 +234,8 @@ function ExtraBlock({
   onSelect,
   onTrim,
   onMove,
+  onGestureStart,
+  onGestureEnd,
 }: {
   extra: ExtraClip
   duration: number
@@ -235,6 +245,8 @@ function ExtraBlock({
   onSelect: (id: string) => void
   onTrim: (id: string, edge: 'in' | 'out', deltaMs: number) => void
   onMove: (id: string, deltaMs: number) => void
+  onGestureStart?: () => void
+  onGestureEnd?: () => void
 }) {
   const left = (extra.startMs / Math.max(duration, 1)) * width
   const blockWidth = Math.max(24, (extra.durationMs / Math.max(duration, 1)) * width)
@@ -249,12 +261,12 @@ function ExtraBlock({
       }}
       onMouseDown={(event) => {
         if ((event.target as HTMLElement).classList.contains('tl-handle')) return
-        startDrag(event, (delta) => onMove(extra.id, delta), pixelsPerSecond)
+        startDrag(event, (delta) => onMove(extra.id, delta), pixelsPerSecond, onGestureStart, onGestureEnd)
       }}
     >
-      <span className="tl-handle" onMouseDown={(event) => startDrag(event, (delta) => onTrim(extra.id, 'in', delta), pixelsPerSecond)} />
+      <span className="tl-handle" onMouseDown={(event) => startDrag(event, (delta) => onTrim(extra.id, 'in', delta), pixelsPerSecond, onGestureStart, onGestureEnd)} />
       <span className="tl-name">{extra.label}</span>
-      <span className="tl-handle is-end" onMouseDown={(event) => startDrag(event, (delta) => onTrim(extra.id, 'out', delta), pixelsPerSecond)} />
+      <span className="tl-handle is-end" onMouseDown={(event) => startDrag(event, (delta) => onTrim(extra.id, 'out', delta), pixelsPerSecond, onGestureStart, onGestureEnd)} />
     </button>
   )
 }
@@ -274,9 +286,16 @@ function rulerTicks(duration: number, pps: number) {
   return ticks
 }
 
-function startDrag(event: ReactMouseEvent, apply: (deltaMs: number) => void, pixelsPerSecond: number) {
+function startDrag(
+  event: ReactMouseEvent,
+  apply: (deltaMs: number) => void,
+  pixelsPerSecond: number,
+  onStart?: () => void,
+  onEnd?: () => void,
+) {
   event.preventDefault()
   event.stopPropagation()
+  onStart?.()
   let lastX = event.clientX
   const move = (next: MouseEvent) => {
     const deltaPx = next.clientX - lastX
@@ -286,6 +305,7 @@ function startDrag(event: ReactMouseEvent, apply: (deltaMs: number) => void, pix
   const up = () => {
     window.removeEventListener('mousemove', move)
     window.removeEventListener('mouseup', up)
+    onEnd?.()
   }
   window.addEventListener('mousemove', move)
   window.addEventListener('mouseup', up)

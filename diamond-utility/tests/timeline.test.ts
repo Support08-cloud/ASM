@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { groupDiamonds } from '../src/services/diamond-parser'
 import {
+  applyDuration,
   applyTransition,
+  editOutputDir,
   clipAtTime,
   clipPlayDurationMs,
   clipStartMs,
@@ -99,5 +101,24 @@ describe('timeline', () => {
     const files = mediaFilesForEdit(diamonds, false)
     expect(files.map((file) => file.outputPath)).toEqual(['D:/in/yash-01/a.mp4', 'D:/in/yash-02/b.mp4'])
     expect(files.every((file) => file.diamondName === 'yash')).toBe(true)
+  })
+
+  it('writes a merge export into the output folder, not beside the source videos', () => {
+    const sources = [
+      file('yash-01'),
+      { ...file('yash-02'), outputPath: 'D:/in/yash-02/b.mp4' },
+    ]
+    expect(editOutputDir(sources, 'D:/out/yash')).toBe('D:/out/yash')
+    expect(editOutputDir(
+      [{ ...file('260602-362-1'), outputPath: 'D:/out/260602-362/260602-362-1.mp4' }],
+      'D:/out',
+    )).toBe('D:/out/260602-362')
+  })
+
+  it('ignores a duration the player could not measure', () => {
+    const project = projectFromCopiedFiles([file('260602-362-1')], 'D:/out', '260602-362')
+    const clip = project.clips[0]
+    expect(applyDuration(clip, Number.POSITIVE_INFINITY)).toBe(clip)
+    expect(applyDuration(clip, Number.NaN).outMs).toBe(clip.outMs)
   })
 })

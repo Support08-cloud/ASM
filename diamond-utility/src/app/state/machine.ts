@@ -213,10 +213,12 @@ export function reducer(state: AppState, action: AppAction): AppState {
     case 'close-details':
       return { ...state, detailsId: null }
     case 'open-confirm':
-      if (state.selectedIds.length === 0 || !state.outputPath || state.phase !== 'ready') return state
+      if (state.selectedIds.length === 0 || !state.outputPath) return state
+      if (state.phase !== 'ready' && state.phase !== 'completed') return state
       return { ...state, phase: 'confirming' }
     case 'cancel-confirm':
-      return { ...state, phase: state.phase === 'confirming' ? 'ready' : state.phase }
+      if (state.phase !== 'confirming') return state
+      return { ...state, phase: state.processResult ? 'completed' : 'ready' }
     case 'process-start':
       return {
         ...state,
@@ -260,8 +262,9 @@ export function reducer(state: AppState, action: AppAction): AppState {
     case 'close-editor':
       return {
         ...state,
-        phase: state.lastProcessResult ? 'completed' : 'ready',
+        phase: state.processResult ? 'completed' : 'ready',
         exportProgress: null,
+        editorDiamond: null,
         editorOutputDir: null,
       }
     case 'export-start':

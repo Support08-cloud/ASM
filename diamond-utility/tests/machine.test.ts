@@ -171,5 +171,30 @@ describe('app state machine', () => {
     expect(stayed.phase).toBe('editing')
     const blocked = reducer(editing, { type: 'navigate', route: 'dashboard' })
     expect(blocked.route).toBe('operations')
+    const closed = reducer(editing, { type: 'close-editor' })
+    expect(closed.phase).toBe('ready')
+    expect(closed.editorDiamond).toBeNull()
+  })
+
+  it('lets Get MP4 start again after a completed job', () => {
+    const completed = {
+      ...initialState,
+      phase: 'completed' as const,
+      outputPath: 'D:/out',
+      selectedIds: ['folder-1'],
+      processResult: {
+        outcome: 'success' as const,
+        copied: 1,
+        skipped: 0,
+        failed: 0,
+        total: 1,
+        outputPath: 'D:/out',
+        files: [],
+      },
+    }
+    const confirming = reducer(completed, { type: 'open-confirm' })
+    expect(confirming.phase).toBe('confirming')
+    const back = reducer(confirming, { type: 'cancel-confirm' })
+    expect(back.phase).toBe('completed')
   })
 })

@@ -3,8 +3,7 @@ const { spawn } = require('child_process')
 const fs = require('fs')
 const path = require('path')
 const { pathToFileURL } = require('url')
-
-const MEDIA = /\.(mp4|m4v|mov|json|jpe?g|png|webp|tiff?|bmp)$/i
+const { scanDirectory } = require('./scan-directory.cjs')
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -73,50 +72,6 @@ function createWindow() {
   } else {
     win.loadURL(process.env.VITE_DEV_SERVER_URL || 'http://127.0.0.1:5173')
   }
-}
-
-function scanDirectory(root) {
-  const entries = fs.readdirSync(root, { withFileTypes: true })
-  const folders = []
-  let foldersScanned = 0
-  let filesSeen = 0
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue
-    const folderPath = path.join(root, entry.name)
-    foldersScanned += 1
-    try {
-      const files = []
-      for (const child of fs.readdirSync(folderPath, { withFileTypes: true })) {
-        if (!child.isFile()) continue
-        filesSeen += 1
-        if (!MEDIA.test(child.name)) continue
-        const absolutePath = path.join(folderPath, child.name)
-        const stat = fs.statSync(absolutePath)
-        files.push({
-          name: child.name,
-          relativePath: path.join(entry.name, child.name),
-          size: stat.size,
-          absolutePath,
-        })
-      }
-      folders.push({
-        folderName: entry.name,
-        relativePath: folderPath,
-        files,
-      })
-    } catch (error) {
-      folders.push({
-        folderName: entry.name,
-        relativePath: folderPath,
-        accessible: false,
-        errorMessage: error instanceof Error ? error.message : 'Unable to read this folder.',
-        files: [],
-      })
-    }
-  }
-
-  return { folders, foldersScanned, filesSeen }
 }
 
 function samplesDir() {

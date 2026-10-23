@@ -9,9 +9,8 @@ import {
   type TransitionId,
 } from '../../models/editor'
 import { toVideoSrc } from '../../services/media-url'
-import { prepareClip, prepareEditorProject } from '../../services/prepare-media'
+import { mergePreparedProject, prepareClip, prepareEditorProject } from '../../services/prepare-media'
 import { isRealDiskPath } from '../../services/sample-media'
-import { sampleMusicUrl } from '../../services/sample-media'
 import { captureFilmstrip } from '../../services/thumbnails'
 import {
   applyDuration,
@@ -74,25 +73,47 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   const hit = clipAtTime(project.clips, project.playheadMs)
   const activeExtras = extrasAtTime(project.extraClips, project.playheadMs)
 
+  const gestureRef = useRef<Snapshot | null>(null)
+  const gestureDirtyRef = useRef(false)
+
+  const snapshotOf = (current: EditorProject): Snapshot => ({
+    clips: current.clips,
+    extraClips: current.extraClips,
+    masterVolume: current.masterVolume,
+  })
+
   const commit = useCallback((patch: Partial<EditorProject>) => {
     const current = projectRef.current
-    setPast((items) => [...items.slice(-40), {
-      clips: current.clips,
-      extraClips: current.extraClips,
-      masterVolume: current.masterVolume,
-    }])
+    setPast((items) => [...items.slice(-40), snapshotOf(current)])
     setFuture([])
     setProject((value) => ({ ...value, ...patch }))
   }, [])
 
+  const beginGesture = useCallback(() => {
+    if (gestureRef.current) return
+    gestureRef.current = snapshotOf(projectRef.current)
+    gestureDirtyRef.current = false
+  }, [])
+
+  const endGesture = useCallback(() => {
+    const snap = gestureRef.current
+    const dirty = gestureDirtyRef.current
+    gestureRef.current = null
+    gestureDirtyRef.current = false
+    if (!snap || !dirty) return
+    setPast((items) => [...items.slice(-40), snap])
+    setFuture([])
+  }, [])
+
   useEffect(() => {
     let cancelled = false
+    const seed = initial
     void (async () => {
-      const next = await prepareEditorProject(initial, (progress) => {
+      const next = await prepareEditorProject(seed, (progress) => {
         if (!cancelled) setPreparing(progress)
       })
       if (cancelled) return
-      setProject(next)
+      setProject((current) => mergePreparedProject(current, next, seed))
       setPreparing(null)
     })()
     return () => {
@@ -148,18 +169,34 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
     })
   }
 
-  const updateClip = (id: string, patch: Partial<EditorClip>) => {
-    commit({
-      clips: project.clips.map((clip) => {
+  const updateClip = (id: string, patch: Partial<EditorClip>, live = false) => {
+    const apply = (current: EditorProject): EditorProject => ({
+      ...current,
+      clips: current.clips.map((clip) => {
         if (clip.id !== id) return clip
         const next = { ...clip, ...patch }
         return patch.speed != null ? setSpeed(next, patch.speed) : next
       }),
     })
+    if (live && gestureRef.current) {
+      gestureDirtyRef.current = true
+      setProject(apply)
+      return
+    }
+    commit({ clips: apply(projectRef.current).clips })
   }
 
-  const updateExtra = (id: string, patch: Partial<ExtraClip>) => {
-    commit({ extraClips: project.extraClips.map((extra) => (extra.id === id ? { ...extra, ...patch } : extra)) })
+  const updateExtra = (id: string, patch: Partial<ExtraClip>, live = false) => {
+    const apply = (current: EditorProject): EditorProject => ({
+      ...current,
+      extraClips: current.extraClips.map((extra) => (extra.id === id ? { ...extra, ...patch } : extra)),
+    })
+    if (live && gestureRef.current) {
+      gestureDirtyRef.current = true
+      setProject(apply)
+      return
+    }
+    commit({ extraClips: apply(projectRef.current).extraClips })
   }
 
   const addVideoClip = async (path: string, mediaUrl?: string, durationMs?: number, hasAudio?: boolean) => {
@@ -212,20 +249,20 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   }
 
   const addMusic = async () => {
-    let absolutePath: string | undefined
-    let mediaUrl = sampleMusicUrl()
-    let label = 'Music'
-    let durationMs = 12000
     if (window.desktop?.pickMedia) {
       const picked = await window.desktop.pickMedia('audio')
       if (!picked) return
-      absolutePath = picked
-      mediaUrl = window.desktop.toMediaUrl?.(picked) ?? sampleMusicUrl()
-      label = picked.split(/[/\\]/).pop() ?? 'Music'
-      durationMs = (await window.desktop.mediaInfo?.(picked))?.durationMs || 12000
+      const durationMs = (await window.desktop.mediaInfo?.(picked))?.durationMs || 12000
+      const extra = createExtra('audio', projectRef.current.playheadMs, {
+        label: picked.split(/[/\\]/).pop() ?? 'Music',
+        absolutePath: picked,
+        mediaUrl: window.desktop.toMediaUrl?.(picked),
+        durationMs,
+      })
+      commit({ extraClips: [...projectRef.current.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null, inspectorTab: 'audio' })
+      return
     }
-    const extra = createExtra('audio', project.playheadMs, { label, absolutePath, mediaUrl, durationMs })
-    commit({ extraClips: [...project.extraClips, extra], selectedExtraId: extra.id, selectedClipId: null, inspectorTab: 'audio' })
+    musicInputRef.current?.click()
   }
 
   const addText = () => {
@@ -286,25 +323,38 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
     setPlaying(true)
   }
 
+  const actionsRef = useRef({ togglePlay, splitAtPlayhead, deleteSelected, undo, redo })
+  actionsRef.current = { togglePlay, splitAtPlayhead, deleteSelected, undo, redo }
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const tag = (event.target as HTMLElement)?.tagName
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
+      const actions = actionsRef.current
       if (event.code === 'Space') {
         event.preventDefault()
-        togglePlay()
+        actions.togglePlay()
       }
-      if (event.key.toLowerCase() === 's' && !isModKey(event)) splitAtPlayhead()
-      if (event.key === 'Delete' || event.key === 'Backspace') deleteSelected()
+      if (event.key.toLowerCase() === 's' && !isModKey(event)) actions.splitAtPlayhead()
+      if (event.key === 'Delete' || event.key === 'Backspace') actions.deleteSelected()
       if (isModKey(event) && event.key.toLowerCase() === 'z') {
         event.preventDefault()
-        if (event.shiftKey) redo()
-        else undo()
+        if (event.shiftKey) actions.redo()
+        else actions.undo()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  })
+  }, [])
+
+  const exportBlocked = project.clips.some(
+    (clip) => clip.ready === false || Boolean(clip.error) || (Boolean(window.desktop?.runFfmpeg) && !clip.durationProbed),
+  )
+  const exportTitle = preparing
+    ? 'Preparing clips for playback'
+    : exportBlocked
+      ? project.clips.find((clip) => clip.error)?.error || 'Wait until every video is ready, then export'
+      : undefined
 
   const overlap = hit?.overlapMs ?? 0
   const transitionMs = hit?.clip.transitionMs || 1
@@ -325,7 +375,13 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           <button type="button" className="btn ghost" onClick={onClose}>
             Back
           </button>
-          <button type="button" className="btn primary" onClick={() => onExport(project)} disabled={Boolean(exporting || preparing)}>
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => onExport(project)}
+            disabled={Boolean(exporting || preparing || exportBlocked)}
+            title={exportTitle}
+          >
             Export
           </button>
         </div>
@@ -378,6 +434,7 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
             extras={activeExtras}
             transitionOpacity={transitionOpacity}
             onDuration={(id, durationMs) => {
+              if (!Number.isFinite(durationMs) || durationMs <= 0) return
               setProject((current) => ({
                 ...current,
                 clips: current.clips.map((clip) => (clip.id === id && !clip.durationProbed ? applyDuration(clip, durationMs) : clip)),
@@ -408,11 +465,22 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           tab={project.inspectorTab}
           onTab={(inspectorTab: InspectorTab) => setProject((current) => ({ ...current, inspectorTab }))}
           masterVolume={project.masterVolume}
-          onMasterVolume={(masterVolume) => commit({ masterVolume })}
+          onMasterVolume={(masterVolume) => {
+            if (gestureRef.current) {
+              gestureDirtyRef.current = true
+              setProject((current) => ({ ...current, masterVolume }))
+              return
+            }
+            commit({ masterVolume })
+          }}
+          onGestureStart={beginGesture}
+          onGestureEnd={endGesture}
           selected={selected}
           selectedExtra={selectedExtra}
           onClip={(patch) => selected && updateClip(selected.id, patch)}
+          onClipLive={(patch) => selected && updateClip(selected.id, patch, true)}
           onExtra={(patch) => selectedExtra && updateExtra(selectedExtra.id, patch)}
+          onExtraLive={(patch) => selectedExtra && updateExtra(selectedExtra.id, patch, true)}
         />
       </div>
 
@@ -440,20 +508,25 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
               inspectorTab: 'fade',
             }))
           }
+          onGestureStart={beginGesture}
+          onGestureEnd={endGesture}
           onTrimClip={(id, edge, delta) => {
+            if (gestureRef.current) gestureDirtyRef.current = true
             setProject((current) => ({
               ...current,
               clips: current.clips.map((clip) => (clip.id === id ? trimClip(clip, edge, delta) : clip)),
             }))
           }}
           onTrimExtra={(id, edge, delta) => {
+            if (gestureRef.current) gestureDirtyRef.current = true
             setProject((current) => ({
               ...current,
               extraClips: current.extraClips.map((extra) => (extra.id === id ? trimExtra(extra, edge, delta) : extra)),
             }))
           }}
-          onMoveClip={(from, to) => commit({ clips: moveClip(project.clips, from, to) })}
+          onMoveClip={(from, to) => commit({ clips: moveClip(projectRef.current.clips, from, to) })}
           onMoveExtra={(id, delta) => {
+            if (gestureRef.current) gestureDirtyRef.current = true
             setProject((current) => ({
               ...current,
               extraClips: current.extraClips.map((extra) => (extra.id === id ? moveExtra(extra, delta) : extra)),

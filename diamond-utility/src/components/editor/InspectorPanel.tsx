@@ -16,10 +16,14 @@ interface InspectorPanelProps {
   onTab: (tab: InspectorTab) => void
   masterVolume: number
   onMasterVolume: (value: number) => void
+  onGestureStart?: () => void
+  onGestureEnd?: () => void
   selected: EditorClip | null
   selectedExtra: ExtraClip | null
   onClip: (patch: Partial<EditorClip>) => void
+  onClipLive?: (patch: Partial<EditorClip>) => void
   onExtra: (patch: Partial<ExtraClip>) => void
+  onExtraLive?: (patch: Partial<ExtraClip>) => void
 }
 
 export function InspectorPanel({
@@ -27,11 +31,17 @@ export function InspectorPanel({
   onTab,
   masterVolume,
   onMasterVolume,
+  onGestureStart,
+  onGestureEnd,
   selected,
   selectedExtra,
   onClip,
+  onClipLive,
   onExtra,
+  onExtraLive,
 }: InspectorPanelProps) {
+  const liveClip = onClipLive ?? onClip
+  const liveExtra = onExtraLive ?? onExtra
   return (
     <aside className="nle-inspector">
       <div className="nle-inspector-tabs" role="tablist" aria-label="Clip tools">
@@ -61,13 +71,14 @@ export function InspectorPanel({
               value={selected.speed}
               onChange={(event) => onClip({ speed: Number(event.target.value) || 1 })}
             />
-            <input
-              type="range"
+            <LiveRange
               min={SPEED_MIN}
               max={SPEED_MAX}
               step={0.05}
               value={selected.speed}
-              onChange={(event) => onClip({ speed: Number(event.target.value) })}
+              onLive={(speed) => liveClip({ speed })}
+              onGestureStart={onGestureStart}
+              onGestureEnd={onGestureEnd}
             />
           </label>
         ) : null}
@@ -75,17 +86,26 @@ export function InspectorPanel({
           <>
             <label className="field">
               <span>Master volume</span>
-              <input type="range" min={0} max={1} step={0.05} value={masterVolume} onChange={(event) => onMasterVolume(Number(event.target.value))} />
+              <LiveRange
+                min={0}
+                max={1}
+                step={0.05}
+                value={masterVolume}
+                onLive={onMasterVolume}
+                onGestureStart={onGestureStart}
+                onGestureEnd={onGestureEnd}
+              />
             </label>
             <label className="field">
               <span>Clip volume</span>
-              <input
-                type="range"
+              <LiveRange
                 min={0}
                 max={1}
                 step={0.05}
                 value={selected.volume}
-                onChange={(event) => onClip({ volume: Number(event.target.value) })}
+                onLive={(volume) => liveClip({ volume })}
+                onGestureStart={onGestureStart}
+                onGestureEnd={onGestureEnd}
               />
             </label>
             <label className="field" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -98,11 +118,27 @@ export function InspectorPanel({
           <>
             <label className="field">
               <span>Fade in ({Math.round(selected.fadeInMs)} ms)</span>
-              <input type="range" min={0} max={2000} step={50} value={selected.fadeInMs} onChange={(event) => onClip({ fadeInMs: Number(event.target.value) })} />
+              <LiveRange
+                min={0}
+                max={2000}
+                step={50}
+                value={selected.fadeInMs}
+                onLive={(fadeInMs) => liveClip({ fadeInMs })}
+                onGestureStart={onGestureStart}
+                onGestureEnd={onGestureEnd}
+              />
             </label>
             <label className="field">
               <span>Fade out ({Math.round(selected.fadeOutMs)} ms)</span>
-              <input type="range" min={0} max={2000} step={50} value={selected.fadeOutMs} onChange={(event) => onClip({ fadeOutMs: Number(event.target.value) })} />
+              <LiveRange
+                min={0}
+                max={2000}
+                step={50}
+                value={selected.fadeOutMs}
+                onLive={(fadeOutMs) => liveClip({ fadeOutMs })}
+                onGestureStart={onGestureStart}
+                onGestureEnd={onGestureEnd}
+              />
             </label>
           </>
         ) : null}
@@ -139,25 +175,27 @@ export function InspectorPanel({
             {(['exposure', 'contrast', 'saturation', 'temperature'] as const).map((key) => (
               <label key={key} className="field">
                 <span>{key[0].toUpperCase() + key.slice(1)}</span>
-                <input
-                  type="range"
+                <LiveRange
                   min={-1}
                   max={1}
                   step={0.05}
                   value={selected.grade[key]}
-                  onChange={(event) => onClip({ grade: { ...selected.grade, [key]: Number(event.target.value) } })}
+                  onLive={(value) => liveClip({ grade: { ...selected.grade, [key]: value } })}
+                  onGestureStart={onGestureStart}
+                  onGestureEnd={onGestureEnd}
                 />
               </label>
             ))}
             <label className="field">
               <span>Transparency</span>
-              <input
-                type="range"
+              <LiveRange
                 min={0}
                 max={1}
                 step={0.05}
                 value={selected.grade.transparency}
-                onChange={(event) => onClip({ grade: { ...selected.grade, transparency: Number(event.target.value) } })}
+                onLive={(transparency) => liveClip({ grade: { ...selected.grade, transparency } })}
+                onGestureStart={onGestureStart}
+                onGestureEnd={onGestureEnd}
               />
             </label>
             <button type="button" className="btn ghost" onClick={() => onClip({ grade: { ...DEFAULT_GRADE }, transform: { ...selected.transform } })}>
@@ -170,20 +208,23 @@ export function InspectorPanel({
             <span>Title</span>
             <input
               value={selectedExtra.text ?? ''}
-              onChange={(event) => onExtra({ text: event.target.value, label: event.target.value || 'Title' })}
+              onFocus={() => onGestureStart?.()}
+              onChange={(event) => (onExtraLive ?? onExtra)({ text: event.target.value, label: event.target.value || 'Title' })}
+              onBlur={() => onGestureEnd?.()}
             />
           </label>
         ) : null}
         {selectedExtra?.kind === 'audio' ? (
           <label className="field">
             <span>Music volume</span>
-            <input
-              type="range"
+            <LiveRange
               min={0}
               max={1}
               step={0.05}
               value={selectedExtra.volume}
-              onChange={(event) => onExtra({ volume: Number(event.target.value) })}
+              onLive={(volume) => liveExtra({ volume })}
+              onGestureStart={onGestureStart}
+              onGestureEnd={onGestureEnd}
             />
           </label>
         ) : null}
@@ -192,24 +233,26 @@ export function InspectorPanel({
             <div className="eyebrow">Canvas</div>
             <label className="field">
               <span>Scale {selected.transform.scale.toFixed(2)}</span>
-              <input
-                type="range"
+              <LiveRange
                 min={0.4}
                 max={2.4}
                 step={0.05}
                 value={selected.transform.scale}
-                onChange={(event) => onClip({ transform: { ...selected.transform, scale: Number(event.target.value) } })}
+                onLive={(scale) => liveClip({ transform: { ...selected.transform, scale } })}
+                onGestureStart={onGestureStart}
+                onGestureEnd={onGestureEnd}
               />
             </label>
             <label className="field">
               <span>Crop</span>
-              <input
-                type="range"
+              <LiveRange
                 min={0}
                 max={0.35}
                 step={0.01}
                 value={selected.transform.crop}
-                onChange={(event) => onClip({ transform: { ...selected.transform, crop: Number(event.target.value) } })}
+                onLive={(crop) => liveClip({ transform: { ...selected.transform, crop } })}
+                onGestureStart={onGestureStart}
+                onGestureEnd={onGestureEnd}
               />
             </label>
             <div className="btn-row">
@@ -227,5 +270,37 @@ export function InspectorPanel({
         ) : null}
       </div>
     </aside>
+  )
+}
+
+function LiveRange({
+  min,
+  max,
+  step,
+  value,
+  onLive,
+  onGestureStart,
+  onGestureEnd,
+}: {
+  min: number
+  max: number
+  step: number
+  value: number
+  onLive: (value: number) => void
+  onGestureStart?: () => void
+  onGestureEnd?: () => void
+}) {
+  return (
+    <input
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onPointerDown={() => onGestureStart?.()}
+      onChange={(event) => onLive(Number(event.target.value))}
+      onPointerUp={() => onGestureEnd?.()}
+      onPointerCancel={() => onGestureEnd?.()}
+    />
   )
 }

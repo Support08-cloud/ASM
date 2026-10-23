@@ -335,7 +335,10 @@ function clamp(value: number, min: number, max: number): number {
 
 export function concatListContents(clips: EditorClip[], outputDir: string): string {
   return clips
-    .map((clip, index) => `file '${joinPath(outputDir, `.edit-cache/${index}-${safe(clip.id)}.mp4`).replace(/'/g, "'\\''")}'`)
+    .map((clip, index) => {
+      const file = joinPath(outputDir, '.edit-cache', `${index}-${safe(clip.id)}.mp4`).replace(/\\/g, '/')
+      return `file '${file.replace(/'/g, "'\\''")}'`
+    })
     .join('\n')
 }
 

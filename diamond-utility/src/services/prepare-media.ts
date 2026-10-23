@@ -29,7 +29,8 @@ export async function probeHtmlDuration(src: string): Promise<{ durationMs: numb
       }
     })
     const durationMs = Math.round((video.duration || 0) * 1000)
-    return durationMs > 0 ? { durationMs, hasAudio: true } : null
+    if (!Number.isFinite(durationMs) || durationMs <= 0) return null
+    return { durationMs, hasAudio: true }
   } catch {
     return null
   } finally {
@@ -54,6 +55,41 @@ export async function prepareEditorProject(
   return { ...project, clips }
 }
 
+/** Apply proxy and probed duration onto the timeline the user is already editing. */
+export function mergePreparedProject(current: EditorProject, prepared: EditorProject, seed: EditorProject): EditorProject {
+  const preparedById = new Map(prepared.clips.map((clip) => [clip.id, clip]))
+  const seedById = new Map(seed.clips.map((clip) => [clip.id, clip]))
+  return {
+    ...current,
+    clips: current.clips.map((clip) => {
+      const fresh = preparedById.get(clip.id)
+      if (!fresh) return clip
+      const next: EditorClip = {
+        ...clip,
+        proxyPath: fresh.proxyPath ?? clip.proxyPath,
+        ready: fresh.ready ?? clip.ready,
+        hasAudio: fresh.hasAudio ?? clip.hasAudio,
+        error: fresh.ready === false ? fresh.error ?? clip.error : fresh.ready ? undefined : clip.error,
+      }
+      const original = seedById.get(clip.id)
+      const edited =
+        !original ||
+        clip.inMs !== original.inMs ||
+        clip.outMs !== original.outMs ||
+        clip.speed !== original.speed ||
+        Boolean(clip.durationProbed)
+      if (edited) return next
+      return {
+        ...next,
+        sourceDurationMs: fresh.sourceDurationMs,
+        inMs: fresh.inMs,
+        outMs: fresh.outMs,
+        durationProbed: fresh.durationProbed,
+      }
+    }),
+  }
+}
+
 export async function prepareClip(clip: EditorClip, outputDir: string): Promise<EditorClip> {
   const input = ffmpegInputPath(clip)
   let next = { ...clip }
@@ -68,7 +104,7 @@ export async function prepareClip(clip: EditorClip, outputDir: string): Promise<
       const src = clip.mediaUrl
       if (src) {
         const info = await probeHtmlDuration(src)
-        if (info) next = applyDuration({ ...next, durationProbed: false, hasAudio: info.hasAudio }, info.durationMs)
+        if (info) next = applyDuration({ ...next, durationProbed: false }, info.durationMs)
       }
     }
 

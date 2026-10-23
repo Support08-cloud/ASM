@@ -1,5 +1,5 @@
-import { countKind } from '../../models/diamond'
 import type { ConfirmSummary } from '../../models/processing'
+import { plannedMp4Names } from '../../services/mp4-processor'
 
 interface ConfirmationDialogProps {
   summary: ConfirmSummary
@@ -35,16 +35,19 @@ export function ConfirmationDialog({ summary, onCancel, onConfirm }: Confirmatio
             {summary.diamonds.map((diamond) => (
               <div key={diamond.id} className="output-group">
                 <div className="folder-name">└── {diamond.baseName}</div>
-                {diamond.folders.map((folder, index) => {
-                  const last = index === diamond.folders.length - 1
-                  const mp4 = countKind(folder, 'mp4')
-                  return (
-                    <div key={folder.id} className="folder-meta" style={{ marginLeft: 24 }}>
-                      {last ? '└──' : '├──'} {folder.folderName}.mp4
-                      {mp4 === 0 ? ' (skipped — no MP4)' : ''}
+                {diamond.folders
+                  .flatMap((folder) => {
+                    const names = plannedMp4Names(folder)
+                    if (names.length === 0) {
+                      return [{ key: folder.id, label: `${folder.folderName}.mp4 (skipped — no MP4)` }]
+                    }
+                    return names.map((name) => ({ key: `${folder.id}:${name}`, label: name }))
+                  })
+                  .map((line, index, lines) => (
+                    <div key={line.key} className="folder-meta" style={{ marginLeft: 24 }}>
+                      {index === lines.length - 1 ? '└──' : '├──'} {line.label}
                     </div>
-                  )
-                })}
+                  ))}
               </div>
             ))}
           </div>

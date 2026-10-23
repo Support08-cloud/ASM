@@ -30,6 +30,10 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   })
 }
 
+export function plannedMp4Names(folder: DiamondFolder): string[] {
+  return folder.files.filter((file) => file.kind === 'mp4').map((file, index) => outputName(folder, file.name, index))
+}
+
 function outputName(folder: DiamondFolder, fileName: string, index: number): string {
   const ext = fileName.includes('.') ? fileName.slice(fileName.lastIndexOf('.')) : '.mp4'
   if (index === 0) return `${folder.folderName}${ext}`
