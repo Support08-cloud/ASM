@@ -5,9 +5,10 @@ interface PathCardProps {
   path: string | null
   hint: string
   onChange: () => void
+  onClear?: () => void
 }
 
-export function PathCard({ label, path, hint, onChange }: PathCardProps) {
+export function PathCard({ label, path, hint, onChange, onClear }: PathCardProps) {
   return (
     <section className="path-card">
       <div className="path-card-top">
@@ -23,9 +24,16 @@ export function PathCard({ label, path, hint, onChange }: PathCardProps) {
       </div>
       <div className="path-foot">
         <span>{hint}</span>
-        <button type="button" className="btn ghost" onClick={onChange}>
-          Change
-        </button>
+        <div className="btn-row">
+          {path && onClear ? (
+            <button type="button" className="btn ghost" onClick={onClear}>
+              Clear
+            </button>
+          ) : null}
+          <button type="button" className="btn ghost" onClick={onChange}>
+            {path ? 'Change' : 'Select'}
+          </button>
+        </div>
       </div>
     </section>
   )

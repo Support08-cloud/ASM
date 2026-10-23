@@ -1,4 +1,4 @@
-import { VIEW_TYPES, type Diamond, type Filters } from '../models/diamond'
+import { type Diamond, type Filters } from '../models/diamond'
 
 export function matchesQuery(diamond: Diamond, rawQuery: string): boolean {
   const query = rawQuery.trim().toLowerCase()
@@ -7,9 +7,9 @@ export function matchesQuery(diamond: Diamond, rawQuery: string): boolean {
   const haystacks = [
     diamond.baseName,
     diamond.id,
-    ...diamond.views.map((view) => view.folderName),
-    ...diamond.views.map((view) => view.view),
-    ...diamond.views.flatMap((view) => view.files.map((file) => file.name)),
+    ...diamond.folders.map((folder) => folder.folderName),
+    ...diamond.folders.map((folder) => folder.variant),
+    ...diamond.folders.flatMap((folder) => folder.files.map((file) => file.name)),
   ].map((value) => value.toLowerCase())
 
   if (haystacks.some((value) => value.includes(query))) return true
@@ -27,9 +27,12 @@ export function fuzzyIncludes(haystack: string, query: string): boolean {
 }
 
 export function matchesFilters(diamond: Diamond, filters: Filters): boolean {
-  if (filters.views.length > 0) {
-    const hasView = filters.views.some((view) => diamond.views.some((item) => item.view === view))
-    if (!hasView) return false
+  if (filters.variants.length > 0) {
+    const hasVariant = filters.variants.some((variant) => {
+      if (variant === 'base') return diamond.folders.some((folder) => folder.isBase)
+      return diamond.folders.some((folder) => folder.variant.toLowerCase() === variant.toLowerCase())
+    })
+    if (!hasVariant) return false
   }
   if (filters.mp4.length > 0 && !filters.mp4.includes(diamond.mp4.availability)) return false
   if (filters.status.length > 0 && !filters.status.includes(diamond.status)) return false
@@ -41,10 +44,5 @@ export function filterDiamonds(diamonds: Diamond[], query: string, filters: Filt
 }
 
 export function activeFilterCount(filters: Filters): number {
-  return filters.views.length + filters.mp4.length + filters.status.length
-}
-
-export function searchHintViews(query: string): string[] {
-  const lower = query.trim().toLowerCase()
-  return VIEW_TYPES.filter((view) => view.toLowerCase().includes(lower))
+  return filters.variants.length + filters.mp4.length + filters.status.length
 }

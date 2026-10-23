@@ -13,6 +13,8 @@ export type AppPhase =
   | 'confirming'
   | 'processing'
   | 'completed'
+  | 'editing'
+  | 'exporting'
 
 export interface ProcessStep {
   viewId: string

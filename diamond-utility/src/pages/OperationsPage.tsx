@@ -1,27 +1,115 @@
+import { useMemo } from 'react'
 import { useAppStore } from '../app/state/AppStateContext'
-import { CompletionDialog } from '../components/dialogs/CompletionDialog'
+import { CompletionDialog, copiedDiamondNames } from '../components/dialogs/CompletionDialog'
 import { EmptyState } from '../components/common/States'
 import { PageHeader } from '../components/navigation/PageHeader'
 import { ProcessingPanel } from '../components/processing/ProcessingPanel'
+import { VideoEditor } from '../components/editor/VideoEditor'
+import { editOutputDir, projectFromCopiedFiles } from '../services/timeline'
+
+function folderOf(target: string): string {
+  if (/\.(mp4|mov|m4v|mkv|webm)$/i.test(target)) return target.replace(/[/\\][^/\\]+$/, '') || target
+  return target
+}
 
 export function OperationsPage() {
-  const { state, dispatch, cancelProcessing } = useAppStore()
+  const { state, dispatch, cancelProcessing, openOutput, exportTimeline } = useAppStore()
+  const result = state.processResult ?? state.lastProcessResult
+  const editorSource = state.lastProcessResult ?? state.processResult
+  const readyDiamonds = result ? copiedDiamondNames(result) : []
+
+  const project = useMemo(() => {
+    if (!editorSource) return null
+    const copied = editorSource.files.filter((file) => file.status === 'copied' && !file.outputPath.endsWith('-edit.mp4'))
+    const files = copied.length > 0 ? copied : editorSource.files.filter((file) => file.status === 'copied')
+    const scoped = state.editorDiamond ? files.filter((file) => file.diamondName === state.editorDiamond) : files
+    if (scoped.length === 0) return null
+    const diamondName = state.editorDiamond || scoped[0].diamondName || 'diamond'
+    return projectFromCopiedFiles(
+      scoped,
+      state.editorOutputDir || editOutputDir(scoped, editorSource.outputPath),
+      diamondName,
+    )
+  }, [editorSource, state.editorDiamond, state.editorOutputDir])
+
+  if (state.phase === 'editing' || state.phase === 'exporting') {
+    if (!project) {
+      return (
+        <EmptyState
+          title="Nothing to edit"
+          body="Select folders on the Dashboard, then choose Edit & merge. Those videos open together on one timeline."
+          actionLabel="Go to Dashboard"
+          onAction={() => dispatch({ type: 'navigate', route: 'dashboard' })}
+        />
+      )
+    }
+    return (
+      <VideoEditor
+        project={project}
+        exporting={state.exportProgress}
+        onClose={() => dispatch({ type: 'close-editor' })}
+        onExport={(next) => {
+          void exportTimeline(next)
+        }}
+      />
+    )
+  }
 
   return (
     <>
       <PageHeader
         eyebrow="Workspace"
         title="Operations"
-        description="Watch Get MP4 jobs as they run. Source files are never modified."
+        description="Watch Get MP4 jobs, then edit the extracted videos on a CapCut-style timeline."
       />
       {state.phase === 'processing' && state.processProgress ? (
         <ProcessingPanel progress={state.processProgress} onCancel={cancelProcessing} />
       ) : state.phase === 'completed' && state.processResult ? (
-        <CompletionDialog result={state.processResult} onDone={() => dispatch({ type: 'dismiss-completion' })} />
+        <CompletionDialog
+          result={state.processResult}
+          onDone={() => dispatch({ type: 'dismiss-completion' })}
+          onEdit={(diamondName) => dispatch({ type: 'open-editor', diamondName })}
+          onOpenOutput={() => {
+            void openOutput(folderOf(state.processResult?.outputPath ?? ''))
+          }}
+        />
+      ) : result ? (
+        <>
+          <EmptyState
+            title="Ready to edit"
+            body={
+              readyDiamonds.length > 1
+                ? 'Choose one group. Edit opens every video from that group together, and Play runs them in order.'
+                : 'Edit opens every video from this group on one timeline. Play runs them in order, and Export saves one file in the output folder.'
+            }
+            actionLabel={readyDiamonds.length === 1 ? 'Edit videos' : undefined}
+            onAction={
+              readyDiamonds.length === 1
+                ? () => dispatch({ type: 'open-editor', diamondName: readyDiamonds[0] })
+                : undefined
+            }
+            secondaryLabel="Go to Dashboard"
+            onSecondary={() => dispatch({ type: 'navigate', route: 'dashboard' })}
+          />
+          {readyDiamonds.length > 1 ? (
+            <div className="btn-row" style={{ justifyContent: 'center', flexWrap: 'wrap', marginTop: 8 }}>
+              {readyDiamonds.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  className="btn primary"
+                  onClick={() => dispatch({ type: 'open-editor', diamondName: name })}
+                >
+                  Edit {name}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </>
       ) : (
         <EmptyState
           title="No active operation"
-          body="Select diamonds on the Dashboard, then run Get MP4. Live progress appears here."
+          body="Select the folders already on this PC, then choose Edit & merge. Play runs those videos in order and Export saves one merged file."
           actionLabel="Go to Dashboard"
           onAction={() => dispatch({ type: 'navigate', route: 'dashboard' })}
         />

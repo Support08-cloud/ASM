@@ -25,3 +25,11 @@ export function isModKey(event: { metaKey: boolean; ctrlKey: boolean }): boolean
 export function uid(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`
 }
+
+export function formatTimecode(ms: number): string {
+  const totalTenths = Math.round(Math.max(0, ms) / 100)
+  const minutes = Math.floor(totalTenths / 600)
+  const seconds = Math.floor(totalTenths / 10) % 60
+  const tenths = totalTenths % 10
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${tenths}`
+}

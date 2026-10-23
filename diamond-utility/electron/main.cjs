@@ -1,0 +1,290 @@
+const { app, BrowserWindow, dialog, ipcMain, shell, protocol, net } = require('electron')
+const { spawn } = require('child_process')
+const crypto = require('crypto')
+const fs = require('fs')
+const path = require('path')
+const { pathToFileURL } = require('url')
+const { scanDirectory } = require('./scan-directory.cjs')
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'du-media',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true,
+      bypassCSP: true,
+      corsEnabled: true,
+    },
+  },
+])
+
+function stateFile() {
+  return path.join(app.getPath('userData'), 'window.json')
+}
+
+function loadWindowState() {
+  try {
+    return JSON.parse(fs.readFileSync(stateFile(), 'utf8'))
+  } catch {
+    return { width: 1440, height: 900 }
+  }
+}
+
+function createWindow() {
+  const saved = loadWindowState()
+  const win = new BrowserWindow({
+    width: saved.width ?? 1440,
+    height: saved.height ?? 900,
+    x: saved.x,
+    y: saved.y,
+    minWidth: 1100,
+    minHeight: 720,
+    title: 'Diamond Utility',
+    backgroundColor: '#0c0e12',
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+    },
+  })
+
+  win.setMenuBarVisibility(false)
+
+  if (saved.isMaximized) win.maximize()
+
+  const persist = () => {
+    if (win.isDestroyed()) return
+    const payload = {
+      ...win.getBounds(),
+      isMaximized: win.isMaximized(),
+    }
+    fs.mkdirSync(app.getPath('userData'), { recursive: true })
+    fs.writeFileSync(stateFile(), JSON.stringify(payload))
+  }
+
+  win.on('close', persist)
+
+  if (app.isPackaged) {
+    win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
+  } else {
+    win.loadURL(process.env.VITE_DEV_SERVER_URL || 'http://127.0.0.1:5173')
+  }
+}
+
+function samplesDir() {
+  const packaged = path.join(__dirname, '..', 'dist', 'samples')
+  if (fs.existsSync(packaged)) return packaged
+  return path.join(__dirname, '..', 'public', 'samples')
+}
+
+function resolveSample(rel) {
+  const name = String(rel || '').replace(/^(\.\/)?samples\//, '').replace(/^.*[/\\]/, '')
+  return path.join(samplesDir(), name)
+}
+
+function fontFile() {
+  if (process.platform === 'win32') {
+    const arial = 'C:\\Windows\\Fonts\\arial.ttf'
+    if (fs.existsSync(arial)) return arial
+  }
+  const linux = [
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+    '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+    '/usr/share/fonts/truetype/freefont/FreeSans.ttf',
+  ]
+  return linux.find((file) => fs.existsSync(file)) ?? null
+}
+
+function parseMediaInfo(stderr) {
+  const match = stderr.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/)
+  let durationMs = 0
+  if (match) {
+    durationMs = Math.round((Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3])) * 1000)
+  }
+  return { durationMs, hasAudio: /Audio:/i.test(stderr) }
+}
+
+function mediaInfo(filePath) {
+  const staged = stageForFfmpeg(filePath)
+  return new Promise((resolve, reject) => {
+    const child = spawn(ffmpegBinary(), ['-hide_banner', '-i', staged], { windowsHide: true })
+    let stderr = ''
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString()
+    })
+    child.on('error', reject)
+    child.on('close', () => resolve(parseMediaInfo(stderr)))
+  })
+}
+
+app.whenReady().then(() => {
+  protocol.handle('du-media', (request) => {
+    try {
+      const parsed = new URL(request.url)
+      const encoded = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
+      const filePath = Buffer.from(encoded, 'base64url').toString('utf8')
+      if (!filePath || !fs.existsSync(filePath)) return new Response('Not found', { status: 404 })
+      return net.fetch(pathToFileURL(filePath).href)
+    } catch {
+      return new Response('Bad request', { status: 400 })
+    }
+  })
+
+  ipcMain.handle('desktop:pick-directory', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Select folder',
+      properties: ['openDirectory'],
+    })
+    if (result.canceled || !result.filePaths[0]) return null
+    return result.filePaths[0]
+  })
+
+  ipcMain.handle('desktop:pick-videos', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Select videos to edit and merge',
+      properties: ['openFile', 'multiSelections'],
+      filters: [{ name: 'Video', extensions: ['mp4', 'mov', 'm4v', 'mkv', 'webm'] }],
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return result.filePaths
+  })
+
+  ipcMain.handle('desktop:file-exists', async (_event, filePath) => {
+    try {
+      return fs.existsSync(filePath)
+    } catch {
+      return false
+    }
+  })
+
+  ipcMain.handle('desktop:pick-media', async (_event, kind) => {
+    const audio = [
+      { name: 'Audio', extensions: ['mp3', 'wav', 'm4a', 'aac', 'ogg'] },
+    ]
+    const video = [
+      { name: 'Video', extensions: ['mp4', 'mov', 'm4v', 'mkv', 'webm'] },
+    ]
+    const result = await dialog.showOpenDialog({
+      title: kind === 'audio' ? 'Add music' : 'Add media',
+      properties: ['openFile'],
+      filters: kind === 'audio' ? audio : video,
+    })
+    if (result.canceled || !result.filePaths[0]) return null
+    return result.filePaths[0]
+  })
+
+  ipcMain.handle('desktop:scan-directory', async (_event, root) => {
+    return scanDirectory(root)
+  })
+
+  ipcMain.handle('desktop:copy-file', async (_event, sourcePath, destinationPath) => {
+    fs.mkdirSync(path.dirname(destinationPath), { recursive: true })
+    await fs.promises.copyFile(sourcePath, destinationPath)
+  })
+
+  ipcMain.handle('desktop:open-path', async (_event, target) => {
+    const err = await shell.openPath(target)
+    if (err) throw new Error(err)
+  })
+
+  ipcMain.handle('desktop:write-text-file', async (_event, filePath, contents) => {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true })
+    fs.writeFileSync(filePath, contents, 'utf8')
+  })
+
+  ipcMain.handle('desktop:run-ffmpeg', async (_event, args) => {
+    const output = args[args.length - 1]
+    if (typeof output === 'string') fs.mkdirSync(path.dirname(output), { recursive: true })
+    await runFfmpeg(args)
+  })
+
+  ipcMain.handle('desktop:resolve-sample', async (_event, rel) => {
+    return resolveSample(rel)
+  })
+
+  ipcMain.handle('desktop:font-file', async () => {
+    return fontFile()
+  })
+
+  ipcMain.handle('desktop:media-info', async (_event, filePath) => {
+    return mediaInfo(filePath)
+  })
+
+  createWindow()
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  })
+})
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit()
+})
+
+function ffmpegBinary() {
+  const packed = path.join(process.resourcesPath, 'bin', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg')
+  if (fs.existsSync(packed)) return packed
+  const local = path.join(__dirname, '..', 'extra-bin', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg')
+  if (fs.existsSync(local)) return local
+  return process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'
+}
+
+function stageForFfmpeg(filePath) {
+  if (typeof filePath !== 'string' || filePath.includes('=') || !fs.existsSync(filePath)) return filePath
+  let stat
+  try {
+    stat = fs.statSync(filePath)
+  } catch {
+    return filePath
+  }
+  if (!stat.isFile() || stat.size <= 0) return filePath
+  const root = path.join(app.getPath('temp'), 'diamond-utility')
+  if (filePath.toLowerCase().startsWith(root.toLowerCase())) return filePath
+  fs.mkdirSync(root, { recursive: true })
+  const id = crypto.createHash('sha1').update(filePath).digest('hex').slice(0, 10)
+  const dest = path.join(root, `${id}-${path.basename(filePath)}`)
+  try {
+    const current = fs.existsSync(dest) ? fs.statSync(dest) : null
+    if (!current || current.size !== stat.size || current.mtimeMs < stat.mtimeMs) fs.copyFileSync(filePath, dest)
+    return dest
+  } catch {
+    return filePath
+  }
+}
+
+function stageInputArgs(args) {
+  const next = [...args]
+  for (let index = 0; index < next.length - 1; index += 1) {
+    if (next[index] === '-i') next[index + 1] = stageForFfmpeg(next[index + 1])
+  }
+  return next
+}
+
+function ffmpegFailure(stderr, code) {
+  const lines = String(stderr)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.includes('--enable-') && !/^libav|^configuration:|^built with|^ffmpeg version/i.test(line))
+  const useful = lines.filter((line) => /error|invalid|moov|no such|failed|denied|not found/i.test(line))
+  const message = (useful.length > 0 ? useful : lines).slice(-3).join(' ')
+  return message.slice(0, 500) || `ffmpeg exited with code ${code}`
+}
+
+function runFfmpeg(args) {
+  const full = stageInputArgs(args[0] === '-hide_banner' ? args : ['-hide_banner', ...args])
+  return new Promise((resolve, reject) => {
+    const child = spawn(ffmpegBinary(), full, { windowsHide: true })
+    let stderr = ''
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString()
+    })
+    child.on('error', (error) => reject(error))
+    child.on('close', (code) => {
+      if (code === 0) resolve()
+      else reject(new Error(ffmpegFailure(stderr, code)))
+    })
+  })
+}

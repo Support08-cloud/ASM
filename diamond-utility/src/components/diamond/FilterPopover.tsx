@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { VIEW_TYPES, type Filters } from '../../models/diamond'
+import { COMMON_VARIANTS, type Filters } from '../../models/diamond'
 import { activeFilterCount } from '../../services/search'
 
 interface FilterPopoverProps {
@@ -34,11 +34,15 @@ export function FilterPopover({ filters, onChange }: FilterPopoverProps) {
       {open ? (
         <div className="filter-pop" role="dialog" aria-label="Filters">
           <div className="filter-group">
-            <h4>Views</h4>
-            {VIEW_TYPES.map((view) => (
-              <button key={view} type="button" className="check-line" onClick={() => toggle('views', view)}>
-                <span className={`check${filters.views.includes(view) ? ' is-on' : ''}`} />
-                {view}
+            <h4>Variants</h4>
+            <button type="button" className="check-line" onClick={() => toggle('variants', 'base')}>
+              <span className={`check${filters.variants.includes('base') ? ' is-on' : ''}`} />
+              Base folder
+            </button>
+            {COMMON_VARIANTS.map((variant) => (
+              <button key={variant} type="button" className="check-line" onClick={() => toggle('variants', variant)}>
+                <span className={`check${filters.variants.includes(variant) ? ' is-on' : ''}`} />
+                -{variant}
               </button>
             ))}
           </div>
@@ -64,7 +68,7 @@ export function FilterPopover({ filters, onChange }: FilterPopoverProps) {
             <button
               type="button"
               className="btn"
-              onClick={() => onChange({ views: [], mp4: [], status: [] })}
+              onClick={() => onChange({ variants: [], mp4: [], status: [] })}
             >
               Clear filters
             </button>

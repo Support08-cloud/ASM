@@ -1,4 +1,5 @@
 import type { ConfirmSummary } from '../../models/processing'
+import { plannedMp4Names } from '../../services/mp4-processor'
 
 interface ConfirmationDialogProps {
   summary: ConfirmSummary
@@ -19,18 +20,38 @@ export function ConfirmationDialog({ summary, onCancel, onConfirm }: Confirmatio
         <div className="modal-body">
           <p>You're about to process:</p>
           <p>
-            <strong>{summary.diamondCount} diamonds</strong>
+            <strong>
+              {summary.diamondCount} diamond group{summary.diamondCount === 1 ? '' : 's'}
+            </strong>
             <br />
-            <strong>{summary.folderCount} source folders</strong>
+            <strong>
+              {summary.folderCount} selected folder{summary.folderCount === 1 ? '' : 's'}
+            </strong>
             <br />
-            {summary.mp4Count} MP4 files
+            {summary.mp4Count} MP4 file{summary.mp4Count === 1 ? '' : 's'} copied into one folder per diamond
           </p>
-          <p>
-            Output:
-            <br />
-            <span className="mono">{summary.outputPath}</span>
-          </p>
-          <p>Source files will not be modified.</p>
+          <div className="output-preview">
+            <div className="mono">{summary.outputPath}</div>
+            {summary.diamonds.map((diamond) => (
+              <div key={diamond.id} className="output-group">
+                <div className="folder-name">└── {diamond.baseName}</div>
+                {diamond.folders
+                  .flatMap((folder) => {
+                    const names = plannedMp4Names(folder)
+                    if (names.length === 0) {
+                      return [{ key: folder.id, label: `${folder.folderName}.mp4 (skipped — no MP4)` }]
+                    }
+                    return names.map((name) => ({ key: `${folder.id}:${name}`, label: name }))
+                  })
+                  .map((line, index, lines) => (
+                    <div key={line.key} className="folder-meta" style={{ marginLeft: 24 }}>
+                      {index === lines.length - 1 ? '└──' : '├──'} {line.label}
+                    </div>
+                  ))}
+              </div>
+            ))}
+          </div>
+          <p>MP4s are renamed to the source folder name. The base folder is included only if you selected it. Source files will not be modified.</p>
         </div>
         <div className="modal-actions">
           <button type="button" className="btn ghost" onClick={onCancel}>
