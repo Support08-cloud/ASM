@@ -62,7 +62,7 @@ export function TransportBar({
           min={0}
           max={Math.max(durationMs, 1)}
           step={10}
-          value={Math.min(playheadMs, Math.max(durationMs, 1))}
+          value={Math.round(Math.min(playheadMs, Math.max(durationMs, 1)) / 10) * 10}
           aria-label="Playhead"
           onChange={(event) => onSeek(Number(event.target.value))}
         />

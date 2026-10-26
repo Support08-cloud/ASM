@@ -279,11 +279,9 @@ export function reducer(state: AppState, action: AppAction): AppState {
     case 'export-complete':
       return {
         ...state,
-        phase: 'completed',
+        phase: state.editorDiamond || state.lastProcessResult ? 'editing' : 'completed',
         exportProgress: null,
-        processResult: action.result,
         lastProcessResult: state.lastProcessResult ?? action.result,
-        editorOutputDir: null,
       }
     case 'export-failed':
       return { ...state, phase: state.editorDiamond || state.lastProcessResult ? 'editing' : 'completed', exportProgress: null }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as R
 import type { ClipTransform, EditorClip, ExtraClip } from '../../models/editor'
 import { cssClipPathForClip, cssFilterForClip, cssTransformForClip, type TransitionLayerStyle } from '../../services/edit-graph'
 import { toVideoSrc } from '../../services/media-url'
+import { shouldSeekMedia } from '../../services/playback'
 import { clipPlayDurationMs, sourceTimeMs } from '../../services/timeline'
 
 interface IncomingPreview {
@@ -81,8 +82,8 @@ export function PreviewStage({
   useEffect(() => {
     const audio = audioRef.current
     if (!audio || !music) return
-    const t = Math.max(0, (playheadRef.current - music.startMs) / 1000)
-    if (Number.isFinite(t) && Math.abs(audio.currentTime - t) > 0.12) audio.currentTime = t
+    const target = Math.max(0, (playheadRef.current - music.startMs) / 1000)
+    if (shouldSeekMedia(audio.currentTime, target, audio.readyState, audio.seeking)) audio.currentTime = target
     if (playing) void audio.play().catch(() => undefined)
     else audio.pause()
   }, [playing, music?.id, music?.startMs])
@@ -92,12 +93,17 @@ export function PreviewStage({
     const timer = window.setInterval(() => {
       const audio = audioRef.current
       const track = extrasRef.current.find((extra) => extra.kind === 'audio')
-      if (!audio || !track || !audio.src) return
+      if (!audio || !track || !audio.src || audio.seeking || audio.readyState < 2) return
       const musicAt = Math.max(0, (playheadRef.current - track.startMs) / 1000)
-      if (Number.isFinite(musicAt) && Math.abs(audio.currentTime - musicAt) > 0.45) audio.currentTime = musicAt
+      if (shouldSeekMedia(audio.currentTime, musicAt, audio.readyState, audio.seeking)) audio.currentTime = musicAt
     }, 400)
     return () => window.clearInterval(timer)
   }, [playing, music?.id])
+
+  useEffect(() => {
+    const audio = audioRef.current
+    return () => releaseMedia(audio)
+  }, [])
 
   return (
     <div className="nle-stage">
@@ -190,6 +196,13 @@ export function PreviewStage({
   )
 }
 
+function releaseMedia(media: HTMLMediaElement | null) {
+  if (!media) return
+  media.pause()
+  media.removeAttribute('src')
+  media.load()
+}
+
 function SyncedVideo({
   clip,
   localMs,
@@ -250,9 +263,26 @@ function SyncedVideo({
   useEffect(() => {
     const video = videoRef.current
     if (!video || playing) return
-    const target = sourceTimeMs(clip, localMs) / 1000
-    if (Number.isFinite(target) && Math.abs(video.currentTime - target) > 0.08) {
-      video.currentTime = Math.max(0, target)
+    let cancelled = false
+    const requested = new Set<number>()
+    const seek = () => {
+      if (cancelled) return
+      const target = Math.max(0, sourceTimeMs(clipRef.current, localRef.current) / 1000)
+      const key = Math.round(target * 20)
+      if (requested.has(key)) return
+      if (!shouldSeekMedia(video.currentTime, target, video.readyState, video.seeking)) return
+      requested.add(key)
+      try {
+        video.currentTime = target
+      } catch {
+        requested.delete(key)
+      }
+    }
+    if (video.readyState >= 2) seek()
+    else video.addEventListener('loadeddata', seek, { once: true })
+    return () => {
+      cancelled = true
+      video.removeEventListener('loadeddata', seek)
     }
   }, [clip.id, clip.inMs, localMs, playing])
 
@@ -268,14 +298,19 @@ function SyncedVideo({
     const timer = window.setInterval(() => {
       const video = videoRef.current
       const current = clipRef.current
-      if (!video || video.readyState < 1) return
+      if (!video || video.readyState < 2 || video.seeking) return
       const target = Math.max(0, sourceTimeMs(current, localRef.current) / 1000)
       if (Number.isFinite(video.duration) && target >= video.duration - 0.05) return
-      if (Math.abs(video.currentTime - target) > 0.45) video.currentTime = target
+      if (shouldSeekMedia(video.currentTime, target, video.readyState, video.seeking)) video.currentTime = target
       if (video.paused) void video.play().catch(() => undefined)
     }, 400)
     return () => window.clearInterval(timer)
   }, [playing, clip.id])
+
+  useEffect(() => {
+    const video = videoRef.current
+    return () => releaseMedia(video)
+  }, [])
 
   if (!src) return null
   return (

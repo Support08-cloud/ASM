@@ -78,6 +78,9 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   const projectRef = useRef(project)
   projectRef.current = project
   const playClockRef = useRef(project.playheadMs)
+  const playingRef = useRef(playing)
+  playingRef.current = playing
+  const filmAbortRef = useRef<AbortController | null>(null)
   if (!playing) playClockRef.current = project.playheadMs
 
   const duration = useMemo(() => projectDurationMs(project), [project])
@@ -308,29 +311,33 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
   }
 
   useEffect(() => {
-    let cancelled = false
+    if (playing) return
     const missing = project.clips.filter((clip) => !thumbs[clip.id])
     if (missing.length === 0) return
+    const controller = new AbortController()
+    filmAbortRef.current = controller
     void (async () => {
       for (const clip of missing) {
+        if (controller.signal.aborted || playingRef.current) return
         const src = toVideoSrc(clip)
         if (!src) continue
-        const frames = await captureFilmstrip(src, Math.min(8, Math.max(4, Math.round(clipPlayDurationMs(clip) / 800))))
-        if (cancelled || frames.length === 0) continue
+        const frames = await captureFilmstrip(src, Math.min(8, Math.max(4, Math.round(clipPlayDurationMs(clip) / 800))), controller.signal)
+        if (controller.signal.aborted || playingRef.current || frames.length === 0) continue
         setThumbs((current) => ({ ...current, [clip.id]: frames }))
       }
     })()
-    return () => {
-      cancelled = true
-    }
-  }, [project.clips, thumbs])
+    return () => controller.abort()
+  }, [playing, project.clips, thumbs])
 
   useEffect(() => {
     if (!playing) return
+    filmAbortRef.current?.abort()
     playClockRef.current = projectRef.current.playheadMs
+    let alive = true
     let frame = 0
     let last = performance.now()
     const tick = (now: number) => {
+      if (!alive) return
       const dt = Math.min(80, Math.max(0, now - last))
       last = now
       const end = projectDurationMs(projectRef.current)
@@ -342,15 +349,23 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
         if (current.playheadMs === next && current.selectedClipId === follow) return current
         return { ...current, playheadMs: next, selectedClipId: follow }
       })
-      if (next >= end) {
+      if (!alive || next >= end) {
+        alive = false
         setPlaying(false)
         return
       }
       frame = window.requestAnimationFrame(tick)
     }
     frame = window.requestAnimationFrame(tick)
-    return () => window.cancelAnimationFrame(frame)
+    return () => {
+      alive = false
+      window.cancelAnimationFrame(frame)
+    }
   }, [playing])
+
+  useEffect(() => {
+    if (exporting) setPlaying(false)
+  }, [exporting])
 
   const togglePlay = () => {
     if (playing) {
@@ -506,7 +521,10 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
           <button
             type="button"
             className="btn primary"
-            onClick={() => onExport(project)}
+            onClick={() => {
+              setPlaying(false)
+              onExport(projectRef.current)
+            }}
             disabled={Boolean(exporting || preparing || exportBlocked)}
             title={exportTitle || 'Export MP4'}
           >
@@ -567,10 +585,14 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
             onGestureEnd={endGesture}
             onDuration={(id, durationMs) => {
               if (!Number.isFinite(durationMs) || durationMs <= 0) return
-              setProject((current) => ({
-                ...current,
-                clips: current.clips.map((clip) => (clip.id === id && !clip.durationProbed ? applyDuration(clip, durationMs) : clip)),
-              }))
+              setProject((current) => {
+                const clip = current.clips.find((item) => item.id === id)
+                if (!clip || clip.durationProbed) return current
+                return {
+                  ...current,
+                  clips: current.clips.map((item) => (item.id === id ? applyDuration(item, durationMs) : item)),
+                }
+              })
             }}
           />
             </div>
