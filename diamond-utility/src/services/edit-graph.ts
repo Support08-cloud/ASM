@@ -23,14 +23,14 @@ export function atempoChain(speed: number): string {
 export function cssFilterForClip(clip: EditorClip): string {
   const named = namedCssFilter(clip.filter)
   const g = clip.grade
-  const brightness = 1 + g.exposure * 0.25
-  const contrast = 1 + g.contrast * 0.4
-  const saturate = 1 + g.saturation * 0.5
-  const hue = g.temperature * -12
+  const parts = [named]
+  if (Math.abs(g.exposure) >= 0.01) parts.push(`brightness(${(1 + g.exposure * 0.25).toFixed(3)})`)
+  if (Math.abs(g.contrast) >= 0.01) parts.push(`contrast(${(1 + g.contrast * 0.4).toFixed(3)})`)
+  if (Math.abs(g.saturation) >= 0.01) parts.push(`saturate(${(1 + g.saturation * 0.5).toFixed(3)})`)
+  if (Math.abs(g.temperature) >= 0.01) parts.push(`hue-rotate(${(g.temperature * -12).toFixed(2)}deg)`)
   const effect = effectCss(clip.effect)
-  return [named, `brightness(${brightness})`, `contrast(${contrast})`, `saturate(${saturate})`, `hue-rotate(${hue}deg)`, effect]
-    .filter(Boolean)
-    .join(' ')
+  if (effect) parts.push(effect)
+  return parts.filter(Boolean).join(' ')
 }
 
 export function cssTransformForClip(clip: EditorClip): string {
@@ -112,7 +112,7 @@ export function videoFiltersForClip(
     namedEqFilter(clip.filter),
     gradeEqFilter(clip),
     alpha,
-    effectFilter(clip.effect, playSec, width, height),
+    effectFilter(clip.effect, width, height),
     `setpts=PTS/${Math.max(clip.speed, 0.01)}`,
     fadeIn,
     fadeOut,
@@ -171,13 +171,15 @@ function effectCss(id: EffectId): string {
   return ''
 }
 
-function effectFilter(id: EffectId, playSec: number, width: number, height: number): string {
+function effectFilter(id: EffectId, width: number, height: number): string {
   if (id === 'flash') return 'eq=brightness=0.18'
   if (id === 'pulse') return 'eq=contrast=1.12:brightness=0.04'
   if (id === 'blur') return 'gblur=sigma=6'
   if (id === 'vignette') return 'vignette=angle=PI/4'
   if (id === 'grain') return 'noise=alls=10:allf=t'
-  if (id === 'slowzoom') return `zoompan=z='min(zoom+0.0008,1.18)':d=${Math.max(1, Math.round(playSec * 30))}:s=${width}x${height}:fps=30`
-  if (id === 'spin') return `rotate=0.08*sin(2*PI*t/4):ow=${width}:oh=${height}:c=black`
+  if (id === 'slowzoom') {
+    return `zoompan=z='min(1+0.0008*on,1.18)':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=${width}x${height}:fps=30`
+  }
+  if (id === 'spin') return `rotate=0.08*sin(2*PI*t/4):ow=iw:oh=ih:c=black`
   return ''
 }

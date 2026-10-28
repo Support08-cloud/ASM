@@ -108,10 +108,9 @@ function parseMediaInfo(stderr) {
   return { durationMs, hasAudio: /Audio:/i.test(stderr) }
 }
 
-function mediaInfo(filePath) {
-  const staged = stageForFfmpeg(filePath)
+function probeMedia(filePath) {
   return new Promise((resolve, reject) => {
-    const child = spawn(ffmpegBinary(), ['-hide_banner', '-i', staged], { windowsHide: true })
+    const child = spawn(ffmpegBinary(), ['-hide_banner', '-i', filePath], { windowsHide: true })
     let stderr = ''
     child.stderr.on('data', (chunk) => {
       stderr += chunk.toString()
@@ -119,6 +118,16 @@ function mediaInfo(filePath) {
     child.on('error', reject)
     child.on('close', () => resolve(parseMediaInfo(stderr)))
   })
+}
+
+async function mediaInfo(filePath) {
+  const direct = await probeMedia(filePath)
+  if (direct.durationMs > 0) return { ...direct, readablePath: filePath }
+  const staged = stageForFfmpeg(filePath)
+  if (!staged || staged === filePath) return { ...direct, readablePath: filePath }
+  const copied = await probeMedia(staged)
+  if (copied.durationMs > 0) return { ...copied, readablePath: staged }
+  return { ...direct, readablePath: filePath }
 }
 
 app.whenReady().then(() => {

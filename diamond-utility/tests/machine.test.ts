@@ -197,4 +197,46 @@ describe('app state machine', () => {
     const back = reducer(confirming, { type: 'cancel-confirm' })
     expect(back.phase).toBe('completed')
   })
+
+  it('keeps the folder selection when the output path changes and the scan refreshes', () => {
+    const diamonds = buildDemoDiamonds().slice(0, 1)
+    const id = diamonds[0].folders[0].id
+    let state = reducer(
+      { ...initialState, phase: 'ready', diamonds, selectedIds: [id, 'missing-folder'], outputPath: 'D:/old', detailsId: diamonds[0].id },
+      { type: 'set-output', path: 'D:/new' },
+    )
+    expect(state.outputPath).toBe('D:/new')
+    expect(state.diamonds).toHaveLength(1)
+    expect(state.selectedIds).toEqual([id, 'missing-folder'])
+
+    state = reducer(state, { type: 'scan-start' })
+    expect(state.phase).toBe('scanning')
+    expect(state.selectedIds).toEqual([id, 'missing-folder'])
+
+    state = reducer(state, {
+      type: 'scan-success',
+      diamonds,
+      foldersScanned: 1,
+      scannedAt: '2026-10-28T09:30:00.000Z',
+    })
+    expect(state.phase).toBe('ready')
+    expect(state.selectedIds).toEqual([id])
+    expect(state.detailsId).toBe(diamonds[0].id)
+  })
+
+  it('restores a saved folder selection with the paths', () => {
+    const state = reducer(initialState, {
+      type: 'hydrate',
+      settings: initialState.settings,
+      history: [],
+      sourcePath: 'D:/DiamondData',
+      outputPath: 'D:/DiamondOutput',
+      sourceKind: 'directory',
+      selectedIds: ['folder-a'],
+    })
+    expect(state.phase).toBe('idle')
+    expect(state.sourcePath).toBe('D:/DiamondData')
+    expect(state.outputPath).toBe('D:/DiamondOutput')
+    expect(state.selectedIds).toEqual(['folder-a'])
+  })
 })

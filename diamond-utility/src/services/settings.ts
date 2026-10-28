@@ -8,6 +8,7 @@ export interface StoredPaths {
   sourcePath?: string
   outputPath?: string
   sourceKind?: 'none' | 'demo' | 'directory'
+  selectedIds?: string[]
 }
 
 export function loadSettings(): AppSettings {

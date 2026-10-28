@@ -61,7 +61,10 @@ export function PreviewStage({
   const music = extras.find((extra) => extra.kind === 'audio')
   const play = clip ? clipPlayDurationMs(clip) : 0
   const fadeOpacity = fadeOpacityFor(clip, localMs, play)
-  const effectClass = clip && clip.effect !== 'none' && !incoming ? ` is-fx-${clip.effect}` : ''
+  const effectClass = clip && clip.effect !== 'none' ? ` is-fx-${clip.effect}` : ''
+  const incomingId = incoming?.clip.id
+  const [incomingSeen, setIncomingSeen] = useState<{ id?: string; ready: boolean }>({ ready: false })
+  const revealIncoming = Boolean(incoming && incomingSeen.id === incomingId && incomingSeen.ready)
 
   useEffect(() => {
     const audio = audioRef.current
@@ -108,40 +111,48 @@ export function PreviewStage({
   return (
     <div className="nle-stage">
       {src && clip ? (
-        <div className={`nle-fx${effectClass}`} style={outgoingStyle}>
-          <SyncedVideo
-            clip={clip}
-            localMs={localMs}
-            playing={playing}
-            masterVolume={masterVolume}
-            style={{
-              filter: cssFilterForClip(clip),
-              transform: cssTransformForClip(clip),
-              clipPath: cssClipPathForClip(clip),
-              opacity: fadeOpacity * clip.grade.transparency,
-            }}
-            onDuration={onDuration}
-            onStatus={setStatus}
-          />
+        <div className="nle-fx" style={revealIncoming ? outgoingStyle : undefined}>
+          <div className={`nle-fx-motion${effectClass}`}>
+            <SyncedVideo
+              clip={clip}
+              localMs={localMs}
+              playing={playing}
+              masterVolume={masterVolume}
+              style={{
+                filter: cssFilterForClip(clip),
+                transform: cssTransformForClip(clip),
+                clipPath: cssClipPathForClip(clip),
+                opacity: fadeOpacity * clip.grade.transparency,
+              }}
+              onDuration={onDuration}
+              onStatus={setStatus}
+            />
+          </div>
         </div>
       ) : (
         <div className="stage-label">{clip?.error ?? clip?.label ?? 'Add a clip'}</div>
       )}
       {incoming ? (
-        <div className="nle-fx is-incoming" style={incoming.layerStyle}>
-          <SyncedVideo
-            clip={incoming.clip}
-            localMs={incoming.localMs}
-            playing={playing}
-            masterVolume={masterVolume}
-            style={{
-              filter: cssFilterForClip(incoming.clip),
-              transform: cssTransformForClip(incoming.clip),
-              clipPath: cssClipPathForClip(incoming.clip),
-              opacity: incoming.clip.grade.transparency,
-            }}
-            onDuration={onDuration}
-          />
+        <div
+          className="nle-fx is-incoming"
+          style={revealIncoming ? incoming.layerStyle : { opacity: 0 }}
+        >
+          <div className={`nle-fx-motion${incoming.clip.effect !== 'none' ? ` is-fx-${incoming.clip.effect}` : ''}`}>
+            <SyncedVideo
+              clip={incoming.clip}
+              localMs={incoming.localMs}
+              playing={playing}
+              masterVolume={masterVolume}
+              style={{
+                filter: cssFilterForClip(incoming.clip),
+                transform: cssTransformForClip(incoming.clip),
+                clipPath: cssClipPathForClip(incoming.clip),
+                opacity: incoming.clip.grade.transparency,
+              }}
+              onDuration={onDuration}
+              onStatus={(next) => setIncomingSeen({ id: incoming.clip.id, ready: next === 'ready' })}
+            />
+          </div>
         </div>
       ) : null}
       {status === 'loading' && src ? <div className="stage-status">Loading video…</div> : null}
@@ -221,6 +232,7 @@ function SyncedVideo({
   onStatus?: (status: 'loading' | 'ready' | 'error') => void
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const releaseTimer = useRef(0)
   const playingRef = useRef(playing)
   playingRef.current = playing
   const localRef = useRef(localMs)
@@ -229,28 +241,26 @@ function SyncedVideo({
   clipRef.current = clip
   const masterVolumeRef = useRef(masterVolume)
   masterVolumeRef.current = masterVolume
+  const onStatusRef = useRef(onStatus)
+  onStatusRef.current = onStatus
   const src = toVideoSrc(clip)
 
   useEffect(() => {
     const video = videoRef.current
     const current = clipRef.current
     if (!video || !src) return
-    if (video.dataset.src !== src) {
-      video.dataset.src = src
-      video.src = src
-      onStatus?.('loading')
-    }
     const start = Math.max(0, sourceTimeMs(current, localRef.current) / 1000)
     const apply = () => {
       video.playbackRate = playbackRateFor(current.speed)
       video.volume = current.muted ? 0 : Math.min(1, Math.max(0, current.volume * masterVolumeRef.current))
       video.muted = video.volume === 0
       if (Math.abs(video.currentTime - start) > 0.08) video.currentTime = start
-      if (playingRef.current) void video.play().catch(() => onStatus?.('error'))
+      if (playingRef.current) void video.play().catch(() => onStatusRef.current?.('error'))
     }
     if (video.readyState >= 1) apply()
     else video.addEventListener('loadedmetadata', apply, { once: true })
-  }, [clip.id, src, onStatus])
+    return () => video.removeEventListener('loadedmetadata', apply)
+  }, [clip.id, src])
 
   useEffect(() => {
     const video = videoRef.current
@@ -289,9 +299,9 @@ function SyncedVideo({
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
-    if (playing && src) void video.play().catch(() => onStatus?.('error'))
+    if (playing && src) void video.play().catch(() => onStatusRef.current?.('error'))
     else video.pause()
-  }, [playing, src, onStatus])
+  }, [playing, src])
 
   useEffect(() => {
     if (!playing) return
@@ -308,8 +318,11 @@ function SyncedVideo({
   }, [playing, clip.id])
 
   useEffect(() => {
+    window.clearTimeout(releaseTimer.current)
     const video = videoRef.current
-    return () => releaseMedia(video)
+    return () => {
+      releaseTimer.current = window.setTimeout(() => releaseMedia(video), 0)
+    }
   }, [])
 
   if (!src) return null
@@ -317,6 +330,7 @@ function SyncedVideo({
     <video
       ref={videoRef}
       className="nle-video"
+      src={src}
       style={style}
       playsInline
       preload="auto"

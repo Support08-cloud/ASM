@@ -85,8 +85,11 @@ export function DashboardPage() {
         />
       </div>
 
-      {state.phase === 'scanning' && state.scanProgress ? <ScanPanel progress={state.scanProgress} /> : null}
-      {state.phase === 'scanning' && !state.scanProgress ? <SkeletonGrid /> : null}
+      {state.phase === 'scanning' && total === 0 && state.scanProgress ? <ScanPanel progress={state.scanProgress} /> : null}
+      {state.phase === 'scanning' && total === 0 && !state.scanProgress ? <SkeletonGrid /> : null}
+      {state.phase === 'scanning' && total > 0 && state.scanProgress ? (
+        <p className="results-sub">Refreshing folders… {state.scanProgress.message}</p>
+      ) : null}
 
       {state.phase === 'scan_error' && state.scanError ? (
         <ErrorState
@@ -97,7 +100,7 @@ export function DashboardPage() {
         />
       ) : null}
 
-      {state.phase === 'idle' || (state.phase === 'ready' && total === 0) ? (
+      {(state.phase === 'idle' || state.phase === 'ready') && total === 0 ? (
         <EmptyState
           title="No diamond data loaded"
           body="Select an input folder to begin, or load the built-in sample dataset."
@@ -108,7 +111,7 @@ export function DashboardPage() {
         />
       ) : null}
 
-      {state.phase !== 'scanning' && state.phase !== 'scan_error' && total > 0 ? (
+      {state.phase !== 'scan_error' && total > 0 ? (
         <>
           <div className="results-head">
             <div>

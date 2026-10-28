@@ -5,6 +5,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
   type Dispatch,
   type ReactNode,
 } from 'react'
@@ -50,6 +51,7 @@ const AppStoreContext = createContext<AppStoreValue | null>(null)
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState)
+  const [pathsReady, setPathsReady] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const sourceHandleRef = useRef<FileSystemDirectoryHandle | null>(null)
   const stateRef = useRef(state)
@@ -69,7 +71,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       sourcePath: paths.sourcePath,
       outputPath: paths.outputPath,
       sourceKind: paths.sourceKind,
+      selectedIds: Array.isArray(paths.selectedIds) ? paths.selectedIds : undefined,
     })
+    setPathsReady(true)
   }, [])
 
   useEffect(() => {
@@ -81,12 +85,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [state.history])
 
   useEffect(() => {
+    if (!pathsReady) return
     savePaths({
       sourcePath: state.sourcePath ?? undefined,
       outputPath: state.outputPath ?? undefined,
       sourceKind: state.sourceKind,
+      selectedIds: state.selectedIds,
     })
-  }, [state.sourcePath, state.outputPath, state.sourceKind])
+  }, [pathsReady, state.sourcePath, state.outputPath, state.sourceKind, state.selectedIds])
 
   useEffect(() => {
     document.documentElement.dataset.theme = state.settings.theme
@@ -223,6 +229,21 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       })
     }
   }
+
+  const bootedRef = useRef(false)
+  useEffect(() => {
+    if (bootedRef.current) return
+    if (!state.sourcePath || state.diamonds.length > 0 || state.phase !== 'idle') return
+    if (state.sourceKind === 'demo') {
+      bootedRef.current = true
+      void runScan('demo')
+      return
+    }
+    if (state.sourceKind === 'directory' && window.desktop?.isElectron) {
+      bootedRef.current = true
+      void runScan('directory')
+    }
+  }, [state.sourcePath, state.sourceKind, state.diamonds.length, state.phase])
 
   const loadSample = async () => {
     dispatch({ type: 'set-source', path: DEMO_SOURCE_PATH, kind: 'demo' })

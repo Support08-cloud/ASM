@@ -55,7 +55,7 @@ interface Window {
     runFfmpeg?: (args: string[]) => Promise<void>
     resolveSample?: (rel: string) => Promise<string>
     fontFile?: () => Promise<string | null>
-    mediaInfo?: (filePath: string) => Promise<{ durationMs: number; hasAudio: boolean }>
+    mediaInfo?: (filePath: string) => Promise<{ durationMs: number; hasAudio: boolean; readablePath?: string }>
     toMediaUrl?: (filePath: string) => string
   }
 }

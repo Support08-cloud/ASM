@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_GRADE, DEFAULT_TRANSFORM, type EditorClip } from '../src/models/editor'
-import { atempoChain, transitionLayerStyle, videoFiltersForClip } from '../src/services/edit-graph'
+import { atempoChain, cssFilterForClip, transitionLayerStyle, videoFiltersForClip } from '../src/services/edit-graph'
 
 const clip = (patch: Partial<EditorClip> = {}): EditorClip => ({
   id: 'c1',
@@ -55,5 +55,15 @@ describe('edit graph', () => {
     expect(vf).toContain('setpts=PTS/2')
     expect(vf).toContain('fade=t=in')
     expect(vf).toContain('gamma_r=1.12')
+  })
+
+  it('leaves a default grade out of the preview filter', () => {
+    expect(cssFilterForClip(clip())).toBe('')
+  })
+
+  it('zooms one output frame per source frame', () => {
+    const vf = videoFiltersForClip(clip({ effect: 'slowzoom' }), 4).join(',')
+    expect(vf).toContain("zoompan=z='min(1+0.0008*on,1.18)':d=1:")
+    expect(vf).not.toContain(':d=120')
   })
 })

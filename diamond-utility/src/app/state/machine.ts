@@ -64,7 +64,7 @@ export const initialState: AppState = {
 }
 
 export type AppAction =
-  | { type: 'hydrate'; settings: AppSettings; history: HistoryRecord[]; sourcePath?: string; outputPath?: string; sourceKind?: AppState['sourceKind'] }
+  | { type: 'hydrate'; settings: AppSettings; history: HistoryRecord[]; sourcePath?: string; outputPath?: string; sourceKind?: AppState['sourceKind']; selectedIds?: string[] }
   | { type: 'navigate'; route: RouteId }
   | { type: 'toggle-sidebar' }
   | { type: 'set-theme'; theme: AppSettings['theme'] }
@@ -113,6 +113,7 @@ export function reducer(state: AppState, action: AppAction): AppState {
         sourcePath: action.sourcePath ?? state.sourcePath,
         outputPath: action.outputPath ?? state.outputPath,
         sourceKind: action.sourceKind && action.sourceKind !== 'none' ? action.sourceKind : state.sourceKind,
+        selectedIds: action.selectedIds ?? state.selectedIds,
       }
     case 'navigate':
       if ((state.phase === 'editing' || state.phase === 'exporting') && action.route !== 'operations') return state
@@ -157,16 +158,15 @@ export function reducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         phase: 'scanning',
-        route: 'dashboard',
         scanProgress: { foldersScanned: 0, filesSeen: 0, percent: 0, message: 'Preparing scan' },
         scanError: null,
-        selectedIds: [],
-        detailsId: null,
         processResult: null,
       }
     case 'scan-progress':
       return { ...state, scanProgress: action.progress }
-    case 'scan-success':
+    case 'scan-success': {
+      const live = new Set(action.diamonds.flatMap((diamond) => diamond.folders.map((folder) => folder.id)))
+      const detailsLive = action.diamonds.some((diamond) => diamond.id === state.detailsId)
       return {
         ...state,
         phase: 'ready',
@@ -175,7 +175,10 @@ export function reducer(state: AppState, action: AppAction): AppState {
         lastScanAt: action.scannedAt,
         scanProgress: null,
         scanError: null,
+        selectedIds: state.selectedIds.filter((id) => live.has(id)),
+        detailsId: detailsLive ? state.detailsId : null,
       }
+    }
     case 'scan-error':
       return {
         ...state,

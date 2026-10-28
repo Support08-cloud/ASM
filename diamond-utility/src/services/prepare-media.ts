@@ -101,6 +101,14 @@ export async function prepareClip(clip: EditorClip, outputDir: string): Promise<
       if (info?.durationMs) {
         next = applyDuration({ ...next, durationProbed: false, hasAudio: info.hasAudio }, info.durationMs)
         next.hasAudio = info.hasAudio
+        const readable = info.readablePath
+        const staged = readable && readable !== input && isRealDiskPath(readable) ? readable : undefined
+        return {
+          ...next,
+          ...(staged ? { proxyPath: staged } : {}),
+          ready: true,
+          error: undefined,
+        }
       }
     } else {
       const src = clip.mediaUrl
