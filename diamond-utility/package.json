@@ -17,7 +17,7 @@
     "preview": "vite preview --host 0.0.0.0 --port 4173",
     "test": "vitest run",
     "electron:dev": "concurrently -k \"vite\" \"wait-on http://127.0.0.1:5173 && electron .\"",
-    "build:win": "npm run build && electron-builder --win portable --x64 --publish never"
+    "build:win": "npm run build && electron-builder --win dir --x64 --publish never"
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.14.10",
@@ -63,19 +63,22 @@
     "extraMetadata": {
       "main": "electron/main.cjs"
     },
+    "extraFiles": [
+      {
+        "from": "packaging/START-HERE.txt",
+        "to": "START-HERE.txt"
+      }
+    ],
     "win": {
       "target": [
         {
-          "target": "portable",
+          "target": "dir",
           "arch": [
             "x64"
           ]
         }
       ],
-      "artifactName": "DiamondUtility.exe"
-    },
-    "portable": {
-      "artifactName": "DiamondUtility.exe"
+      "signAndEditExecutable": false
     }
   }
 }

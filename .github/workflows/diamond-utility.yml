@@ -60,5 +60,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: DiamondUtility-win-x64
-          path: diamond-utility/release/*.exe
+          path: diamond-utility/release/win-unpacked
           if-no-files-found: error

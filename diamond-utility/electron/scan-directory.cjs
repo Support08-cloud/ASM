@@ -4,8 +4,8 @@ const path = require('path')
 const MEDIA = /\.(mp4|m4v|mov|json|jpe?g|png|webp|tiff?|bmp)$/i
 const EXTRA_FOLDER_DEPTH = 1
 
-function scanDirectory(root) {
-  const entries = fs.readdirSync(root, { withFileTypes: true })
+async function scanDirectory(root) {
+  const entries = await fs.promises.readdir(root, { withFileTypes: true })
   const folders = []
   let foldersScanned = 0
   let filesSeen = 0
@@ -17,7 +17,7 @@ function scanDirectory(root) {
     try {
       const files = []
       const seen = { filesSeen }
-      collectMediaFiles(folderPath, entry.name, [], 0, files, seen)
+      await collectMediaFiles(folderPath, entry.name, [], 0, files, seen)
       filesSeen = seen.filesSeen
       folders.push({
         folderName: entry.name,
@@ -38,15 +38,16 @@ function scanDirectory(root) {
   return { folders, foldersScanned, filesSeen }
 }
 
-function collectMediaFiles(folderPath, folderName, relativeParts, depth, files, seen) {
-  for (const child of fs.readdirSync(folderPath, { withFileTypes: true })) {
+async function collectMediaFiles(folderPath, folderName, relativeParts, depth, files, seen) {
+  const children = await fs.promises.readdir(folderPath, { withFileTypes: true })
+  for (const child of children) {
     if (child.isFile()) {
       seen.filesSeen += 1
       if (!MEDIA.test(child.name)) continue
       const absolutePath = path.join(folderPath, child.name)
       let size = 0
       try {
-        size = fs.statSync(absolutePath).size
+        size = (await fs.promises.stat(absolutePath)).size
       } catch {
         size = 0
       }
@@ -60,7 +61,7 @@ function collectMediaFiles(folderPath, folderName, relativeParts, depth, files, 
     }
     if (child.isDirectory() && depth < EXTRA_FOLDER_DEPTH) {
       try {
-        collectMediaFiles(path.join(folderPath, child.name), folderName, [...relativeParts, child.name], depth + 1, files, seen)
+        await collectMediaFiles(path.join(folderPath, child.name), folderName, [...relativeParts, child.name], depth + 1, files, seen)
       } catch {
         // An unreadable nested folder does not hide the media beside it.
       }

@@ -7,9 +7,9 @@ import { groupDiamonds } from '../src/services/diamond-parser'
 
 const require = createRequire(import.meta.url)
 const { scanDirectory } = require('../electron/scan-directory.cjs') as {
-  scanDirectory: (root: string) => {
+  scanDirectory: (root: string) => Promise<{
     folders: Array<{ folderName: string; files: Array<{ name: string; relativePath: string; absolutePath: string }> }>
-  }
+  }>
 }
 
 describe('desktop scanDirectory', () => {
@@ -27,7 +27,7 @@ describe('desktop scanDirectory', () => {
       await mkdir(path.join(root, '260602-362'), { recursive: true })
       await writeFile(path.join(root, '260602-362', '260602-362.mp4'), 'mp4')
 
-      const scanned = scanDirectory(root)
+      const scanned = await scanDirectory(root)
       const yashFolder = scanned.folders.find((folder) => folder.folderName === 'yash-01')
       expect(yashFolder?.files.map((file) => file.relativePath).sort()).toEqual([
         'yash-01/Mp4/3D.mp4',

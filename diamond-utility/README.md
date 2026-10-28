@@ -30,16 +30,17 @@ Output_Testing
 
 The base folder (`260602-362`) is listed with its variants so you can choose it, but it is not copied unless you select it and it contains an MP4. Source files are never modified.
 
-## Get the Windows EXE
+## Get the Windows app
 
-GitHub Actions on this branch builds `DiamondUtility.exe`.
+GitHub Actions on this branch builds a folder you extract once. It does not unpack itself into a temporary directory on every launch.
 
 1. Open the **windows-exe** workflow on https://github.com/Support08-cloud/ASM/actions
 2. Open the latest successful run on `cursor/diamond-utility-exe-9839`
 3. Download the artifact **DiamondUtility-win-x64**
-4. Unzip it and double-click `DiamondUtility.exe`
+4. Extract the whole zip to a folder on this PC
+5. Open the folder that contains `START-HERE.txt` and double-click `DiamondUtility.exe`
 
-If Windows SmartScreen appears, choose **More info → Run anyway**. This is an internal unsigned utility.
+Leave every file in that folder together. If Windows SmartScreen appears, choose **More info → Run anyway**. This is an internal unsigned utility.
 
 To rebuild on a Windows PC with Node.js:
 

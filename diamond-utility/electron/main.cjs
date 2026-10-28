@@ -1,10 +1,27 @@
-const { app, BrowserWindow, dialog, ipcMain, shell, protocol, net } = require('electron')
+const { app, BrowserWindow, dialog, ipcMain, shell, protocol, net, screen } = require('electron')
 const { spawn } = require('child_process')
 const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
 const { pathToFileURL } = require('url')
 const { scanDirectory } = require('./scan-directory.cjs')
+const { boundsOnScreen } = require('./window-bounds.cjs')
+
+const SCAN_TIMEOUT_MS = 180000
+
+function gpuFlagFile() {
+  try {
+    return path.join(app.getPath('userData'), 'gpu-safe-mode')
+  } catch {
+    return null
+  }
+}
+
+const gpuFlag = gpuFlagFile()
+if (gpuFlag && fs.existsSync(gpuFlag)) app.disableHardwareAcceleration()
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) app.quit()
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -32,15 +49,22 @@ function loadWindowState() {
   }
 }
 
+function appIndex() {
+  return path.join(__dirname, '..', 'dist', 'index.html')
+}
+
 function createWindow() {
   const saved = loadWindowState()
+  const displays = screen.getAllDisplays().map((display) => ({ workArea: display.workArea }))
+  const bounds = boundsOnScreen(saved, displays)
   const win = new BrowserWindow({
-    width: saved.width ?? 1440,
-    height: saved.height ?? 900,
-    x: saved.x,
-    y: saved.y,
+    width: bounds.width,
+    height: bounds.height,
+    x: bounds.center ? undefined : bounds.x,
+    y: bounds.center ? undefined : bounds.y,
     minWidth: 1100,
     minHeight: 720,
+    show: true,
     title: 'Diamond Utility',
     backgroundColor: '#0c0e12',
     autoHideMenuBar: true,
@@ -53,8 +77,8 @@ function createWindow() {
   })
 
   win.setMenuBarVisibility(false)
-
-  if (saved.isMaximized) win.maximize()
+  if (bounds.center) win.center()
+  if (bounds.maximized) win.maximize()
 
   const persist = () => {
     if (win.isDestroyed()) return
@@ -62,17 +86,71 @@ function createWindow() {
       ...win.getBounds(),
       isMaximized: win.isMaximized(),
     }
-    fs.mkdirSync(app.getPath('userData'), { recursive: true })
-    fs.writeFileSync(stateFile(), JSON.stringify(payload))
+    try {
+      fs.mkdirSync(app.getPath('userData'), { recursive: true })
+      fs.writeFileSync(stateFile(), JSON.stringify(payload))
+    } catch {
+      // A locked settings folder should not stop the window from closing.
+    }
   }
 
   win.on('close', persist)
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  win.webContents.on('did-fail-load', (_event, code, description, url, isMainFrame) => {
+    if (!isMainFrame || code === -3) return
+    dialog.showErrorBox(
+      'Diamond Utility could not open',
+      `${description || 'The window did not load.'}\n\nExtract the whole download, then open DiamondUtility.exe from that folder.`,
+    )
+  })
+  let reloaded = false
+  win.webContents.on('render-process-gone', () => {
+    if (reloaded || win.isDestroyed()) return
+    reloaded = true
+    loadApp(win)
+  })
 
-  if (app.isPackaged) {
-    win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
-  } else {
-    win.loadURL(process.env.VITE_DEV_SERVER_URL || 'http://127.0.0.1:5173')
+  loadApp(win)
+  return win
+}
+
+function loadApp(win) {
+  const index = appIndex()
+  if (app.isPackaged || fs.existsSync(index)) {
+    win.loadFile(index).catch((error) => {
+      dialog.showErrorBox(
+        'Diamond Utility could not open',
+        error instanceof Error ? error.message : 'Extract the whole download, then open DiamondUtility.exe from that folder.',
+      )
+    })
+    return
   }
+  win.loadURL(process.env.VITE_DEV_SERVER_URL || 'http://127.0.0.1:5173')
+}
+
+function scanWithTimeout(root) {
+  let settled = false
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      if (settled) return
+      settled = true
+      reject(new Error('This folder did not respond. Connect the drive, then press Refresh.'))
+    }, SCAN_TIMEOUT_MS)
+    Promise.resolve()
+      .then(() => scanDirectory(root))
+      .then((result) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        resolve(result)
+      })
+      .catch((error) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        reject(error instanceof Error ? error : new Error('Unable to read this folder.'))
+      })
+  })
 }
 
 function samplesDir() {
@@ -130,7 +208,29 @@ async function mediaInfo(filePath) {
   return { ...direct, readablePath: filePath }
 }
 
-app.whenReady().then(() => {
+if (gotSingleInstanceLock) app.whenReady().then(() => {
+  app.on('second-instance', () => {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (!win) return
+    if (win.isMinimized()) win.restore()
+    win.show()
+    win.focus()
+  })
+
+  app.on('child-process-gone', (_event, details) => {
+    if (!details || details.type !== 'GPU' || details.reason === 'clean-exit') return
+    const flag = gpuFlagFile()
+    if (!flag || fs.existsSync(flag)) return
+    try {
+      fs.mkdirSync(path.dirname(flag), { recursive: true })
+      fs.writeFileSync(flag, '1')
+    } catch {
+      return
+    }
+    app.relaunch()
+    app.exit(0)
+  })
+
   protocol.handle('du-media', (request) => {
     try {
       const parsed = new URL(request.url)
@@ -187,7 +287,8 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('desktop:scan-directory', async (_event, root) => {
-    return scanDirectory(root)
+    if (typeof root !== 'string' || !root.trim()) throw new Error('Choose a source folder again, then retry the scan.')
+    return scanWithTimeout(root)
   })
 
   ipcMain.handle('desktop:copy-file', async (_event, sourcePath, destinationPath) => {
@@ -227,6 +328,11 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+process.on('uncaughtException', (error) => {
+  const message = error instanceof Error ? error.message : 'The program hit a problem.'
+  if (app.isReady()) dialog.showErrorBox('Diamond Utility', message)
 })
 
 app.on('window-all-closed', () => {
