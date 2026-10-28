@@ -5,6 +5,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
   type Dispatch,
   type ReactNode,
 } from 'react'
@@ -16,8 +17,14 @@ import { countSelectedFolders, countSelectedMp4s, extractMp4s } from '../../serv
 import { loadHistory, loadPaths, loadSettings, saveHistory, savePaths, saveSettings } from '../../services/settings'
 import { uid } from '../../utils/format'
 import { initialState, reducer, type AppAction, type AppState } from './machine'
-import type { Diamond } from '../../models/diamond'
+import { withSelectedFolders, type Diamond } from '../../models/diamond'
+import type { EditorProject } from '../../models/editor'
 import type { ConfirmSummary, HistoryRecord, ProcessResult } from '../../models/processing'
+import { buildExportPlan, concatListContents, durationMatches } from '../../services/ffmpeg-export'
+import { ffmpegInputPath } from '../../services/media-url'
+import { isRealDiskPath } from '../../services/sample-media'
+import { exportFileName, mediaFilesForEdit } from '../../services/timeline'
+import { MAX_TIMELINE_CLIPS } from '../../models/editor'
 
 interface AppStoreValue {
   state: AppState
@@ -29,16 +36,22 @@ interface AppStoreValue {
   loadSample: () => Promise<void>
   chooseSource: () => Promise<void>
   chooseOutput: () => Promise<void>
+  clearSource: () => void
+  clearOutput: () => void
   rescan: () => Promise<void>
   startGetMp4: () => void
+  startEditMerge: () => void
   confirmGetMp4: () => Promise<void>
+  exportTimeline: (project: EditorProject) => Promise<void>
   cancelProcessing: () => void
+  openOutput: (target: string) => Promise<void>
 }
 
 const AppStoreContext = createContext<AppStoreValue | null>(null)
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState)
+  const [pathsReady, setPathsReady] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const sourceHandleRef = useRef<FileSystemDirectoryHandle | null>(null)
   const stateRef = useRef(state)
@@ -57,7 +70,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       history,
       sourcePath: paths.sourcePath,
       outputPath: paths.outputPath,
+      sourceKind: paths.sourceKind,
+      selectedIds: Array.isArray(paths.selectedIds) ? paths.selectedIds : undefined,
     })
+    setPathsReady(true)
   }, [])
 
   useEffect(() => {
@@ -69,11 +85,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [state.history])
 
   useEffect(() => {
+    if (!pathsReady) return
     savePaths({
       sourcePath: state.sourcePath ?? undefined,
       outputPath: state.outputPath ?? undefined,
+      sourceKind: state.sourceKind,
+      selectedIds: state.selectedIds,
     })
-  }, [state.sourcePath, state.outputPath])
+  }, [pathsReady, state.sourcePath, state.outputPath, state.sourceKind, state.selectedIds])
 
   useEffect(() => {
     document.documentElement.dataset.theme = state.settings.theme
@@ -85,7 +104,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   )
 
   const selectedDiamonds = useMemo(
-    () => state.diamonds.filter((diamond) => state.selectedIds.includes(diamond.id)),
+    () => withSelectedFolders(state.diamonds, state.selectedIds),
     [state.diamonds, state.selectedIds],
   )
 
@@ -142,6 +161,40 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         toast('success', `${folders.length} folders scanned`)
         return
       }
+      if (window.desktop?.isElectron) {
+        const root = stateRef.current.sourcePath
+        if (!root) {
+          dispatch({
+            type: 'scan-error',
+            title: 'Unable to read this folder.',
+            detail: 'Choose a source folder again, then retry the scan.',
+          })
+          return
+        }
+        dispatch({
+          type: 'scan-progress',
+          progress: { foldersScanned: 0, filesSeen: 0, percent: 8, message: 'Reading folders and media files' },
+        })
+        const scanned = await window.desktop.scanDirectory(root)
+        if (controller.signal.aborted) return
+        dispatch({
+          type: 'scan-progress',
+          progress: {
+            foldersScanned: scanned.foldersScanned,
+            filesSeen: scanned.filesSeen,
+            percent: 100,
+            message: 'Scan complete',
+          },
+        })
+        dispatch({
+          type: 'scan-success',
+          diamonds: groupDiamonds(scanned.folders),
+          foldersScanned: scanned.foldersScanned,
+          scannedAt: new Date().toISOString(),
+        })
+        toast('success', `${scanned.foldersScanned} folders scanned`)
+        return
+      }
       const handle = sourceHandleRef.current
       if (!handle) {
         dispatch({
@@ -177,6 +230,21 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const bootedRef = useRef(false)
+  useEffect(() => {
+    if (bootedRef.current) return
+    if (!state.sourcePath || state.diamonds.length > 0 || state.phase !== 'idle') return
+    if (state.sourceKind === 'demo') {
+      bootedRef.current = true
+      void runScan('demo')
+      return
+    }
+    if (state.sourceKind === 'directory' && window.desktop?.isElectron) {
+      bootedRef.current = true
+      void runScan('directory')
+    }
+  }, [state.sourcePath, state.sourceKind, state.diamonds.length, state.phase])
+
   const loadSample = async () => {
     dispatch({ type: 'set-source', path: DEMO_SOURCE_PATH, kind: 'demo' })
     dispatch({ type: 'set-output', path: DEMO_OUTPUT_PATH })
@@ -185,6 +253,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }
 
   const chooseSource = async () => {
+    if (window.desktop?.isElectron) {
+      try {
+        const picked = await window.desktop.pickDirectory()
+        if (!picked) return
+        sourceHandleRef.current = null
+        dispatch({ type: 'set-source', path: picked, kind: 'directory' })
+        await runScan('directory')
+      } catch {
+        toast('error', 'Could not open the selected folder')
+      }
+      return
+    }
     if (typeof window.showDirectoryPicker !== 'function') {
       await loadSample()
       toast('info', 'Folder picker is unavailable — loaded sample data')
@@ -202,6 +282,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }
 
   const chooseOutput = async () => {
+    if (window.desktop?.isElectron) {
+      try {
+        const picked = await window.desktop.pickDirectory()
+        if (!picked) return
+        dispatch({ type: 'set-output', path: picked })
+        toast('success', 'Output folder selected')
+      } catch {
+        toast('error', 'Could not open the output folder')
+      }
+      return
+    }
     if (typeof window.showDirectoryPicker !== 'function') {
       dispatch({ type: 'set-output', path: DEMO_OUTPUT_PATH })
       toast('info', 'Using sample output location')
@@ -217,12 +308,66 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const clearSource = () => {
+    sourceHandleRef.current = null
+    dispatch({ type: 'clear-source' })
+    toast('info', 'Source path cleared')
+  }
+
+  const clearOutput = () => {
+    dispatch({ type: 'clear-output' })
+    toast('info', 'Output path cleared')
+  }
+
   const rescan = async () => {
-    if (stateRef.current.sourceKind === 'none' || !stateRef.current.sourcePath) {
+    const current = stateRef.current
+    if (!current.sourcePath) {
       await chooseSource()
       return
     }
-    await runScan(stateRef.current.sourceKind === 'demo' ? 'demo' : 'directory')
+    const kind = current.sourceKind === 'demo' || current.sourcePath.includes('Sample Dataset') ? 'demo' : 'directory'
+    await runScan(kind)
+  }
+
+  const startEditMerge = () => {
+    const current = stateRef.current
+    if (!current.outputPath) {
+      toast('warning', 'Select an output folder first. The merged video is saved there.')
+      return
+    }
+    if (current.selectedIds.length === 0) {
+      toast('info', 'Select the folders you want to edit and merge.')
+      return
+    }
+    if (current.phase === 'scanning' || current.phase === 'processing' || current.phase === 'exporting') {
+      toast('info', 'Wait for the current job to finish, then edit and merge.')
+      return
+    }
+    const selected = withSelectedFolders(current.diamonds, current.selectedIds)
+    const found = mediaFilesForEdit(selected, current.sourceKind === 'demo')
+    if (found.length === 0) {
+      toast('warning', 'Those folders do not contain an MP4.')
+      return
+    }
+    const names = [...new Set(selected.map((diamond) => diamond.baseName))]
+    const diamondName = names.length === 1 ? names[0] : 'merged'
+    const files = found.slice(0, MAX_TIMELINE_CLIPS).map((file) => ({ ...file, diamondName }))
+    if (found.length > MAX_TIMELINE_CLIPS) toast('warning', `Only the first ${MAX_TIMELINE_CLIPS} videos are opened.`)
+    const outputDir = joinPath(current.outputPath, diamondName)
+    dispatch({
+      type: 'open-merge',
+      diamondName,
+      outputDir,
+      result: {
+        outcome: 'success',
+        copied: files.length,
+        skipped: 0,
+        failed: 0,
+        total: files.length,
+        outputPath: outputDir,
+        files,
+      },
+    })
   }
 
   const startGetMp4 = () => {
@@ -231,7 +376,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       return
     }
     if (stateRef.current.selectedIds.length === 0) {
-      toast('info', 'Select one or more diamonds to enable processing.')
+      toast('info', 'Select one or more variant folders to enable processing.')
+      return
+    }
+    if (stateRef.current.phase === 'confirming') return
+    if (stateRef.current.phase !== 'ready' && stateRef.current.phase !== 'completed') {
+      toast('info', 'Wait until the folder list is ready, then try Get MP4 again.')
       return
     }
     dispatch({ type: 'open-confirm' })
@@ -239,7 +389,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const confirmGetMp4 = async () => {
     const current = stateRef.current
-    const selected = current.diamonds.filter((diamond) => current.selectedIds.includes(diamond.id))
+    const selected = withSelectedFolders(current.diamonds, current.selectedIds)
     if (selected.length === 0 || !current.outputPath) return
 
     abortRef.current?.abort()
@@ -264,6 +414,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         duplicatePolicy: current.settings.duplicatePolicy,
         signal: controller.signal,
         onProgress: (progress) => dispatch({ type: 'process-progress', progress }),
+        copyFile: window.desktop?.isElectron
+          ? (sourcePath, destinationPath) => window.desktop!.copyFile(sourcePath, destinationPath)
+          : undefined,
+        fileExists: window.desktop?.fileExists
+          ? (path) => window.desktop!.fileExists!(path)
+          : undefined,
       })
       const record = toHistory(result, selected, current.sourcePath ?? 'Unknown', new Date().toISOString())
       dispatch({ type: 'process-complete', result, record })
@@ -294,8 +450,85 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const openOutput = async (target: string) => {
+    if (window.desktop?.isElectron) {
+      try {
+        await window.desktop.openPath(target)
+      } catch {
+        toast('error', 'Could not open the output folder')
+      }
+      return
+    }
+    toast('info', 'Open the output folder from Explorer')
+  }
+
   const cancelProcessing = () => {
     abortRef.current?.abort()
+  }
+
+  const exportTimeline = async (project: EditorProject) => {
+    dispatch({ type: 'export-start' })
+    try {
+      const prepared = await prepareProjectForExport(project)
+      const fontFile = (await window.desktop?.fontFile?.()) ?? undefined
+      const plan = buildExportPlan(prepared, { fontFile })
+      if (window.desktop?.writeTextFile) {
+        const concatStep = plan.steps.find((step) => step.args.includes('concat'))
+        if (concatStep) {
+          const inputAt = concatStep.args.indexOf('-i')
+          const listPath = concatStep.args[inputAt + 1]
+          if (listPath) await window.desktop.writeTextFile(listPath, concatListContents(prepared.clips, prepared.outputDir))
+        }
+      }
+      for (let i = 0; i < plan.steps.length; i += 1) {
+        const step = plan.steps[i]
+        dispatch({
+          type: 'export-progress',
+          percent: Math.round((i / Math.max(plan.steps.length, 1)) * 100),
+          message: step.label,
+        })
+        if (window.desktop?.runFfmpeg) {
+          const args = await Promise.all(step.args.map((arg) => resolveExportArg(arg)))
+          await window.desktop.runFfmpeg(args)
+        } else {
+          await wait(260)
+        }
+      }
+      if (window.desktop?.runFfmpeg) {
+        const info = await window.desktop.mediaInfo?.(plan.outputPath).catch(() => null)
+        if (!info?.durationMs) throw new Error('Export finished but the output file was not readable.')
+        if (!durationMatches(info.durationMs, plan.durationMs)) {
+          throw new Error(`Exported duration ${info.durationMs}ms does not match the timeline ${plan.durationMs}ms.`)
+        }
+      }
+      dispatch({
+        type: 'export-progress',
+        percent: 100,
+        message: 'Finishing',
+      })
+      const result: ProcessResult = {
+        outcome: 'success',
+        copied: 1,
+        skipped: 0,
+        failed: 0,
+        total: 1,
+        outputPath: plan.outputPath,
+        files: [
+          {
+            diamondName: project.diamondName,
+            viewLabel: exportFileName(project.diamondName),
+            sourcePath: 'timeline',
+            outputPath: plan.outputPath,
+            status: 'copied',
+          },
+        ],
+      }
+      dispatch({ type: 'export-complete', result })
+      toast('success', window.desktop?.runFfmpeg ? 'Edited video exported' : `Export planned: ${exportFileName(project.diamondName)}`)
+    } catch (error) {
+      dispatch({ type: 'export-failed' })
+      toast('error', error instanceof Error ? error.message.slice(0, 180) : 'Could not export the edited video')
+    }
   }
 
   const value: AppStoreValue = {
@@ -308,10 +541,15 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     loadSample,
     chooseSource,
     chooseOutput,
+    clearSource,
+    clearOutput,
     rescan,
     startGetMp4,
+    startEditMerge,
     confirmGetMp4,
+    exportTimeline,
     cancelProcessing,
+    openOutput,
   }
 
   return <AppStoreContext.Provider value={value}>{children}</AppStoreContext.Provider>
@@ -323,8 +561,57 @@ export function useAppStore(): AppStoreValue {
   return value
 }
 
+function joinPath(...parts: string[]): string {
+  const root = parts[0] ?? ''
+  const sep = root.includes('\\') ? '\\' : '/'
+  return parts
+    .map((part, index) => (index === 0 ? part.replace(/[\\/]+$/, '') : part.replace(/^[\\/]+/, '')))
+    .join(sep)
+}
+
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms))
+}
+
+async function resolveExportArg(arg: string): Promise<string> {
+  if (!window.desktop?.resolveSample) return arg
+  if (arg.startsWith('./samples/') || /(?:^|[\\/])samples[\\/]/.test(arg)) {
+    return window.desktop.resolveSample(arg)
+  }
+  return arg
+}
+
+async function prepareProjectForExport(project: EditorProject): Promise<EditorProject> {
+  if (!window.desktop?.mediaInfo && !window.desktop?.resolveSample) return project
+  const clips = []
+  for (const clip of project.clips) {
+    const input = await resolveExportArg(ffmpegInputPath(clip))
+    let hasAudio = clip.hasAudio
+    try {
+      const info = await window.desktop.mediaInfo?.(input)
+      if (info) hasAudio = info.hasAudio
+    } catch {
+      hasAudio = false
+    }
+    clips.push({
+      ...clip,
+      hasAudio,
+      absolutePath: isRealDiskPath(clip.absolutePath) ? clip.absolutePath : input,
+    })
+  }
+  const extraClips = []
+  for (const extra of project.extraClips) {
+    if (extra.kind !== 'audio') {
+      extraClips.push(extra)
+      continue
+    }
+    const input = extra.absolutePath || extra.mediaUrl
+    extraClips.push({
+      ...extra,
+      absolutePath: input ? await resolveExportArg(input) : extra.absolutePath,
+    })
+  }
+  return { ...project, clips, extraClips }
 }
 
 function toHistory(

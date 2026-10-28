@@ -1,0 +1,11 @@
+Diamond Utility
+
+1. Extract this whole zip to a folder on this PC.
+   Do not run the program from inside the zip.
+2. Open the folder that contains this file and double-click DiamondUtility.exe.
+3. Leave every file in this folder together.
+   Moving only the exe stops the program from opening.
+4. If Windows SmartScreen appears, choose More info, then Run anyway.
+
+The window opens directly. It does not unpack itself again.
+Your source folder, output folder, and selected videos are remembered.

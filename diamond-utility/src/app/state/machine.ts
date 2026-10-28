@@ -28,6 +28,10 @@ export interface AppState {
   detailsId: string | null
   processProgress: ProcessProgress | null
   processResult: ProcessResult | null
+  lastProcessResult: ProcessResult | null
+  exportProgress: { percent: number; message: string } | null
+  editorDiamond: string | null
+  editorOutputDir: string | null
   history: HistoryRecord[]
   toasts: ToastItem[]
   settings: AppSettings
@@ -50,19 +54,25 @@ export const initialState: AppState = {
   detailsId: null,
   processProgress: null,
   processResult: null,
+  lastProcessResult: null,
+  exportProgress: null,
+  editorDiamond: null,
+  editorOutputDir: null,
   history: [],
   toasts: [],
   settings: DEFAULT_SETTINGS,
 }
 
 export type AppAction =
-  | { type: 'hydrate'; settings: AppSettings; history: HistoryRecord[]; sourcePath?: string; outputPath?: string }
+  | { type: 'hydrate'; settings: AppSettings; history: HistoryRecord[]; sourcePath?: string; outputPath?: string; sourceKind?: AppState['sourceKind']; selectedIds?: string[] }
   | { type: 'navigate'; route: RouteId }
   | { type: 'toggle-sidebar' }
   | { type: 'set-theme'; theme: AppSettings['theme'] }
   | { type: 'set-duplicate-policy'; policy: AppSettings['duplicatePolicy'] }
   | { type: 'set-source'; path: string; kind: 'demo' | 'directory' }
   | { type: 'set-output'; path: string }
+  | { type: 'clear-source' }
+  | { type: 'clear-output' }
   | { type: 'scan-start' }
   | { type: 'scan-progress'; progress: ScanProgress }
   | { type: 'scan-success'; diamonds: Diamond[]; foldersScanned: number; scannedAt: string }
@@ -70,6 +80,7 @@ export type AppAction =
   | { type: 'set-search'; search: string }
   | { type: 'set-filters'; filters: Filters }
   | { type: 'toggle-select'; id: string }
+  | { type: 'toggle-group'; ids: string[] }
   | { type: 'select-visible'; ids: string[] }
   | { type: 'clear-selection' }
   | { type: 'set-view-mode'; viewMode: ViewMode }
@@ -80,6 +91,13 @@ export type AppAction =
   | { type: 'process-start'; progress: ProcessProgress }
   | { type: 'process-progress'; progress: ProcessProgress }
   | { type: 'process-complete'; result: ProcessResult; record: HistoryRecord }
+  | { type: 'open-editor'; diamondName?: string }
+  | { type: 'open-merge'; diamondName: string; outputDir: string; result: ProcessResult }
+  | { type: 'close-editor' }
+  | { type: 'export-failed' }
+  | { type: 'export-start' }
+  | { type: 'export-progress'; percent: number; message: string }
+  | { type: 'export-complete'; result: ProcessResult }
   | { type: 'dismiss-completion' }
   | { type: 'add-toast'; toast: ToastItem }
   | { type: 'dismiss-toast'; id: string }
@@ -94,8 +112,11 @@ export function reducer(state: AppState, action: AppAction): AppState {
         history: action.history,
         sourcePath: action.sourcePath ?? state.sourcePath,
         outputPath: action.outputPath ?? state.outputPath,
+        sourceKind: action.sourceKind && action.sourceKind !== 'none' ? action.sourceKind : state.sourceKind,
+        selectedIds: action.selectedIds ?? state.selectedIds,
       }
     case 'navigate':
+      if ((state.phase === 'editing' || state.phase === 'exporting') && action.route !== 'operations') return state
       return { ...state, route: action.route }
     case 'toggle-sidebar':
       return {
@@ -116,20 +137,36 @@ export function reducer(state: AppState, action: AppAction): AppState {
       }
     case 'set-output':
       return { ...state, outputPath: action.path }
+    case 'clear-source':
+      return {
+        ...state,
+        sourcePath: null,
+        sourceKind: 'none',
+        diamonds: [],
+        foldersScanned: 0,
+        lastScanAt: null,
+        selectedIds: [],
+        detailsId: null,
+        scanError: null,
+        scanProgress: null,
+        search: '',
+        phase: 'idle',
+      }
+    case 'clear-output':
+      return { ...state, outputPath: null }
     case 'scan-start':
       return {
         ...state,
         phase: 'scanning',
-        route: 'dashboard',
         scanProgress: { foldersScanned: 0, filesSeen: 0, percent: 0, message: 'Preparing scan' },
         scanError: null,
-        selectedIds: [],
-        detailsId: null,
         processResult: null,
       }
     case 'scan-progress':
       return { ...state, scanProgress: action.progress }
-    case 'scan-success':
+    case 'scan-success': {
+      const live = new Set(action.diamonds.flatMap((diamond) => diamond.folders.map((folder) => folder.id)))
+      const detailsLive = action.diamonds.some((diamond) => diamond.id === state.detailsId)
       return {
         ...state,
         phase: 'ready',
@@ -138,7 +175,10 @@ export function reducer(state: AppState, action: AppAction): AppState {
         lastScanAt: action.scannedAt,
         scanProgress: null,
         scanError: null,
+        selectedIds: state.selectedIds.filter((id) => live.has(id)),
+        detailsId: detailsLive ? state.detailsId : null,
       }
+    }
     case 'scan-error':
       return {
         ...state,
@@ -156,6 +196,15 @@ export function reducer(state: AppState, action: AppAction): AppState {
         : [...state.selectedIds, action.id]
       return { ...state, selectedIds: selected }
     }
+    case 'toggle-group': {
+      const allOn = action.ids.length > 0 && action.ids.every((id) => state.selectedIds.includes(id))
+      return {
+        ...state,
+        selectedIds: allOn
+          ? state.selectedIds.filter((id) => !action.ids.includes(id))
+          : unique([...state.selectedIds, ...action.ids]),
+      }
+    }
     case 'select-visible':
       return { ...state, selectedIds: unique(action.ids) }
     case 'clear-selection':
@@ -167,10 +216,12 @@ export function reducer(state: AppState, action: AppAction): AppState {
     case 'close-details':
       return { ...state, detailsId: null }
     case 'open-confirm':
-      if (state.selectedIds.length === 0 || !state.outputPath || state.phase !== 'ready') return state
+      if (state.selectedIds.length === 0 || !state.outputPath) return state
+      if (state.phase !== 'ready' && state.phase !== 'completed') return state
       return { ...state, phase: 'confirming' }
     case 'cancel-confirm':
-      return { ...state, phase: state.phase === 'confirming' ? 'ready' : state.phase }
+      if (state.phase !== 'confirming') return state
+      return { ...state, phase: state.processResult ? 'completed' : 'ready' }
     case 'process-start':
       return {
         ...state,
@@ -187,9 +238,56 @@ export function reducer(state: AppState, action: AppAction): AppState {
         phase: 'completed',
         processProgress: null,
         processResult: action.result,
+        lastProcessResult: action.result,
         history: [action.record, ...state.history].slice(0, 80),
         selectedIds: [],
       }
+    case 'open-editor': {
+      const result = state.lastProcessResult ?? state.processResult
+      const copied = (result?.files ?? []).filter((file) => file.status === 'copied' && !file.outputPath.endsWith('-edit.mp4'))
+      if (copied.length === 0) return state
+      const names = [...new Set(copied.map((file) => file.diamondName).filter(Boolean))]
+      const diamondName = action.diamondName ?? (names.length === 1 ? names[0] : null)
+      if (!diamondName) return { ...state, phase: 'completed', route: 'operations' }
+      return { ...state, phase: 'editing', route: 'operations', editorDiamond: diamondName, editorOutputDir: null }
+    }
+    case 'open-merge':
+      return {
+        ...state,
+        phase: 'editing',
+        route: 'operations',
+        editorDiamond: action.diamondName,
+        editorOutputDir: action.outputDir,
+        lastProcessResult: action.result,
+        processResult: null,
+        exportProgress: null,
+      }
+    case 'close-editor':
+      return {
+        ...state,
+        phase: state.processResult ? 'completed' : 'ready',
+        exportProgress: null,
+        editorDiamond: null,
+        editorOutputDir: null,
+      }
+    case 'export-start':
+      return {
+        ...state,
+        phase: 'exporting',
+        route: 'operations',
+        exportProgress: { percent: 0, message: 'Preparing export' },
+      }
+    case 'export-progress':
+      return { ...state, exportProgress: { percent: action.percent, message: action.message } }
+    case 'export-complete':
+      return {
+        ...state,
+        phase: state.editorDiamond || state.lastProcessResult ? 'editing' : 'completed',
+        exportProgress: null,
+        lastProcessResult: state.lastProcessResult ?? action.result,
+      }
+    case 'export-failed':
+      return { ...state, phase: state.editorDiamond || state.lastProcessResult ? 'editing' : 'completed', exportProgress: null }
     case 'dismiss-completion':
       return { ...state, phase: 'ready', processResult: null, processProgress: null, route: 'dashboard' }
     case 'add-toast':
