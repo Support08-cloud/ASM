@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { initialState, reducer } from '../src/app/state/machine'
-import { shouldSeekMedia } from '../src/services/playback'
+import { PLAY_SEEK_SEC, shouldSeekMedia } from '../src/services/playback'
 import type { ProcessResult } from '../src/models/processing'
 
 const exported: ProcessResult = {
@@ -19,9 +19,14 @@ describe('pause does not seek a busy decoder', () => {
     expect(shouldSeekMedia(0, 1.2, 1, false)).toBe(false)
   })
 
-  it('does not seek again while a seek is running or the frame is already close', () => {
-    expect(shouldSeekMedia(1.2, 1.3, 2, true)).toBe(false)
-    expect(shouldSeekMedia(1.2, 1.3, 2, false)).toBe(false)
+  it('does not seek again while a seek is running', () => {
+    expect(shouldSeekMedia(1.2, 2.4, 2, true)).toBe(false)
+  })
+
+  it('follows a 0.05s rewind and ignores a 0.01s nudge', () => {
+    expect(shouldSeekMedia(1.2, 1.15, 2, false)).toBe(true)
+    expect(shouldSeekMedia(1.2, 1.21, 2, false)).toBe(false)
+    expect(shouldSeekMedia(1.2, 1.3, 2, false, PLAY_SEEK_SEC)).toBe(false)
   })
 
   it('seeks once when the playhead has moved', () => {

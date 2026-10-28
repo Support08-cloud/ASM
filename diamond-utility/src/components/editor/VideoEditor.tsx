@@ -23,7 +23,7 @@ import {
   clipAtTime,
   clipPlayDurationMs,
   clipStartMs,
-  transitionOverlapMs,
+  playheadForCut,
   createClipFromFile,
   createExtra,
   duplicateClip,
@@ -201,13 +201,9 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
       const end = projectDurationMs(nextProject)
       const playheadMs = Math.min(current.playheadMs, end)
       if (patch.transition == null || index < 0) return { ...nextProject, playheadMs }
-      const clip = clips[index]
-      const start = clipStartMs(clips, index)
-      const overlap = transitionOverlapMs(clip, clips[index + 1])
-      const at = start + Math.max(0, clipPlayDurationMs(clip) - Math.max(overlap, 240) / 2)
       return {
         ...nextProject,
-        playheadMs: Math.min(end, at),
+        playheadMs: playheadForCut(clips, index, playheadMs, end),
         selectedTransitionIndex: index,
         inspectorTab: 'fade',
       }
@@ -419,11 +415,11 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
       }
       if (event.key === 'ArrowLeft') {
         event.preventDefault()
-        actions.stepPlayhead(event.altKey ? -33 : event.shiftKey ? -1000 : -100)
+        actions.stepPlayhead(event.altKey ? -33 : event.shiftKey ? -1000 : -50)
       }
       if (event.key === 'ArrowRight') {
         event.preventDefault()
-        actions.stepPlayhead(event.altKey ? 33 : event.shiftKey ? 1000 : 100)
+        actions.stepPlayhead(event.altKey ? 33 : event.shiftKey ? 1000 : 50)
       }
       if (event.key.toLowerCase() === 'd' && !isModKey(event)) actions.duplicateSelected()
       if (event.key.toLowerCase() === 'm' && !isModKey(event)) actions.toggleMute()
@@ -446,16 +442,14 @@ export function VideoEditor({ project: initial, exporting, onClose, onExport }: 
     setPlaying(false)
     setProject((current) => {
       const clip = current.clips[index]
-      const start = clipStartMs(current.clips, index)
-      const overlapMs = clip ? transitionOverlapMs(clip, current.clips[index + 1]) : 0
-      const at = start + Math.max(0, (clip ? clipPlayDurationMs(clip) : 0) - Math.max(overlapMs, 240) / 2)
+      const end = projectDurationMs(current)
       return {
         ...current,
         selectedTransitionIndex: index,
         selectedClipId: clip?.id ?? null,
         selectedExtraId: null,
         inspectorTab: 'fade',
-        playheadMs: at,
+        playheadMs: playheadForCut(current.clips, index, current.playheadMs, end),
       }
     })
   }

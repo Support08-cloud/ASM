@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as R
 import type { ClipTransform, EditorClip, ExtraClip } from '../../models/editor'
 import { cssClipPathForClip, cssFilterForClip, cssTransformForClip, type TransitionLayerStyle } from '../../services/edit-graph'
 import { toVideoSrc } from '../../services/media-url'
-import { shouldSeekMedia } from '../../services/playback'
+import { PLAY_SEEK_SEC, SCRUB_SEEK_SEC, shouldSeekMedia } from '../../services/playback'
 import { clipPlayDurationMs, sourceTimeMs } from '../../services/timeline'
 
 interface IncomingPreview {
@@ -86,7 +86,9 @@ export function PreviewStage({
     const audio = audioRef.current
     if (!audio || !music) return
     const target = Math.max(0, (playheadRef.current - music.startMs) / 1000)
-    if (shouldSeekMedia(audio.currentTime, target, audio.readyState, audio.seeking)) audio.currentTime = target
+    if (shouldSeekMedia(audio.currentTime, target, audio.readyState, audio.seeking, playing ? PLAY_SEEK_SEC : SCRUB_SEEK_SEC)) {
+      audio.currentTime = target
+    }
     if (playing) void audio.play().catch(() => undefined)
     else audio.pause()
   }, [playing, music?.id, music?.startMs])
@@ -98,7 +100,7 @@ export function PreviewStage({
       const track = extrasRef.current.find((extra) => extra.kind === 'audio')
       if (!audio || !track || !audio.src || audio.seeking || audio.readyState < 2) return
       const musicAt = Math.max(0, (playheadRef.current - track.startMs) / 1000)
-      if (shouldSeekMedia(audio.currentTime, musicAt, audio.readyState, audio.seeking)) audio.currentTime = musicAt
+      if (shouldSeekMedia(audio.currentTime, musicAt, audio.readyState, audio.seeking, PLAY_SEEK_SEC)) audio.currentTime = musicAt
     }, 400)
     return () => window.clearInterval(timer)
   }, [playing, music?.id])
@@ -244,6 +246,47 @@ function SyncedVideo({
   const onStatusRef = useRef(onStatus)
   onStatusRef.current = onStatus
   const src = toVideoSrc(clip)
+  const wantSec = useRef<number | null>(null)
+  const issuedSec = useRef<number | null>(null)
+  const seekTolerance = useRef(SCRUB_SEEK_SEC)
+
+  const srcRef = useRef(src)
+  srcRef.current = src
+
+  const assignSeek = (video: HTMLVideoElement) => {
+    const want = wantSec.current
+    if (want == null || !mediaMatches(video, srcRef.current)) return
+    if (!shouldSeekMedia(video.currentTime, want, video.readyState, video.seeking, seekTolerance.current)) {
+      if (!video.seeking && video.readyState >= 2) wantSec.current = null
+      return
+    }
+    if (issuedSec.current === want) return
+    issuedSec.current = want
+    try {
+      video.currentTime = want
+    } catch {
+      issuedSec.current = null
+      /* Wait for loadeddata. A seek before a decoded frame restarts the load and sticks. */
+    }
+  }
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+    issuedSec.current = null
+    wantSec.current = null
+    const flush = () => {
+      assignSeek(video)
+      if (video.seeking || !playingRef.current || !video.paused || !mediaMatches(video, srcRef.current)) return
+      void video.play().catch(() => undefined)
+    }
+    video.addEventListener('loadeddata', flush)
+    video.addEventListener('seeked', flush)
+    return () => {
+      video.removeEventListener('loadeddata', flush)
+      video.removeEventListener('seeked', flush)
+    }
+  }, [clip.id, src])
 
   useEffect(() => {
     const video = videoRef.current
@@ -251,15 +294,20 @@ function SyncedVideo({
     if (!video || !src) return
     const start = Math.max(0, sourceTimeMs(current, localRef.current) / 1000)
     const apply = () => {
+      if (!mediaMatches(video, src)) return
       video.playbackRate = playbackRateFor(current.speed)
       video.volume = current.muted ? 0 : Math.min(1, Math.max(0, current.volume * masterVolumeRef.current))
       video.muted = video.volume === 0
-      if (Math.abs(video.currentTime - start) > 0.08) video.currentTime = start
-      if (playingRef.current) void video.play().catch(() => onStatusRef.current?.('error'))
+      seekTolerance.current = SCRUB_SEEK_SEC
+      wantSec.current = start
+      assignSeek(video)
+      if (playingRef.current && !video.seeking) {
+        void video.play().catch(() => onStatusRef.current?.('error'))
+      }
     }
-    if (video.readyState >= 1) apply()
-    else video.addEventListener('loadedmetadata', apply, { once: true })
-    return () => video.removeEventListener('loadedmetadata', apply)
+    if (mediaMatches(video, src)) apply()
+    else video.addEventListener('loadeddata', apply, { once: true })
+    return () => video.removeEventListener('loadeddata', apply)
   }, [clip.id, src])
 
   useEffect(() => {
@@ -273,34 +321,48 @@ function SyncedVideo({
   useEffect(() => {
     const video = videoRef.current
     if (!video || playing) return
-    let cancelled = false
-    const requested = new Set<number>()
-    const seek = () => {
-      if (cancelled) return
-      const target = Math.max(0, sourceTimeMs(clipRef.current, localRef.current) / 1000)
-      const key = Math.round(target * 20)
-      if (requested.has(key)) return
-      if (!shouldSeekMedia(video.currentTime, target, video.readyState, video.seeking)) return
-      requested.add(key)
-      try {
-        video.currentTime = target
-      } catch {
-        requested.delete(key)
-      }
-    }
-    if (video.readyState >= 2) seek()
-    else video.addEventListener('loadeddata', seek, { once: true })
-    return () => {
-      cancelled = true
-      video.removeEventListener('loadeddata', seek)
-    }
-  }, [clip.id, clip.inMs, localMs, playing])
+    const target = Math.max(0, sourceTimeMs(clip, localMs) / 1000)
+    seekTolerance.current = SCRUB_SEEK_SEC
+    wantSec.current = target
+    assignSeek(video)
+  }, [clip.id, clip.inMs, clip.speed, localMs, playing])
 
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
-    if (playing && src) void video.play().catch(() => onStatusRef.current?.('error'))
-    else video.pause()
+    if (!playing) {
+      video.pause()
+      return
+    }
+    let cancel = false
+    const onSeeked = () => {
+      video.removeEventListener('seeked', onSeeked)
+      if (cancel || !playingRef.current) return
+      void video.play().catch(() => onStatusRef.current?.('error'))
+    }
+    const begin = () => {
+      if (cancel || !playingRef.current || !mediaMatches(video, src)) return
+      const target = Math.max(0, sourceTimeMs(clipRef.current, localRef.current) / 1000)
+      const drift = Math.abs((Number.isFinite(video.currentTime) ? video.currentTime : 0) - target)
+      seekTolerance.current = SCRUB_SEEK_SEC
+      wantSec.current = target
+      if (drift > SCRUB_SEEK_SEC || video.seeking) {
+        if (!video.seeking) assignSeek(video)
+        if (video.seeking) {
+          video.addEventListener('seeked', onSeeked)
+          return
+        }
+      }
+      void video.play().catch(() => onStatusRef.current?.('error'))
+    }
+    const onData = () => begin()
+    if (mediaMatches(video, src)) begin()
+    else video.addEventListener('loadeddata', onData)
+    return () => {
+      cancel = true
+      video.removeEventListener('loadeddata', onData)
+      video.removeEventListener('seeked', onSeeked)
+    }
   }, [playing, src])
 
   useEffect(() => {
@@ -308,11 +370,15 @@ function SyncedVideo({
     const timer = window.setInterval(() => {
       const video = videoRef.current
       const current = clipRef.current
-      if (!video || video.readyState < 2 || video.seeking) return
+      if (!video || !mediaMatches(video, srcRef.current)) return
       const target = Math.max(0, sourceTimeMs(current, localRef.current) / 1000)
       if (Number.isFinite(video.duration) && target >= video.duration - 0.05) return
-      if (shouldSeekMedia(video.currentTime, target, video.readyState, video.seeking)) video.currentTime = target
-      if (video.paused) void video.play().catch(() => undefined)
+      if (shouldSeekMedia(video.currentTime, target, video.readyState, video.seeking, PLAY_SEEK_SEC)) {
+        seekTolerance.current = PLAY_SEEK_SEC
+        wantSec.current = target
+        assignSeek(video)
+      }
+      if (video.paused && !video.seeking) void video.play().catch(() => undefined)
     }, 400)
     return () => window.clearInterval(timer)
   }, [playing, clip.id])
@@ -420,6 +486,15 @@ function dragScale(
   }
   window.addEventListener('pointermove', move)
   window.addEventListener('pointerup', up)
+}
+
+function mediaMatches(video: HTMLMediaElement, src: string | undefined): boolean {
+  if (!src || video.readyState < 2 || !video.currentSrc) return false
+  try {
+    return video.currentSrc === new URL(src, window.location.href).href
+  } catch {
+    return false
+  }
 }
 
 function playbackRateFor(speed: number): number {

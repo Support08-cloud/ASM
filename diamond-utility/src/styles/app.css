@@ -1518,6 +1518,10 @@
   border-left-color: rgba(254, 254, 254, 0.45);
 }
 
+.timeline-sheet {
+  position: relative;
+}
+
 .timeline-lanes {
   position: relative;
 }

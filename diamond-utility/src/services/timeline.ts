@@ -97,6 +97,26 @@ export function clipStartMs(clips: EditorClip[], index: number): number {
   return cursor
 }
 
+/** Where the playhead sits to show a cut, on a whole millisecond. */
+export function cutPreviewMs(clips: EditorClip[], index: number): number {
+  const clip = clips[index]
+  if (!clip) return 0
+  const start = clipStartMs(clips, index)
+  const overlap = transitionOverlapMs(clip, clips[index + 1])
+  const at = start + Math.max(0, clipPlayDurationMs(clip) - Math.max(overlap, 240) / 2)
+  return Math.round(at)
+}
+
+/**
+ * Jump to the cut when it is a real move. A few milliseconds of backward snap
+ * is left alone so the preview does not seek again and freeze on that frame.
+ */
+export function playheadForCut(clips: EditorClip[], index: number, currentMs: number, endMs: number): number {
+  const at = Math.min(Math.max(0, endMs), Math.max(0, cutPreviewMs(clips, index)))
+  if (Math.abs(at - currentMs) <= 15) return currentMs
+  return at
+}
+
 export function sourceTimeMs(clip: EditorClip, localMs: number): number {
   return clip.inMs + localMs * clip.speed
 }

@@ -61,10 +61,14 @@ export function TransportBar({
           type="range"
           min={0}
           max={Math.max(durationMs, 1)}
-          step={10}
-          value={Math.round(Math.min(playheadMs, Math.max(durationMs, 1)) / 10) * 10}
+          step={1}
+          value={Math.round(Math.min(Math.max(0, playheadMs), Math.max(durationMs, 1)))}
           aria-label="Playhead"
-          onChange={(event) => onSeek(Number(event.target.value))}
+          onChange={(event) => {
+            const next = Number(event.target.value)
+            if (!Number.isFinite(next) || Math.abs(next - playheadMs) < 1) return
+            onSeek(next)
+          }}
         />
         <button type="button" className="btn ghost" onClick={() => onStep(1000)} title="Forward 1s">
           +1s

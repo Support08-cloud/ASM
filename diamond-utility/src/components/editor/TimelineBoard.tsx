@@ -60,9 +60,10 @@ export function TimelineBoard({
   const audioMuted =
     project.extraClips.some((extra) => extra.kind === 'audio') &&
     project.extraClips.filter((extra) => extra.kind === 'audio').every((extra) => extra.volume === 0)
-  const width = Math.max(720, (duration / 1000) * project.pixelsPerSecond)
-  const playX = (project.playheadMs / Math.max(duration, 1)) * width
-  const ticks = useMemo(() => rulerTicks(duration, project.pixelsPerSecond), [duration, project.pixelsPerSecond])
+  const width = Math.max(720, (Math.max(duration, 1) / 1000) * project.pixelsPerSecond)
+  const pxPerMs = width / Math.max(duration, 1)
+  const playX = project.playheadMs * pxPerMs
+  const ticks = useMemo(() => rulerTicks(duration, width), [duration, width])
   const extrasByKind = {
     audio: project.extraClips.filter((extra) => extra.kind === 'audio'),
     text: project.extraClips.filter((extra) => extra.kind === 'text'),
@@ -70,14 +71,14 @@ export function TimelineBoard({
 
   const seekFromClientX = (clientX: number, innerLeft: number) => {
     const x = clientX - innerLeft
-    onSeek(Math.max(0, Math.min(duration, (x / width) * duration)))
+    onSeek(Math.max(0, Math.min(duration, x / pxPerMs)))
   }
 
   const startScrub = (event: ReactMouseEvent) => {
-    const lane = trackRef.current?.querySelector('.timeline-lanes')
-    if (!(lane instanceof HTMLElement)) return
+    const sheet = trackRef.current?.querySelector('.timeline-sheet')
+    if (!(sheet instanceof HTMLElement)) return
     event.preventDefault()
-    const left = () => lane.getBoundingClientRect().left
+    const left = () => sheet.getBoundingClientRect().left
     seekFromClientX(event.clientX, left())
     const move = (next: MouseEvent) => seekFromClientX(next.clientX, left())
     const up = () => {
@@ -89,11 +90,11 @@ export function TimelineBoard({
   }
 
   useEffect(() => {
-    if (!playing) return
     const scroller = trackRef.current
     if (!scroller) return
-    const pad = 48
-    if (playX < scroller.scrollLeft + pad || playX > scroller.scrollLeft + scroller.clientWidth - pad) {
+    const pad = playing ? 48 : 0
+    const viewRight = scroller.scrollLeft + scroller.clientWidth
+    if (playX < scroller.scrollLeft + pad || playX > viewRight - pad) {
       scroller.scrollLeft = Math.max(0, playX - scroller.clientWidth * 0.35)
     }
   }, [playing, playX])
@@ -155,8 +156,9 @@ export function TimelineBoard({
           ))}
         </div>
         <div className="timeline-track" ref={trackRef}>
+          <div className="timeline-sheet" style={{ width }}>
           <div className="ruler" onMouseDown={startScrub}>
-            <div className="ruler-inner" style={{ width }}>
+            <div className="ruler-inner">
               {ticks.map((tick) => (
                 <span key={tick.ms} className={`ruler-tick${tick.major ? ' is-major' : ''}`} style={{ left: tick.x }}>
                   {tick.major ? tick.label : ''}
@@ -166,7 +168,6 @@ export function TimelineBoard({
           </div>
           <div
             className="timeline-lanes"
-            style={{ width }}
             onMouseDown={(event) => {
               const target = event.target as HTMLElement
               if (target.closest('.tl-clip, .tl-cut, .tl-add, .tl-handle, .tl-name')) return
@@ -183,10 +184,8 @@ export function TimelineBoard({
                   <ExtraBlock
                     key={extra.id}
                     extra={extra}
-                    duration={duration}
-                    width={width}
                     selected={extra.id === project.selectedExtraId}
-                    pixelsPerSecond={project.pixelsPerSecond}
+                    pxPerMs={pxPerMs}
                     locked={locked.text}
                     onSelect={onSelectExtra}
                     onTrim={onTrimExtra}
@@ -200,8 +199,8 @@ export function TimelineBoard({
             <div className="tl-lane is-video">
               {project.clips.map((clip, index) => {
                 const start = clipStartMs(project.clips, index)
-                const left = (start / Math.max(duration, 1)) * width
-                const clipWidth = Math.max(28, (clipPlayDurationMs(clip) / Math.max(duration, 1)) * width)
+                const left = start * pxPerMs
+                const clipWidth = Math.max(28, clipPlayDurationMs(clip) * pxPerMs)
                 const frames = thumbs[clip.id] ?? []
                 return (
                   <div key={clip.id} className="tl-clip-wrap" style={{ left, width: clipWidth }}>
@@ -235,7 +234,7 @@ export function TimelineBoard({
                         className="tl-handle"
                         onMouseDown={(event) => {
                           if (locked.video) return
-                          startDrag(event, (delta) => onTrimClip(clip.id, 'in', delta), project.pixelsPerSecond, onGestureStart, onGestureEnd)
+                          startDrag(event, (delta) => onTrimClip(clip.id, 'in', delta), pxPerMs, onGestureStart, onGestureEnd)
                         }}
                       />
                       <span
@@ -259,7 +258,7 @@ export function TimelineBoard({
                         className="tl-handle is-end"
                         onMouseDown={(event) => {
                           if (locked.video) return
-                          startDrag(event, (delta) => onTrimClip(clip.id, 'out', delta), project.pixelsPerSecond, onGestureStart, onGestureEnd)
+                          startDrag(event, (delta) => onTrimClip(clip.id, 'out', delta), pxPerMs, onGestureStart, onGestureEnd)
                         }}
                       />
                     </button>
@@ -290,10 +289,8 @@ export function TimelineBoard({
                   <ExtraBlock
                     key={extra.id}
                     extra={extra}
-                    duration={duration}
-                    width={width}
                     selected={extra.id === project.selectedExtraId}
-                    pixelsPerSecond={project.pixelsPerSecond}
+                    pxPerMs={pxPerMs}
                     locked={locked.audio}
                     onSelect={onSelectExtra}
                     onTrim={onTrimExtra}
@@ -304,17 +301,18 @@ export function TimelineBoard({
                 ))
               )}
             </div>
-            <div className="playhead" style={{ left: playX }}>
-              <button
-                type="button"
-                className="playhead-cap"
-                aria-label="Drag playhead"
-                onMouseDown={(event) => {
-                  event.stopPropagation()
-                  startScrub(event)
-                }}
-              />
-            </div>
+          </div>
+          <div className="playhead" style={{ left: playX }}>
+            <button
+              type="button"
+              className="playhead-cap"
+              aria-label="Drag playhead"
+              onMouseDown={(event) => {
+                event.stopPropagation()
+                startScrub(event)
+              }}
+            />
+          </div>
           </div>
         </div>
       </div>
@@ -324,10 +322,8 @@ export function TimelineBoard({
 
 function ExtraBlock({
   extra,
-  duration,
-  width,
   selected,
-  pixelsPerSecond,
+  pxPerMs,
   locked,
   onSelect,
   onTrim,
@@ -336,10 +332,8 @@ function ExtraBlock({
   onGestureEnd,
 }: {
   extra: ExtraClip
-  duration: number
-  width: number
   selected: boolean
-  pixelsPerSecond: number
+  pxPerMs: number
   locked?: boolean
   onSelect: (id: string) => void
   onTrim: (id: string, edge: 'in' | 'out', deltaMs: number) => void
@@ -347,8 +341,8 @@ function ExtraBlock({
   onGestureStart?: () => void
   onGestureEnd?: () => void
 }) {
-  const left = (extra.startMs / Math.max(duration, 1)) * width
-  const blockWidth = Math.max(24, (extra.durationMs / Math.max(duration, 1)) * width)
+  const left = extra.startMs * pxPerMs
+  const blockWidth = Math.max(24, extra.durationMs * pxPerMs)
   return (
     <button
       type="button"
@@ -360,19 +354,18 @@ function ExtraBlock({
       }}
       onMouseDown={(event) => {
         if (locked || (event.target as HTMLElement).classList.contains('tl-handle')) return
-        startDrag(event, (delta) => onMove(extra.id, delta), pixelsPerSecond, onGestureStart, onGestureEnd)
+        startDrag(event, (delta) => onMove(extra.id, delta), pxPerMs, onGestureStart, onGestureEnd)
       }}
     >
-      <span className="tl-handle" onMouseDown={(event) => { if (!locked) startDrag(event, (delta) => onTrim(extra.id, 'in', delta), pixelsPerSecond, onGestureStart, onGestureEnd) }} />
+      <span className="tl-handle" onMouseDown={(event) => { if (!locked) startDrag(event, (delta) => onTrim(extra.id, 'in', delta), pxPerMs, onGestureStart, onGestureEnd) }} />
       <span className="tl-name">{extra.label}</span>
-      <span className="tl-handle is-end" onMouseDown={(event) => { if (!locked) startDrag(event, (delta) => onTrim(extra.id, 'out', delta), pixelsPerSecond, onGestureStart, onGestureEnd) }} />
+      <span className="tl-handle is-end" onMouseDown={(event) => { if (!locked) startDrag(event, (delta) => onTrim(extra.id, 'out', delta), pxPerMs, onGestureStart, onGestureEnd) }} />
     </button>
   )
 }
 
-function rulerTicks(duration: number, pps: number) {
+function rulerTicks(duration: number, width: number) {
   const ticks: Array<{ ms: number; x: number; major: boolean; label: string }> = []
-  const width = Math.max(720, (duration / 1000) * pps)
   const step = duration > 60000 ? 5000 : 1000
   for (let ms = 0; ms <= duration + 1; ms += step) {
     ticks.push({
@@ -388,7 +381,7 @@ function rulerTicks(duration: number, pps: number) {
 function startDrag(
   event: ReactMouseEvent,
   apply: (deltaMs: number) => void,
-  pixelsPerSecond: number,
+  pxPerMs: number,
   onStart?: () => void,
   onEnd?: () => void,
 ) {
@@ -399,7 +392,7 @@ function startDrag(
   const move = (next: MouseEvent) => {
     const deltaPx = next.clientX - lastX
     lastX = next.clientX
-    apply((deltaPx / pixelsPerSecond) * 1000)
+    apply(deltaPx / pxPerMs)
   }
   const up = () => {
     window.removeEventListener('mousemove', move)

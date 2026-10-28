@@ -7,6 +7,8 @@ import {
   clipAtTime,
   clipPlayDurationMs,
   clipStartMs,
+  cutPreviewMs,
+  playheadForCut,
   createExtra,
   duplicateClip,
   mediaFilesForEdit,
@@ -65,6 +67,14 @@ describe('timeline', () => {
     expect(timelineDurationMs(withFade)).toBe(4000 + 4000 - 500)
     const hardCut = project.clips.map((clip) => applyTransition(clip, 'none'))
     expect(timelineDurationMs(hardCut)).toBe(8000)
+  })
+
+  it('previews a cut without snapping the playhead backward by a hundredth of a second', () => {
+    const project = projectFromCopiedFiles([file('A'), file('B')], '/out', 'A')
+    const faded = project.clips.map((clip, index) => (index === 0 ? applyTransition(clip, 'fade', 500) : clip))
+    expect(cutPreviewMs(faded, 0)).toBe(3750)
+    expect(playheadForCut(faded, 0, 3758, 7500)).toBe(3758)
+    expect(playheadForCut(faded, 0, 2000, 7500)).toBe(3750)
   })
 
   it('plays into the next clip from its start when clips are back to back', () => {
